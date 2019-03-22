@@ -1,11 +1,11 @@
-## Interface: 80000
+## Interface: 80100
 ## Title: Bagnon
 ## Author: Tuller & Jaliborc (João Cardoso)
 ## Notes: Single window displays for your inventory and bank
 ## SavedVariables: Bagnon_Sets
 
-## OptionalDeps: BagBrother, ItemRack, Wardrobe, WoWUnit
-## Version: 8.0.0
+## OptionalDeps: BagBrother, WoWUnit
+## Version: 8.1.8
 
 main.lua
 

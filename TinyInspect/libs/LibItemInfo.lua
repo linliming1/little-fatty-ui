@@ -3,7 +3,7 @@
 -- 物品信息庫 Author: M
 ---------------------------------
 
-local MAJOR, MINOR = "LibItemInfo.7000", 1
+local MAJOR, MINOR = "LibItemInfo.7000", 2
 local lib = LibStub:NewLibrary(MAJOR, MINOR)
 
 if not lib then return end
@@ -12,6 +12,8 @@ local locale = GetLocale()
 
 --物品等級匹配規則
 local ItemLevelPattern = gsub(ITEM_LEVEL, "%%d", "(%%d+)")
+local ItemLevelPlusPat = gsub(ITEM_LEVEL_PLUS, "%%d%+", "(%%d+%%+)")
+local ItemLevelAltPat = gsub(gsub(gsub(ITEM_LEVEL_ALT, "%(", "%%%("), "%)", "%%%)"), "%%d", "(%%d+)")
 
 --Toolip
 local tooltip = CreateFrame("GameTooltip", "LibItemLevelTooltip1", UIParent, "GameTooltipTemplate")
@@ -109,21 +111,43 @@ function lib:GetItemInfo(link, stats)
     local text, level
     for i = 2, 5 do
         text = _G[tooltip:GetName().."TextLeft" .. i]:GetText() or ""
+        level = select(2, string.match(text, ItemLevelAltPat))
+        if (level) then break end
         level = string.match(text, ItemLevelPattern)
         if (level) then break end
+        level = string.match(text, ItemLevelPlusPat)
+        if (level) then break end
     end
-    self:GetStatsViaTooltip(tooltip, stats)
-    return 0, tonumber(level) or 0, GetItemInfo(link)
+    if stats then self:GetStatsViaTooltip(tooltip, stats) end
+    if (level and string.find(level, "+")) then
+        return 0, level, GetItemInfo(link)
+    else
+        return 0, tonumber(level) or 0, GetItemInfo(link)
+    end
 end
 
---獲取容器裏物品裝備等級(傳家寶/神器)
+--獲取容器裏物品裝備等級
 function lib:GetContainerItemLevel(pid, id)
+--[[
+    if (pid < 0) then
+        local link = GetContainerItemLink(pid, id)
+        return self:GetItemInfo(link)
+    end
+--]]
     local text, level
     if (pid and id) then
         tooltip:SetOwner(UIParent, "ANCHOR_NONE")
-        tooltip:SetBagItem(pid, id)
+        if pid == BANK_CONTAINER then
+            tooltip:SetInventoryItem('player', BankButtonIDToInvSlotID(id))
+        elseif pid == REAGENTBANK_CONTAINER then
+            return 0, 0 --材料银行不用管 ReagentBankButtonIDToInvSlotID
+        else
+            tooltip:SetBagItem(pid, id)
+        end
         for i = 2, 5 do
             text = _G[tooltip:GetName().."TextLeft" .. i]:GetText() or ""
+            level = select(2, string.match(text, ItemLevelAltPat))
+            if (level) then break end
             level = string.match(text, ItemLevelPattern)
             if (level) then break end
         end
@@ -161,14 +185,16 @@ function lib:GetUnitItemInfo(unit, index, stats)
 end
 
 --獲取UNIT的裝備等級
+--@return unknownCount, 平均装等, 装等总和, 最大武器等级, 是否神器, 最大装等
 function lib:GetUnitItemLevel(unit, stats)
-    local total, counts = 0, 0
+    local total, counts, maxlevel = 0, 0, 0
     local _, count, level
     for i = 1, 15 do
         if (i ~= 4) then
             count, level = self:GetUnitItemInfo(unit, i, stats)
             total = total + level
             counts = counts + count
+            maxlevel = max(maxlevel, level)
         end
     end
     local mcount, mlevel, mquality, mslot, ocount, olevel, oquality, oslot
@@ -182,5 +208,6 @@ function lib:GetUnitItemLevel(unit, stats)
     else
         total = total + mlevel + olevel
     end
-    return counts, total/max(16-counts,1), total, max(mlevel,olevel), (mquality == 6 or oquality == 6)
+    maxlevel = max(maxlevel, mlevel, olevel)
+    return counts, total/max(16-counts,1), total, max(mlevel,olevel), (mquality == 6 or oquality == 6), maxlevel
 end

@@ -33,7 +33,6 @@ local GetQuestLogRewardMoney = GetQuestLogRewardMoney
 local GetQuestTagInfo = GetQuestTagInfo
 local GetNumQuestLogRewards = GetNumQuestLogRewards
 local GetQuestInfoByQuestID = C_TaskQuest.GetQuestInfoByQuestID
-local GetQuestTimeLeftMinutes = C_TaskQuest.GetQuestTimeLeftMinutes
 
 local MapRangeClamped = DF.MapRangeClamped
 local FindLookAtRotation = DF.FindLookAtRotation
@@ -51,6 +50,10 @@ rf.FullRareListSendCooldown = 0
 rf.CommGlobalCooldown = 0
 rf.RareSpottedSendCooldown = {}
 rf.MinimapScanCooldown = {}
+
+function ff.GetItemLevelRequirement()
+	return 0
+end
 
 rf.COMM_IDS = {
 	RARE_SPOTTED = "RS1",
@@ -368,6 +371,10 @@ function WorldQuestTracker:CommReceived (_, data)
 			end
 			
 			WorldQuestTracker.Debug ("CommReceived() > added: " .. newRares .. " updated: " .. justUpdated)
+			
+		else
+			WorldQuestTracker.HandleComm (validData)
+			
 		end
 	end
 end
@@ -478,12 +485,16 @@ end
 
 --/run WorldQuestTrackerAddon.debug = true;
 
+local safeDisableCLEU = function()
+	rf:UnregisterEvent ("COMBAT_LOG_EVENT_UNFILTERED")
+end
+
 function rf.IsTargetARare()
 
 	if (UnitExists ("target")) then -- and not UnitIsDead ("target")
 		local serial = UnitGUID ("target")
 		local npcId = WorldQuestTracker:GetNpcIdFromGuid (serial)
-
+	
 		if (npcId) then
 		
 			--> check if is a non registered rare
@@ -498,9 +509,11 @@ function rf.IsTargetARare()
 			
 			--> is a rare npc?
 			if (WorldQuestTracker.MapData.RaresToScan [npcId]) then
+			
 				--> check is the npc is flagged as rare
 				local unitClassification = UnitClassification ("target")
 				if (unitClassification == "rareelite" or unitClassification == "rare") then
+
 					--> send comm
 					local mapPosition = C_Map.GetPlayerMapPosition (WorldQuestTracker.GetCurrentStandingMapAreaID(), "player")
 					if (not mapPosition) then
@@ -535,12 +548,17 @@ function rf.IsTargetARare()
 					
 					--
 					rf:RegisterEvent ("COMBAT_LOG_EVENT_UNFILTERED")
+					if (rf.DisableCLEUTimer and not rf.DisableCLEUTimer._cancelled) then
+						rf.DisableCLEUTimer:Cancel()
+					end
+					rf.DisableCLEUTimer = C_Timer.NewTimer (300, safeDisableCLEU)
+					
 					rf.LastRareSerial = serial
 					rf.LastRareName = rareName
 					
 					-- ~disabled
 					if (true) then
-						return
+						--return
 					end
 					
 					--find group or create a group for this rare
@@ -555,10 +573,14 @@ function rf.IsTargetARare()
 								local itemLevelRequired = ff.GetItemLevelRequirement()
 								
 								if (EnglishRareName and WorldQuestTracker.db.profile.rarescan.always_use_english) then
-									WorldQuestTracker.FindGroupForCustom (EnglishRareName, rareName, L["S_GROUPFINDER_ACTIONS_SEARCH_RARENPC"], "Doing rare encounter against " .. rareName .. ". Group created with World Quest Tracker #NPCID" .. npcId .. "#LOC " .. (rareName or "") .. " ", itemLevelRequired, callback)
+									--WorldQuestTracker.FindGroupForCustom (EnglishRareName, rareName, L["S_GROUPFINDER_ACTIONS_SEARCH_RARENPC"], "Doing rare encounter against " .. rareName .. ". Group created with World Quest Tracker #NPCID" .. npcId .. "#LOC " .. (rareName or "") .. " ", itemLevelRequired, callback)
+									--print (1)
 								else
-									WorldQuestTracker.FindGroupForCustom (rareName, rareName, L["S_GROUPFINDER_ACTIONS_SEARCH_RARENPC"], "Doing rare encounter against " .. rareName .. ". Group created with World Quest Tracker #NPCID" .. npcId .. "#LOC " .. (EnglishRareName or "") .. " ", itemLevelRequired, callback)
+									--WorldQuestTracker.FindGroupForCustom (rareName, rareName, L["S_GROUPFINDER_ACTIONS_SEARCH_RARENPC"], "Doing rare encounter against " .. rareName .. ". Group created with World Quest Tracker #NPCID" .. npcId .. "#LOC " .. (EnglishRareName or "") .. " ", itemLevelRequired, callback)
+									--ff:PlayerEnteredWorldQuestZone (nil, npcId)
 								end
+								
+								ff:PlayerEnteredWorldQuestZone (nil, npcId, UnitName ("target"))
 							end
 						end
 					end
@@ -577,10 +599,10 @@ function rf.IsTargetARare()
 							
 							local EnglishRareName = WorldQuestTracker.MapData.RaresENNames [npcId]
 							if (EnglishRareName and WorldQuestTracker.db.profile.rarescan.always_use_english) then
-								WorldQuestTracker.FindGroupForCustom (EnglishRareName, rareName, L["S_GROUPFINDER_ACTIONS_SEARCH"], "Doing Argus World Boss against " .. rareName .. " Group created with World Quest Tracker #NPCID" .. npcId .. "#LOC " .. (rareName or "") .. " ", 0, callback)
+								--WorldQuestTracker.FindGroupForCustom (EnglishRareName, rareName, L["S_GROUPFINDER_ACTIONS_SEARCH"], "Doing Argus World Boss against " .. rareName .. " Group created with World Quest Tracker #NPCID" .. npcId .. "#LOC " .. (rareName or "") .. " ", 0, callback)
 								WorldQuestTracker.Debug ("IsTargetARare() > invasion boss detected and using english name.")
 							else
-								WorldQuestTracker.FindGroupForCustom (rareName, rareName, L["S_GROUPFINDER_ACTIONS_SEARCH"], "Doing Invasion Point boss encounter against " .. rareName .. " Group created with World Quest Tracker #NPCID" .. npcId, 0, callback)
+								--WorldQuestTracker.FindGroupForCustom (rareName, rareName, L["S_GROUPFINDER_ACTIONS_SEARCH"], "Doing Invasion Point boss encounter against " .. rareName .. " Group created with World Quest Tracker #NPCID" .. npcId, 0, callback)
 								WorldQuestTracker.Debug ("IsTargetARare() > invasion boss detected and cannot english name.")
 							end
 						end
@@ -608,13 +630,11 @@ rf:SetScript ("OnEvent", function (self, event, ...)
 
 				--> check if the group finder window is shown with the mob we just killed
 				if (ff:IsShown()) then
-					if (ff.Label1.text == alvo_name) then
-						ff.HideMainFrame()
-					end
+					ff:HideFrame (true)
 				end
 				
 				--> ask to leave the group
-				if (ff.Label1.text == alvo_name and ff.SearchCustom) then
+				if (ff.QuestName2Text.text == alvo_name and IsInGroup()) then
 					ff.WorldQuestFinished (0, true)
 				end
 				
@@ -698,11 +718,13 @@ function WorldQuestTracker.RareWidgetOnClick (self, button)
 			
 			local itemLevelRequired = ff.GetItemLevelRequirement()
 			
-			if (EnglishRareName and WorldQuestTracker.db.profile.rarescan.always_use_english) then
-				WorldQuestTracker.FindGroupForCustom (EnglishRareName, rareName, L["S_GROUPFINDER_ACTIONS_SEARCH_RARENPC"], "Doing rare encounter against " .. rareName .. ". Group created with World Quest Tracker #NPCID" .. npcId .. "#LOC " .. (rareName or "") .. " ", itemLevelRequired, callback)
-			else
-				WorldQuestTracker.FindGroupForCustom (rareName, rareName, L["S_GROUPFINDER_ACTIONS_SEARCH_RARENPC"], "Doing rare encounter against " .. rareName .. ". Group created with World Quest Tracker #NPCID" .. npcId .. "#LOC " .. (EnglishRareName or "") .. " ", itemLevelRequired, callback)
-			end
+			--if (EnglishRareName and WorldQuestTracker.db.profile.rarescan.always_use_english) then
+			--	WorldQuestTracker.FindGroupForCustom (EnglishRareName, rareName, L["S_GROUPFINDER_ACTIONS_SEARCH_RARENPC"], "Doing rare encounter against " .. rareName .. ". Group created with World Quest Tracker #NPCID" .. npcId .. "#LOC " .. (rareName or "") .. " ", itemLevelRequired, callback)
+			--else
+			--	WorldQuestTracker.FindGroupForCustom (rareName, rareName, L["S_GROUPFINDER_ACTIONS_SEARCH_RARENPC"], "Doing rare encounter against " .. rareName .. ". Group created with World Quest Tracker #NPCID" .. npcId .. "#LOC " .. (EnglishRareName or "") .. " ", itemLevelRequired, callback)
+			--end
+			
+			ff:PlayerEnteredWorldQuestZone (nil, npcId, rareName)
 		end
 		
 	elseif (button == "RightButton") then
@@ -739,7 +761,7 @@ function WorldQuestTracker.UpdateRareIcons (mapID)
 		local timeSpotted = rareTable [rf.RARETABLE.TIMESPOTTED]
 		
 		--alreadyKilled [npcId] = nil --debug
-		
+			
 		if (timeSpotted + 3600 > time() and not alreadyKilled [npcId] and not WorldQuestTracker.MapData.RaresIgnored [npcId]) then
 		
 			local questCompleted = false
@@ -775,7 +797,7 @@ function WorldQuestTracker.UpdateRareIcons (mapID)
 					
 					if (not pin.InitializedForRare) then
 						pin.InitializedForRare = true
-						local widget = WorldQuestTracker.GetOrCreateZoneWidget (nil, math.random (1, 99999999))
+						local widget = WorldQuestTracker.GetOrCreateZoneWidget (math.random (1, 99999999))
 						WorldQuestTracker.ResetWorldQuestZoneButton (widget)
 						widget:SetPoint ("center", pin, "center")
 						pin.RareWidget = widget
@@ -850,50 +872,53 @@ function rf.ScanMinimapForRares()
 	-- vignetteInfo.atlasName == "VignetteKill"
 	for i, vignetteID in ipairs (C_VignetteInfo.GetVignettes()) do
 		local vignetteInfo = C_VignetteInfo.GetVignetteInfo (vignetteID)
-		local serial = vignetteInfo.objectGUID
+		
+		if (vignetteInfo) then
+			local serial = vignetteInfo.objectGUID
 
-		if (serial) then
-			local name = vignetteInfo.name
-			local objectIcon = vignetteInfo.atlasName
-			
-			if (objectIcon and (objectIcon == "VignetteKill")) then
-			
-				local npcId = WorldQuestTracker.db.profile.rarescan.name_cache [name]
+			if (serial) then
+				local name = vignetteInfo.name
+				local objectIcon = vignetteInfo.atlasName
 				
-				if (npcId and WorldQuestTracker.MapData.RaresToScan [npcId]) then
-					if (not rf.MinimapScanCooldown [npcId] or rf.MinimapScanCooldown [npcId]+10 < time()) then
-						local isWorldQuest = rf.IsRareAWorldQuest (name)
-						if (not isWorldQuest) then
-							--> make sure the spotted minimap rare isn't the player target
-							local targetSerial = UnitGUID ("target") or ""
-							local targetNpcId = WorldQuestTracker:GetNpcIdFromGuid (targetSerial)
-						
-							if (npcId ~= targetNpcId) then
-								local mapPosition = C_Map.GetPlayerMapPosition (WorldQuestTracker.GetCurrentStandingMapAreaID(), "player")
-								if (not mapPosition) then
-									return
-								end
-								local x, y = mapPosition.x, mapPosition.y
-								
-								local map = WorldQuestTracker.GetCurrentMapAreaID()
-								local rareName = name
-								serial = "Creature-0-0000-0000-00000-" .. npcId .. "-0000000000"
-								
-								local data = LibStub ("AceSerializer-3.0"):Serialize ({rf.COMM_IDS.RARE_SPOTTED, UnitName ("player"), "GUILD", rareName, serial, map, x, y, true, time()})
-								
-								WorldQuestTracker:SendCommMessage (WorldQuestTracker.COMM_PREFIX, data, "GUILD")
-								
-								if (WorldQuestTracker.db.profile.rarescan.playsound and (not rf.MinimapScanCooldown [npcId] or rf.MinimapScanCooldown [npcId]+60 < time())) then
-									PlaySoundFile ("Interface\\AddOns\\WorldQuestTracker\\media\\rare_found" .. WorldQuestTracker.db.profile.rarescan.playsound_volume .. ".ogg", WorldQuestTracker.db.profile.rarescan.use_master and "Master" or "SFX")
-									if (WorldQuestTracker.db.profile.rarescan.playsound_warnings < 3) then
-										WorldQuestTracker.db.profile.rarescan.playsound_warnings = WorldQuestTracker.db.profile.rarescan.playsound_warnings + 1
-										WorldQuestTracker:Msg (L["S_RAREFINDER_SOUNDWARNING"])
+				if (objectIcon and (objectIcon == "VignetteKill")) then
+				
+					local npcId = WorldQuestTracker.db.profile.rarescan.name_cache [name]
+					
+					if (npcId and WorldQuestTracker.MapData.RaresToScan [npcId]) then
+						if (not rf.MinimapScanCooldown [npcId] or rf.MinimapScanCooldown [npcId]+10 < time()) then
+							local isWorldQuest = rf.IsRareAWorldQuest (name)
+							if (not isWorldQuest) then
+								--> make sure the spotted minimap rare isn't the player target
+								local targetSerial = UnitGUID ("target") or ""
+								local targetNpcId = WorldQuestTracker:GetNpcIdFromGuid (targetSerial)
+							
+								if (npcId ~= targetNpcId) then
+									local mapPosition = C_Map.GetPlayerMapPosition (WorldQuestTracker.GetCurrentStandingMapAreaID(), "player")
+									if (not mapPosition) then
+										return
 									end
+									local x, y = mapPosition.x, mapPosition.y
+									
+									local map = WorldQuestTracker.GetCurrentMapAreaID()
+									local rareName = name
+									serial = "Creature-0-0000-0000-00000-" .. npcId .. "-0000000000"
+									
+									local data = LibStub ("AceSerializer-3.0"):Serialize ({rf.COMM_IDS.RARE_SPOTTED, UnitName ("player"), "GUILD", rareName, serial, map, x, y, true, time()})
+									
+									WorldQuestTracker:SendCommMessage (WorldQuestTracker.COMM_PREFIX, data, "GUILD")
+									
+									if (WorldQuestTracker.db.profile.rarescan.playsound and (not rf.MinimapScanCooldown [npcId] or rf.MinimapScanCooldown [npcId]+60 < time())) then
+										PlaySoundFile ("Interface\\AddOns\\WorldQuestTracker\\media\\rare_found" .. WorldQuestTracker.db.profile.rarescan.playsound_volume .. ".ogg", WorldQuestTracker.db.profile.rarescan.use_master and "Master" or "SFX")
+										if (WorldQuestTracker.db.profile.rarescan.playsound_warnings < 3) then
+											WorldQuestTracker.db.profile.rarescan.playsound_warnings = WorldQuestTracker.db.profile.rarescan.playsound_warnings + 1
+											WorldQuestTracker:Msg (L["S_RAREFINDER_SOUNDWARNING"])
+										end
+									end
+									
+									rf.MinimapScanCooldown [npcId] = time()
+									
+									WorldQuestTracker.Debug ("ScanMinimapForRares > added npc from minimap: " .. rareName .. " ID: " .. npcId)
 								end
-								
-								rf.MinimapScanCooldown [npcId] = time()
-								
-								WorldQuestTracker.Debug ("ScanMinimapForRares > added npc from minimap: " .. rareName .. " ID: " .. npcId)
 							end
 						end
 					end

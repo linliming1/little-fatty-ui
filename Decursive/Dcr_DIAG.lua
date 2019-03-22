@@ -1,7 +1,7 @@
 --[[
     This file is part of Decursive.
 
-    Decursive (v 2.7.6) add-on for World of Warcraft UI
+    Decursive (v 2.7.6.2) add-on for World of Warcraft UI
     Copyright (C) 2006-2018 John Wellesz (Decursive AT 2072productions.com) ( http://www.2072productions.com/to/decursive.php )
 
     Starting from 2009-10-31 and until said otherwise by its author, Decursive
@@ -17,7 +17,7 @@
     Decursive is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY.
 
-    This file was last updated on 2018-07-22T8:40:14Z
+    This file was last updated on 2018-08-09T22:30:55Z
 --]]
 -------------------------------------------------------------------------------
 
@@ -89,7 +89,7 @@ local DebugTextTable    = T._DebugTextTable;
 local Reported          = {};
 
 local UNPACKAGED = "@pro" .. "ject-version@";
-local VERSION = "2.7.6";
+local VERSION = "2.7.6.2";
 
 T._LoadedFiles = {};
 T._LoadedFiles["Dcr_DIAG.lua"] = false; -- here for consistency but useless in this particular file
@@ -231,7 +231,8 @@ end -- }}}
 
 do
     local DebugHeader = false;
-    local HeaderFailOver = "|cFF11FF33Please email the content of this window to <Decursive+Report@2072productions.com>|r\n|cFF009999(Use CTRL+A to select all and then CTRL+C to put the text in your clip-board)|r\n\n";
+    local ReportEmail = GetAddOnMetadata("Decursive", "X-eMail") or "Decursive@2072productions.com";
+    local HeaderFailOver = ("|cFF11FF33Please email the content of this window to <%s>|r\n|cFF009999(Use CTRL+A to select all and then CTRL+C to put the text in your clip-board)|r\nAlso tell in your report if you noticed any strange behavior of Decursive.\n"):format(ReportEmail:gsub('@','+ReportFH@'));
     local LoadedAddonNum = 0;
     local TotalAddonMemoryUsage = 0;
 
@@ -268,15 +269,22 @@ do
         local instructionsHeader;
 
         if fromDiag or not T.Dcr.db or not T.Dcr.db.global.NewerVersionName or T._HHTDErrors ~= 0 then
-            instructionsHeader = T.Dcr.L and T.Dcr.L["DEBUG_REPORT_HEADER"] or HeaderFailOver;
+            if T.Dcr.L and T.Dcr.L["DEBUG_REPORT_HEADER"] then
+                -- Create the header insterting the email address and
+                -- influencing the content if this is an HHTD error.
+                instructionsHeader = (T.Dcr.L["DEBUG_REPORT_HEADER"]):format(
+
+                    ReportEmail:gsub('@', T._HHTDErrors ~= 0 and '+HHTDReport@' or '+Report@'),
+                    T._HHTDErrors ~= 0 and 'Decursive / H.H.T.D.' or 'Decursive'
+
+                );
+            else
+                instructionsHeader = HeaderFailOver
+            end
         else
             instructionsHeader = T.Dcr.L and ((T.Dcr.L["DECURSIVE_DEBUG_REPORT_BUT_NEW_VERSION"]):format(T.Dcr.db.global.NewerVersionName)) or HeaderFailOver;
             -- disable bug me not since the user _clearly_ took the wrong decision
             T.Dcr.db.global.NewVersionsBugMeNot = false;
-        end
-
-        if T._HHTDErrors ~= 0 then
-            instructionsHeader = instructionsHeader:gsub('ecursive', 'ecursive / H.H.T.D.');
         end
 
         local TIandBI = T.Dcr.GetTimersInfo and {T.Dcr:GetTimersInfo()} or {-1,-1,-1,-1,-1,0};
@@ -284,7 +292,7 @@ do
         _Debug(unpack(TIandBI));
 
 
-        DebugHeader = ("%s\n2.7.6  %s(%s)  CT: %0.4f D: %s %s %s BDTHFAd: %s nDrE: %d Embeded: %s W: %d (LA: %d TAMU: %d) TA: %d NDRTA: %d BUIE: %d TI: [dc:%d, lc:%d, y:%d, LEBY:%d, LB:%d, TTE:%u] (%s, %s, %s, %s)"):format(instructionsHeader, -- "%s\n
+        DebugHeader = ("%s\n2.7.6.2  %s(%s)  CT: %0.4f D: %s %s %s BDTHFAd: %s nDrE: %d Embeded: %s W: %d (LA: %d TAMU: %d) TA: %d NDRTA: %d BUIE: %d TI: [dc:%d, lc:%d, y:%d, LEBY:%d, LB:%d, TTE:%u] (%s, %s, %s, %s)"):format(instructionsHeader, -- "%s\n
         tostring(DC.MyClass), tostring(UnitLevel("player") or "??"), NiceTime(), date(), GetLocale(), -- %s(%s)  CT: %0.4f D: %s %s
         BugGrabber and "BG" .. (T.BugGrabber and "e" or "") or "NBG", -- %s
         tostring(T._BDT_HotFix1_applyed), -- BDTHFAd: %s
@@ -345,7 +353,7 @@ do
             local title = T.Dcr.L and T.Dcr.L["DECURSIVE_DEBUG_REPORT"] or "**** |cFFFF0000Decursive Debug Report|r ****";
 
             if T._HHTDErrors ~= 0 then
-                title = title:gsub('ecursive', 'ecursive/HHTD');
+                title = title:gsub('ecursive', 'ecursive / H.H.T.D.');
             end
 
             _G.DecursiveDEBUGtext:SetText(title);
@@ -373,9 +381,9 @@ local function PlaySoundFile_RanTooLongheck(message)
 end
 
 local function CheckHHTD_Error(errorm, errorml)
-    if (errorml:find("healers%-have%-to%-die") or errorml:find("hhtd"))
-        and not errorml:find("\\libs\\")
-        or errorml:find("\\libnameplateregistry") then
+    if (errorml:find("hhtd") and not errorml:find("\\libs\\"))
+        or
+        (errorml:find("\\libnameplateregistry") and not errorml:find("couldn't open") and not errorml:find("error loading")) then
         _Debug("CheckHHTD_Error()", true);
         return true;
     end
@@ -599,7 +607,6 @@ function T._DecursiveErrorHandler(err, ...)
         mine = true;
         _Debug("Error recorded");
     else
-
         if IsReporting then -- then it means there is a bug inside AddDebugText...
             IsReporting = false;
         else
@@ -712,7 +719,7 @@ function T._HookErrorHandler()
         BUGGRABBER_SUPPRESS_THROTTLE_CHAT = true; -- for people using an older version of BugGrabber. There is no way to know...
 
 
-        -- force BG to load callbackhandler since it relies on other add-ons to embeded it.
+        -- force BG to load callbackhandler since it relies on other add-ons that embeded it.
         if not BugGrabber.RegisterCallback and BugGrabber.setupCallbacks then
             BugGrabber.setupCallbacks();
         end
@@ -1067,4 +1074,4 @@ do
     end
 end
 
-T._LoadedFiles["Dcr_DIAG.lua"] = "2.7.6";
+T._LoadedFiles["Dcr_DIAG.lua"] = "2.7.6.2";

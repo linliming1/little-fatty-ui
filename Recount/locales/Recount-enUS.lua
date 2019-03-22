@@ -279,6 +279,7 @@ L["Rage Sources"] = true
 L["Raid"] = true
 L["Raid Instances"] = true
 L["Rank Number"] = true
+L["RealID"] = true
 L["Realtime"] = true
 L["Record Buffs/Debuffs"] = true
 L["Record Data"] = true
@@ -448,3 +449,4 @@ L["Window Scaling"] = true
 L["X Gridlines Represent"] = true
 L["Yes"] = true
 
+L["RealID"] = true

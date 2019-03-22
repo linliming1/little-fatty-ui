@@ -96,12 +96,11 @@ local function SetStatus(self, color, text, value, maxValue, texture, texCoords,
 	end
 
     local c = strbyte(text, 1)
-   	if(c and c >= 224 and text.utf8sub) then
-        self:SetText(text:utf8sub(1, math.floor(GridFrame.db.profile.textlength / 2)));
+   	if(c and c >= 224 and string.utf8sub) then
+        self:SetText(string.utf8sub(text, 1, math.floor(GridFrame.db.profile.textlength / 2)));
    	else
-        self:SetText(strsub(text, 1, profile.textlength))
+	self:SetText(strsub(text, 1, profile.textlength))
    	end
-
 
 	if color then
 		if profile.invertBarColor and profile.invertTextColor then

@@ -29,8 +29,8 @@ U1RegisterAddon("$NAME$", {
     --pics = 2, -- 一共多少张图片，都在图片Pics/插件名.tga里，高度128，宽度200。
     --picsWidth = 1024, -- 图片材质的宽度，默认为1024，可以存两张图
 
-    --author = "|cffcd1a1c[有爱原创]|r",
-    --modifier = "|cffcd1a1c[有爱]|r",
+    --author = "|cffcd1a1c[爱不易原创]|r",
+    --modifier = "|cffcd1a1c[爱不易]|r",
 
     --toggle = function(name, info, enable, justload) end, --如果未开插件，则初始不会调用。
 
@@ -59,7 +59,7 @@ U1RegisterAddon("$NAME$", {
         alwaysEnable = true, --总是可用
         tip = "", --用`分割的说明
         default = 1, --不会自动保存，除非有getvalue, 一般如果callback里if loading then return end的话，就不会强制覆盖用户已有的值
-        default = function() end, --注意这里在插件加载前就有调用，所以不适合读取插件数据, 一般不用
+        default = function() end, --注意这里在插件加载前就有调用，所以不适合读取插件数据, 一般不用, U1GetValue在各选项初始加载时会调用default
         getvalue = function() end, --当打开面板和退出游戏时会调用，加载游戏时不调用, 插件没加载的时候也不会调用
         callback = function(cfg, v, loading) end,
         confirm = "text", --提供此选项，则设置会出现提示
@@ -81,4 +81,4 @@ U1RegisterAddon("$NAME$", {
     --]]
 });
 
---如果提供 UI163_USER_MODE = 1 则不需要写alwaysRegister，而且插件会列在有爱整合里，如果不提供USER_MODE，只写alwaysRegister，则插件会列在分类里，但仍然在单体插件里，而不是有爱整合里
+--如果提供 UI163_USER_MODE = 1 则不需要写alwaysRegister，而且插件会列在爱不易整合里，如果不提供USER_MODE，只写alwaysRegister，则插件会列在分类里，但仍然在单体插件里，而不是爱不易整合里

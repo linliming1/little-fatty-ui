@@ -14,8 +14,8 @@ local pairs = pairs
 local CreateFrame = CreateFrame
 local strfind = strfind
 local tinsert = tinsert
-local UnitBuff = UnitBuff
-local UnitDebuff = UnitDebuff
+local UnitBuff = Pre80API.UnitBuff
+local UnitDebuff = Pre80API.UnitDebuff
 
 local module = CompactRaid:GetModule("CornerIndicators")
 if not module then return end
@@ -26,15 +26,15 @@ local auraGroups = _G["LibBuffGroups-1.0"]
 
 local function FindAura(unit, aura, selfcast, lacks, similar)
 	local filter = selfcast and "PLAYER" or ""
-	local name, rank, icon, count, dispelType, duration, expires, caster, harmful
+	local name, icon, count, dispelType, duration, expires, caster, harmful
 
 	if similar then
 		name, icon, count, dispelType, duration, expires, caster, harmful = auraGroups:UnitAura(unit, aura)
 	else
-		name, rank, icon, count, _, duration, expires = Aby_UnitBuff(unit, aura, nil, filter)
+		name, icon, count, dispelType, duration, expires = UnitBuff(unit, aura, filter)
 		if not name then
 			harmful = 1
-			name, rank, icon, count, _, duration, expires = Aby_UnitDebuff(unit, aura, nil, filter)
+			name, icon, count, dispelType, duration, expires = UnitDebuff(unit, aura, filter)
 		end
 	end
 

@@ -97,7 +97,8 @@ local BarMetaFunctions = _G [DF.GlobalWidgetControlNames ["normal_bar"]]
 	end
 	--> left color
 	local gmember_color = function (_object)
-		return _object._texture.original_colors
+		local r, g, b, a = _object._texture:GetVertexColor()
+		return r, g, b, a
 	end
 	--> icon
 	local gmember_icon = function (_object)
@@ -121,6 +122,10 @@ local BarMetaFunctions = _G [DF.GlobalWidgetControlNames ["normal_bar"]]
 	local gmember_textcolor = function (_object)
 		return _object.textleft:GetTextColor()
 	end
+	--> alpha 
+	local gmember_alpha= function (_object)
+		return _object:GetAlpha()
+	end
 
 	BarMetaFunctions.GetMembers = BarMetaFunctions.GetMembers or {}
 	BarMetaFunctions.GetMembers ["tooltip"] = gmember_tooltip
@@ -139,6 +144,7 @@ local BarMetaFunctions = _G [DF.GlobalWidgetControlNames ["normal_bar"]]
 	BarMetaFunctions.GetMembers ["textsize"] = gmember_textsize --alias
 	BarMetaFunctions.GetMembers ["textfont"] = gmember_textfont --alias
 	BarMetaFunctions.GetMembers ["textcolor"] = gmember_textcolor --alias
+	BarMetaFunctions.GetMembers ["alpha"] = gmember_alpha
 	
 	BarMetaFunctions.__index = function (_table, _member_requested)
 
@@ -203,7 +209,7 @@ local BarMetaFunctions = _G [DF.GlobalWidgetControlNames ["normal_bar"]]
 	--> color
 	local smember_color = function (_object, _value)
 		local _value1, _value2, _value3, _value4 = DF:ParseColors (_value)
-		
+
 		_object.statusbar:SetStatusBarColor (_value1, _value2, _value3, _value4)
 		_object._texture.original_colors = {_value1, _value2, _value3, _value4}
 		_object.timer_texture:SetVertexColor (_value1, _value2, _value3, _value4)
@@ -295,7 +301,11 @@ local BarMetaFunctions = _G [DF.GlobalWidgetControlNames ["normal_bar"]]
 		DF:SetFontOutline (_object.textleft, _value)
 		return DF:SetFontOutline (_object.textright, _value)
 	end
-
+	--> alpha 
+	local smember_alpha= function (_object, _value)
+		return _object:SetAlpha (_value)
+	end
+	
 	BarMetaFunctions.SetMembers = BarMetaFunctions.SetMembers or {}
 	BarMetaFunctions.SetMembers["tooltip"] = smember_tooltip
 	BarMetaFunctions.SetMembers["shown"] = smember_shown
@@ -317,6 +327,7 @@ local BarMetaFunctions = _G [DF.GlobalWidgetControlNames ["normal_bar"]]
 	BarMetaFunctions.SetMembers["textcolor"] = smember_textcolor --alias
 	BarMetaFunctions.SetMembers["shadow"] = smember_outline
 	BarMetaFunctions.SetMembers["outline"] = smember_outline --alias
+	BarMetaFunctions.SetMembers["alpha"] = smember_alpha
 	
 	BarMetaFunctions.__newindex = function (_table, _key, _value)
 	
@@ -338,8 +349,15 @@ local BarMetaFunctions = _G [DF.GlobalWidgetControlNames ["normal_bar"]]
 	function BarMetaFunctions:Hide()
 		self.statusbar:Hide()
 	end
+	
+	
+--> return color
+	function BarMetaFunctions:GetVertexColor()
+		return self._texture:GetVertexColor()
+	end
 
 --> set value (status bar)
+
 	function BarMetaFunctions:SetValue (value)
 		if (not value) then
 			value = 0
@@ -476,6 +494,8 @@ local BarMetaFunctions = _G [DF.GlobalWidgetControlNames ["normal_bar"]]
 		if (kill) then
 			return
 		end
+		
+		frame.MyObject.background:Hide()
 		
 		if (frame.MyObject.have_tooltip) then 
 			GameCooltip2:ShowMe (false)
@@ -756,6 +776,8 @@ function DF:NewBar (parent, container, name, member, w, h, value, texture_name)
 	
 	--> create widgets
 		BarObject.statusbar = CreateFrame ("statusbar", name, parent)
+		DF:Mixin (BarObject.statusbar, DF.WidgetFunctions)
+		
 		build_statusbar (BarObject.statusbar)
 		
 		BarObject.widget = BarObject.statusbar

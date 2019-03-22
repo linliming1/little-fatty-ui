@@ -39,7 +39,6 @@ local default = {
   sparkColor = {1.0, 1.0, 1.0, 1.0},
   sparkTexture = "Interface\\CastingBar\\UI-CastingBar-Spark",
   sparkBlendMode = "ADD",
-  sparkDesature = false,
   sparkOffsetX = 0,
   sparkOffsetY = 0,
   sparkRotationMode = "AUTO",
@@ -145,6 +144,7 @@ local properties = {
     min = 6,
     softMax = 72,
     step = 1,
+    default = 12
   },
   timerSize = {
     display = L["Second Text Size"],
@@ -153,6 +153,7 @@ local properties = {
     min = 6,
     softMax = 72,
     step = 1,
+    default = 12
   },
   stacksSize = {
     display = L["Stacks Text Size"],
@@ -161,6 +162,7 @@ local properties = {
     min = 6,
     softMax = 72,
     step = 1,
+    default = 12
   },
   width = {
     display = L["Width"],
@@ -169,6 +171,7 @@ local properties = {
     min = 1,
     softMax = screenWidth,
     bigStep = 1,
+    defautl = 32,
   },
   height = {
     display = L["Height"],
@@ -176,7 +179,8 @@ local properties = {
     type = "number",
     min = 1,
     softMax = screenHeight,
-    bigStep = 1
+    bigStep = 1,
+    default = 32
   },
   orientation = {
     display = L["Orientation"],
@@ -328,11 +332,12 @@ local barPrototype = {
 
   ["UpdateProgress"] = function(self)
     -- Limit values
-    self.value   = math.max(self.min, self.value);
-    self.value   = math.min(self.max, self.value);
+    local value = self.value;
+    value = math.max(self.min, value);
+    value = math.min(self.max, value);
 
     -- Alignment variables
-    local progress = (self.value - self.min) / (self.max - self.min);
+    local progress = (value - self.min) / (self.max - self.min);
 
     -- Create statusbar illusion
     if (self.horizontal) then
@@ -365,8 +370,10 @@ local barPrototype = {
       for index, additionalBar in ipairs(self.additionalBars) do
         if (not self.extraTextures[index]) then
           local extraTexture = self:CreateTexture(nil, "ARTWORK");
+          extraTexture:SetSnapToPixelGrid(false)
+          extraTexture:SetTexelSnappingBias(0)
           extraTexture:SetTexture(self:GetStatusBarTexture(), extraTextureWrapMode, extraTextureWrapMode);
-          extraTexture:SetDrawLayer("ARTWORK", index);
+          extraTexture:SetDrawLayer("ARTWORK", min(index, 7));
           self.extraTextures[index] = extraTexture;
         end
 
@@ -406,6 +413,11 @@ local barPrototype = {
               endProgress = self.value - offset / valueWidth;
             end
           end
+        end
+
+        if (self.additionalBarsClip) then
+          startProgress = max(0, min(1, startProgress));
+          endProgress = max(0, min(1, endProgress));
         end
 
         if ((endProgress - startProgress) == 0) then
@@ -502,12 +514,13 @@ local barPrototype = {
     end
   end,
 
-  ["SetAdditionalBars"] = function(self, additionalBars, colors, min, max, inverse)
+  ["SetAdditionalBars"] = function(self, additionalBars, colors, min, max, inverse, overlayclip)
     self.additionalBars = additionalBars;
     self.additionalBarsColors = colors;
     self.additionalBarsMin = min;
     self.additionalBarsMax = max;
     self.additionalBarsInverse = inverse;
+    self.additionalBarsClip = overlayclip;
     self:UpdateAdditionalBars();
   end,
 
@@ -616,9 +629,15 @@ local function create(parent)
   local bar = CreateFrame("FRAME", nil, region);
   Mixin(bar, SmoothStatusBarMixin);
   local fg = bar:CreateTexture(nil, "ARTWORK");
+  fg:SetSnapToPixelGrid(false)
+  fg:SetTexelSnappingBias(0)
   local bg = bar:CreateTexture(nil, "ARTWORK");
+  bg:SetSnapToPixelGrid(false)
+  bg:SetTexelSnappingBias(0)
   bg:SetAllPoints();
   local spark = bar:CreateTexture(nil, "ARTWORK");
+  spark:SetSnapToPixelGrid(false)
+  spark:SetTexelSnappingBias(0)
   fg:SetDrawLayer("ARTWORK", 0);
   bg:SetDrawLayer("ARTWORK", -1);
   spark:SetDrawLayer("ARTWORK", 7);
@@ -651,6 +670,8 @@ local function create(parent)
   local iconFrame = CreateFrame("FRAME", nil, region);
   region.iconFrame = iconFrame;
   local icon = iconFrame:CreateTexture(nil, "OVERLAY");
+  icon:SetSnapToPixelGrid(false)
+  icon:SetTexelSnappingBias(0)
   region.icon = icon;
   icon:SetTexture("Interface\\Icons\\INV_Misc_QuestionMark");
 
@@ -1027,6 +1048,7 @@ local function modify(parent, region, data)
   region.stickyDuration = data.stickyDuration;
   region.progressPrecision = data.progressPrecision;
   region.totalPrecision = data.totalPrecision;
+  region.overlayclip = data.overlayclip;
 
   region.overlays = {};
   if (data.overlays) then
@@ -1188,6 +1210,23 @@ local function modify(parent, region, data)
     timer.visible = false;
   end
 
+  -- Icon update function
+  function region:SetIcon(path)
+    -- Set icon options
+    local iconPath = (
+      region.useAuto
+      and path ~= ""
+      and path
+      or data.displayIcon
+      or "Interface\\Icons\\INV_Misc_QuestionMark"
+      );
+    self.icon:SetTexture(iconPath);
+    region.values.icon = "|T"..iconPath..":12:12:0:0:64:64:4:60:4:60|t";
+
+    -- Update text
+    UpdateText(self, data);
+  end
+
   -- Update icon visibility
   if data.icon then
     -- Update icon
@@ -1198,23 +1237,6 @@ local function modify(parent, region, data)
     icon:SetTexCoord(GetTexCoordZoom(texWidth))
     icon:SetDesaturated(data.desaturate);
     icon:SetVertexColor(data.icon_color[1], data.icon_color[2], data.icon_color[3], data.icon_color[4]);
-
-    -- Icon update function
-    function region:SetIcon(path)
-      -- Set icon options
-      local iconPath = (
-        region.useAuto
-        and path ~= ""
-        and path
-        or data.displayIcon
-        or "Interface\\Icons\\INV_Misc_QuestionMark"
-        );
-      self.icon:SetTexture(iconPath);
-      region.values.icon = "|T"..iconPath..":12:12:0:0:64:64:4:60:4:60|t";
-
-      -- Update text
-      UpdateText(self, data);
-    end
 
     -- Update icon visibility
     icon:Show();
@@ -1266,7 +1288,7 @@ local function modify(parent, region, data)
 
   -- Look for need to use custom text update
   local customTextFunc = nil
-  if (data.displayTextLeft:find("%%c") or data.displayTextRight:find("%%c")) and data.customText then
+  if (WeakAuras.ContainsCustomPlaceHolder(data.displayTextLeft) or WeakAuras.ContainsCustomPlaceHolder(data.displayTextRight)) and data.customText then
     -- Load custom code function
     customTextFunc = WeakAuras.LoadFunction("return "..data.customText, region.id)
   end
@@ -1291,6 +1313,7 @@ local function modify(parent, region, data)
 
     -- Remove custom text update
   else
+    region.values.custom = nil;
     region.UpdateCustomText = nil;
     WeakAuras.UnregisterCustomTextUpdates(region);
   end
@@ -1392,6 +1415,7 @@ local function modify(parent, region, data)
     end
 
     if (data.smoothProgress) then
+      region.bar.targetValue = progress
       region.bar:SetSmoothedValue(progress);
     else
       region.bar:SetValue(progress);
@@ -1410,18 +1434,23 @@ local function modify(parent, region, data)
     then
       progress = 1 - progress;
     end
-    region.bar:SetValue(progress);
+    if (data.smoothProgress) then
+      region.bar.targetValue = progress
+      region.bar:SetSmoothedValue(progress);
+    else
+      region.bar:SetValue(progress);
+    end
     UpdateText(region, data);
   end
 
   function region:SetAdditionalProgress(additionalProgress, min, max, inverse)
     local effectiveInverse = (inverse and not region.inverseDirection) or (not inverse and region.inverseDirection);
-    region.bar:SetAdditionalBars(additionalProgress, region.overlays, min, max, effectiveInverse);
+    region.bar:SetAdditionalBars(additionalProgress, region.overlays, min, max, effectiveInverse, region.overlayclip);
   end
 
   function region:TimerTick()
     local adjustMin = region.adjustedMin or 0;
-    self:SetTime( (region.adjustedMax or region.duration) - adjustMin, region.expirationTime - adjustMin, region.inverse);
+    self:SetTime( (region.duration ~= 0 and region.adjustedMax or region.duration) - adjustMin, region.expirationTime - adjustMin, region.inverse);
   end
 
   function region:SetIconColor(r, g, b, a)
@@ -1502,12 +1531,25 @@ local function modify(parent, region, data)
       return;
     end
     region.inverseDirection = inverse;
-    region.bar:SetValue(1 - region.bar:GetValue());
+    if (data.smoothProgress) then
+      if (region.bar.targetValue) then
+        region.bar.targetValue = 1 - region.bar.targetValue
+        region.bar:SetSmoothedValue(region.bar.targetValue);
+      end
+    else
+      region.bar:SetValue(1 - region.bar:GetValue());
+    end
   end
 
   function region:SetOrientation(orientation)
     orient(region, data, orientation);
-    region.bar:SetValue(region.bar:GetValue());
+    if (data.smoothProgress) then
+      if region.bar.targetValue then
+        region.bar:SetSmoothedValue(region.bar.targetValue);
+      end
+    else
+      region.bar:SetValue(region.bar:GetValue());
+    end
   end
 
   function region:SetOverlayColor(id, r, g, b, a)

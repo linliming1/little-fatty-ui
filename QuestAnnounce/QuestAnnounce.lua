@@ -52,18 +52,24 @@ function QuestAnnounce:OnEnable()
 	self:SendDebugMsg("Addon Enabled :: "..tostring(QuestAnnounce.db.profile.settings.enable))
 end
 
-local pattern = GetLocale()=="zhCN" and "(.*)：%s*([-%d]+)%s*/%s*([-%d]+)%s*$" or "(.*):%s*([-%d]+)%s*/%s*([-%d]+)%s*$"
+--[[ QuestAnnounce ZeichenTabelle Chinese]]--
+local QUEST_INFO_REGEX = "(.*):%s*([-%d]+)%s*/%s*([-%d]+)%s*$"
+	if (GetLocale() == "zhCN") then
+		QUEST_INFO_REGEX = "(.*)：%s*([-%d]+)%s*/%s*([-%d]+)%s*$"
+end
+
 --[[ Event handlers ]]--
 function QuestAnnounce:UI_INFO_MESSAGE(event, id, msg)
 	local settings = self.db.profile.settings
 	
 	if (msg ~= nil) then
 		if (settings.enable) then
-			local questText = gsub(msg, pattern, "%1", 1)
+			local questText = gsub(msg, QUEST_INFO_REGEX, "%1", 1)
+			
+			QuestAnnounce:SendDebugMsg("Quest Text: "..questText)
 			
 			if (questText ~= msg) then
-                QuestAnnounce:SendDebugMsg("Quest Text: "..questText)
-				local ii, jj, strItemName, iNumItems, iNumNeeded = string.find(msg, pattern)
+				local ii, jj, strItemName, iNumItems, iNumNeeded = string.find(msg, QUEST_INFO_REGEX)
                 iNumNeeded, iNumItems = tonumber(iNumNeeded), tonumber(iNumItems)
 				local stillNeeded = iNumNeeded - iNumItems
                 
@@ -72,9 +78,9 @@ function QuestAnnounce:UI_INFO_MESSAGE(event, id, msg)
 				if(stillNeeded == 0 and settings.every == 0) then
 					QuestAnnounce:SendMsg(L["Completed: "]..msg)
 				elseif(QuestAnnounce.db.profile.settings.every > 0) then
-                    --超过10个的则按比例来
+                    --超过10个的则按比例来, 但如果设置成1，则每一个都通知
                     local every = settings.every
-                    if iNumNeeded > 10 then every = math.ceil(iNumNeeded / 10 * every) end
+                    if iNumNeeded > 10 and every ~= 1 then every = math.ceil(iNumNeeded / 10 * (every - 1)) end
 					every = math.fmod(iNumItems, every)
 					QuestAnnounce:SendDebugMsg("Every fMod: "..every)
 				

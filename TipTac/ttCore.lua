@@ -1362,8 +1362,11 @@ end
 local function OnHyperlinkEnter(self,refString)
 	local linkToken = refString:match("^([^:]+)");
 	if (supportedHyperLinks[linkToken]) then
-		GameTooltip_SetDefaultAnchor(gtt,self);
+		--GameTooltip_SetDefaultAnchor(gtt,self);
+        gtt:SetOwner(UIParent, "ANCHOR_CURSOR")
+        gtt:SetUnit("player")
 		gtt:SetHyperlink(refString);
+        tt:AnchorFrameToMouse(gtt);
 	end
 end
 

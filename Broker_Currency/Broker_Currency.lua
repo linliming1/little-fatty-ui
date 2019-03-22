@@ -817,24 +817,45 @@ do
 			summaryGold = true,
 			["iconSize"] = 12,
 			["iconSizeGold"] = 12,
-			["show1220"] = true,
-            ["show1226"] = true,
+			["show1220"] = false,  --职业大厅
+            ["show1226"] = false,  --虚空碎片
             ["show1342"] = false, --物资
 			["show1155"] = false, --魔力
-			["show1273"] = true,
-            ["show1508"] = true,
-            ["show1533"] = true,
-            --["show1506"] = true,
-			["summary1155"] = true,
-			["summary1273"] = true,
-			["summary1220"] = true,
+			["show1273"] = false,  --破碎命运
+            ["show1508"] = false,  --暗淡水晶
+            ["show1533"] = false,  --觉醒精华
+            ["show1560"] = true,  --8.0物资
+            ["show1580"] = true,  --8.0印记
+            ["show1718"] = true,  --8.1泰坦
+            ["show1716"] = true,  --8.1PVP
+            ["show1717"] = true,  --8.1PVP
+			["summary1560"] = true,
+            ["summary1580"] = true,
+            ["summary1718"] = true,
+            ["summary1716"] = true,
+            ["summary1717"] = true,
 			summaryColorDark = { r = 0, g = 0, b = 0, a = 0 },
 			summaryColorLight = { r = 1, g = 1, b = 1, a = .3 },
+            update810 = true,
         }
 
-        if (date("%Y%m%d")<"20180401" and Broker_CurrencyCharDB.show1533 == nil) or Broker_CurrencyCharDB.show1501 == true then
-            Broker_CurrencyCharDB.show1533 = true
-            Broker_CurrencyCharDB.show1501 = false
+        if not Broker_CurrencyCharDB.update810 then
+            Broker_CurrencyCharDB.update810 = true
+            Broker_CurrencyCharDB.show1580 = true
+            Broker_CurrencyCharDB.show1560 = true
+            Broker_CurrencyCharDB.show1718 = true
+            Broker_CurrencyCharDB.show1716 = true
+            Broker_CurrencyCharDB.show1717 = true
+            Broker_CurrencyCharDB["summary1560"] = true
+            Broker_CurrencyCharDB["summary1580"] = true
+            Broker_CurrencyCharDB["summary1718"] = true
+            Broker_CurrencyCharDB["summary1716"] = true
+            Broker_CurrencyCharDB["summary1717"] = true
+
+            Broker_CurrencyCharDB.show1533 = false
+            Broker_CurrencyCharDB.summary1155 = false
+            Broker_CurrencyCharDB.summary1273 = false
+            Broker_CurrencyCharDB.summary1220 = false
         end
 
 		-- ----------------------------------------------------------------------------

@@ -9,7 +9,7 @@ local GetEncounterTime, UnitCombatlogname, GetUnitInfoByUnitFlag, ScheduleTimer,
 
 local VExRT, VExRT_CDE = nil
 
-local module = ExRT.mod:New("ExCD2",ExRT.L.cd2)
+local module = ExRT:New("ExCD2",ExRT.L.cd2)
 local ELib,L = ExRT.lib,ExRT.L
 
 module._C = {}
@@ -75,22 +75,22 @@ module.db.spellDB = {
 module.db.Cmirror = module._C
 module.db.dbCountDef = #module.db.spellDB
 module.db.findspecspells = {
-	[224968] = 62, [30451] = 62, [7268] = 62,
+	[30451] = 62, [7268] = 62,
 	[194466] = 63, [133] = 63, [11366] = 63,
 	[214634] = 64, [116] = 64, [30455] = 64,
 	
-	[200652] = 65, [20473] = 65, [82326] = 65,
-	[209202] = 66, [53600] = 66, [31935] = 66,
-	[205273] = 70, [85256] = 70, [53385] = 70, 
+	[20473] = 65, [82326] = 65,
+	[53600] = 66, [31935] = 66,
+	[85256] = 70, [53385] = 70, 
 
 	[209577] = 71, [12294] = 71, [167105] = 71,
 	[205546] = 72, [23881] = 72, [184367] = 72,
 	[203524] = 73, [20243] = 73, [23922] = 73,
 	
-	[202767] = 102, --[190984] = 102, [78674] = 102, 
+	[202767] = 102, [190984] = 102, --[78674] = 102, 
 	[210722] = 103, [52610] = 103, --[1822] = 103, 
 	[200851] = 104, [33917] = 104, --[22842] = 104,
-	[208253] = 105, [188550] = 105, [48438] = 105, 
+	[208253] = 105, [188550] = 105, --[8936] = 105, 
 
 	[205223] = 250, [206930] = 250, [50842] = 250,
 	[190778] = 251, [49143] = 251, [49184] = 251,
@@ -118,7 +118,7 @@ module.db.findspecspells = {
 	
 	[214326] = 268, [205523] = 268, [121253] = 268, 
 	[205320] = 269, [113656] = 269, --[100780] = 269,
-	[205406] = 270, [115151] = 270, [116670] = 270,
+	[205406] = 270, [115151] = 270, --[116670] = 270,
 	
 	[201467] = 577, [162243] = 577, [198013] = 577,
 	[207407] = 581, [203782] = 581, [228477] = 581,
@@ -311,6 +311,7 @@ module.db.spell_isTalent = {
 
 module.db.spell_autoTalent = {		--Для маркировки базовых заклинаний спека, которые являются талантами у других спеков [spellID] = specID
 	[107574] = 73,
+	[288826] = 104,
 }
 
 module.db.spell_talentsList = {}
@@ -363,6 +364,7 @@ module.db.spell_charge_fix = {		--Спелы с зарядами
 	[61336]=1,
 	[22842]=1,
 	[18562]=200383,
+	[12051]=273330,
 }
 
 module.db.spell_durationByTalent_fix = {	--Изменение длительности талантом\глифом   вид: [спелл] = {spellid глифа\таланта, изменение времени (-10;10;*0.5;*1.5)}
@@ -416,6 +418,12 @@ module.db.spell_cdByTalent_fix = {		--Изменение кд талантом\�
 	[18562] = {200383,-3},
 	[740] = {197073,-60},
 	[102342] = {197061,-15},
+	[48792] = {288424,-15},
+	[106898] = {288826,-60},
+	[77764] = {288826,-60},
+	[77761] = {288826,-60},
+	[109304] = {287938,-15},
+	[116849] = {277667,-20},
 }
 
 module.db.tierSetsSpells = {}	--[specID.tierID.tierMark] = {2P Bonus Spell ID, 4P Bonus Spell ID}
@@ -478,6 +486,8 @@ module.db.spell_afterCombatNotReset = {	--Запрещать сброс кд п�
 	
 	[199740]=true,
 	[160452]=true,
+
+	--[271466]=true,
 }
 module.db.spell_reduceCdByHaste = {	--Заклинания, кд которых уменьшается хастой
 	[12294]=true,
@@ -591,9 +601,9 @@ module.db.spell_reduceCdCast = {	--Заклинания, применение к
 	[201430]={{109304,270581},-1},
 	[120360]={{109304,270581,253},-2,{109304,270581,254},-1.5},
 	[19434]={{109304,270581},-1.5},
-	[185358]={{109304,270581},-0.75,{193526,260404},-3},
+	[185358]={{109304,270581},-0.75,{288613,260404},-3},
 	[186387]={{109304,270581,254},-0.5},
-	[257620]={{109304,270581},-0.75,{193526,260404},-3},
+	[257620]={{109304,270581},-0.75,{288613,260404},-3},
 	[212431]={{109304,270581},-1},
 	[198670]={{109304,270581},-1.75},	
 	[187708]={{109304,270581},-1.75},
@@ -651,12 +661,13 @@ module.db.spell_startCDbyAuraFade = {	--Заклинания, кд которы�
 module.db.spell_startCDbyAuraApplied = {	--Заклинания, кд которых запускается только при наложении ауры (вида [aura_spellID] = CD_spellID)
 	[117679]=33891,
 	[59628]=57934,
+	[212800]=198589,	--blur fix
 }
 module.db.spell_startCDbyAuraApplied_fix = {}
 for _,spellID in pairs(module.db.spell_startCDbyAuraApplied) do module.db.spell_startCDbyAuraApplied_fix[spellID] = true end
 
 module.db.spell_reduceCdByAuraFade = {	--Заклинания, кд которых уменьшается при спадении ауры до окончания времени действия. !Важно обязательное время действия для таких заклинаний
-	[47788]={{47788,200209},-120},
+	[47788]={{47788,200209},-110},
 }
 module.db.spell_battleRes = {		--Заклинания-воскрешения [WOD]
 	[20484]=true,
@@ -959,6 +970,11 @@ module.db.differentIcons = {	--Другие иконки заклинаниям
 	[90633] = "Interface\\Icons\\inv_guild_standard_horde_c",
 	[90632] = "Interface\\Icons\\inv_guild_standard_horde_b",
 	[90631] = "Interface\\Icons\\inv_guild_standard_horde_a",
+
+	--Prevent replacing icons for players with some talents
+	[31884] = "Interface\\Icons\\spell_holy_avenginewrath",	--Avenging Wrath
+	[1022] = "Interface\\Icons\\spell_holy_sealofprotection",	--Blessing of Protection
+	[62618] = "Interface\\Icons\\spell_holy_powerwordbarrier",	--Power Word: Barrier
 }
 
 module.db.playerName = nil
@@ -2561,54 +2577,57 @@ do
 				local spellID = data.db[1]
 				
 				local barParent = columnsTable[col]
-				if barParent.methodsNewSpellNewLine and barParent.lastSpell ~= spellID then
-					local fix = 0
-					for j=numberInCol,maxLinesInCol do
-						local bar_now = barParent.lines[numberInCol + fix]
-						if bar_now then
-							if bar_now.IsNewLine then
-								break
-							else
-								if bar_now.data then
-									bar_now.data = nil
-									bar_now:Update()
+				
+				if numberInCol <= barParent.optionLinesMax then
+					if barParent.methodsNewSpellNewLine and barParent.lastSpell ~= spellID then
+						local fix = 0
+						for j=numberInCol,maxLinesInCol do
+							local bar_now = barParent.lines[numberInCol + fix]
+							if bar_now then
+								if bar_now.IsNewLine then
+									break
+								else
+									if bar_now.data then
+										bar_now.data = nil
+										bar_now:Update()
+									end
+									fix = fix + 1
 								end
-								fix = fix + 1
 							end
 						end
+						numberInCol = numberInCol + fix
 					end
-					numberInCol = numberInCol + fix
-				end
-				if barParent.optionIconTitles and barParent.lastSpell ~= spellID then
-					local bar = barParent.lines[numberInCol]
-					if bar and (bar.data ~= data or not bar.isTitle) then
-						bar.data = data
-						bar:CreateTitle()
-					end
-					numberInCol = numberInCol + 1
-				end
-				if barParent.methodsNewSpellNewLine and barParent.optionIconTitles and barParent.frameColumns > 1 and barParent.lastSpell == spellID then
-					local bar_now = barParent.lines[numberInCol]
-					if bar_now and bar_now.IsNewLine then
-						if bar_now.data then
-							bar_now.data = nil
-							bar_now:Update()
+					if barParent.optionIconTitles and barParent.lastSpell ~= spellID then
+						local bar = barParent.lines[numberInCol]
+						if bar and (bar.data ~= data or not bar.isTitle) then
+							bar.data = data
+							bar:CreateTitle()
 						end
 						numberInCol = numberInCol + 1
 					end
-				end
-
-				barParent.lastSpell = spellID
-				
-				inColsCount[col] = numberInCol
-				local bar = barParent.lines[numberInCol]
-				if bar and bar.data ~= data then
-					bar.data = data
+					if barParent.methodsNewSpellNewLine and barParent.optionIconTitles and barParent.frameColumns > 1 and barParent.lastSpell == spellID then
+						local bar_now = barParent.lines[numberInCol]
+						if bar_now and bar_now.IsNewLine then
+							if bar_now.data then
+								bar_now.data = nil
+								bar_now:Update()
+							end
+							numberInCol = numberInCol + 1
+						end
+					end
+	
+					barParent.lastSpell = spellID
 					
-					data.bar = bar
-				
-					bar:Update()
-					bar:UpdateStatus()
+					inColsCount[col] = numberInCol
+					local bar = barParent.lines[numberInCol]
+					if bar and bar.data ~= data then
+						bar.data = data
+						
+						data.bar = bar
+					
+						bar:Update()
+						bar:UpdateStatus()
+					end
 				end
 			end
 		end
@@ -2698,7 +2717,7 @@ end
 
 function RaidResurrectSpecialCheck()
 	local _,_,difficulty = GetInstanceInfo()
-	if difficulty == 14 or difficulty == 15 or difficulty == 16 or difficulty == 7 or difficulty == 17 then
+	if difficulty == 14 or difficulty == 15 or difficulty == 16 or difficulty == 7 or difficulty == 17 or difficulty == 8 then
 		return true
 	end
 end
@@ -3808,9 +3827,11 @@ do
 	
 	local spellHeal_trackedSpells = {
 		[207778] = true,
+		[48438] = true,
 	}
 	local spellHeal_trackedSpells_Register = {
 		[207778] = true,
+		[29166] = true,
 	}	
 	local spell207778_var = {0,0}
 	function module.main:SPELL_HEAL(sourceGUID,sourceName,sourceFlags,destGUID,destName,destFlags,spellID,critical,amount,overhealing)
@@ -3838,6 +3859,21 @@ do
 					end)
 				end							
 			end				
+		elseif spellID == 48438 and session_gGUIDs[sourceName][287251] then
+			local line = CDList[sourceName][29166]
+			if line then
+				if (amount - overhealing) == 0 then
+					line.cd = line.cd - 1
+					if line.cd < 0 then 
+						line.cd = 0 
+					end
+					if line.bar and line.bar.data == line then
+						line.bar:UpdateStatus()
+					end
+					UpdateAllData()
+					SortAllData()
+				end							
+			end
 		end
 	end
 	
@@ -3958,7 +3994,7 @@ function module.options:Load()
 	end
 	self.fastSetupFrame = ELib:ListButton(self.tab.tabs[1],L.cd2fastSetupTitle..":",200,7):Size(18,18):Point("TOPRIGHT",-15,-9):Left():OnClick(function(self)
 		local list = {
-			{L.cd2fastSetupTitle1,{31821,204150,62618,98008,97462,31842,64843,108280,740,115310,196718,207399}},					--Raid Save
+			{L.cd2fastSetupTitle1,{31821,204150,62618,98008,97462,31884,64843,108280,740,115310,15286,196718,207399,265202,216331,271466}},		--Raid Save
 			{L.cd2fastSetupTitle2,{102342,47788,33206,6940,633,116849,1022,204018}},								--Direct Save
 			{L.cd2fastSetupTitle3,{20484,20707,61999,20608,161642}},										--Battle Res
 			{L.cd2fastSetupTitle4,{6552,96231,147362,1766,15487,47528,47476,57994,2139,116705,106839,19647,91802,115781,78675,183752,}},	--Kicks
@@ -7622,7 +7658,8 @@ function module:ReloadAllSplits(argScaleFix)
 		columnFrame.optionAlphaCooldown = (not VExRT_ColumnOptions[i].textureGeneral and VExRT_ColumnOptions[i].textureAlphaCooldown) or (VExRT_ColumnOptions[i].textureGeneral and VExRT_ColumnOptions[module.db.maxColumns+1].textureAlphaCooldown) or module.db.colsDefaults.textureAlphaCooldown
 
 		if VExRT_ColumnOptions[i].enabled then
-			for n=1,linesTotal do
+			--for n=1,linesTotal do
+			for n=1,#columnFrame.lines do
 				columnFrame.lines[n]:UpdateStyle()
 				if columnFrame.lines[n]:IsVisible() then
 					columnFrame.lines[n]:UpdateStatus()
@@ -7858,7 +7895,7 @@ module.db.allClassSpells = {
 	{187707,3,	nil,			nil,			nil,			{187707,15,	0},	},	--Muzzle
 	{257044,3,	nil,			nil,			{257044,20,	0},	nil,			},	--Rapid Fire
 	{187698,3,	{187698,30,	0},	nil,			nil,			nil,			},	--Tar Trap
-	{193526,3,	nil,			nil,			{193526,180,	15},	nil,			},	--Trueshot
+	{288613,3,	nil,			nil,			{288613,120,	15},	nil,			},	--Trueshot
 	
 	{131894,3,	{131894,60,	15},	nil,			nil,			nil,			},	--A Murder of Crows
 	{120360,3,	nil,			{120360,20,	3},	{120360,20,	3},	nil,			},	--Barrage
@@ -7941,7 +7978,7 @@ module.db.allClassSpells = {
 	
 	{121536,3,	nil,			{121536,20,	0},	{121536,20,	0},	nil,			},	--Angelic Feather
 	{110744,3,	nil,			{110744,15,	0},	{110744,15,	0},	nil,			},	--Divine Star
-	{246287,3,	nil,			{246287,75,	0},	nil,			nil,			},	--Evangelism
+	{246287,3,	nil,			{246287,90,	0},	nil,			nil,			},	--Evangelism
 	{120517,3,	nil,			{120517,40,	0},	{120517,40,	0},	nil,			},	--Halo
 	{271466,1,	nil,			{271466,180,	0},	nil,			nil,			},	--Luminous Barrier
 	{123040,3,	nil,			{123040,60,	12},	nil,			nil,			},	--Mindbender
@@ -8220,7 +8257,7 @@ module.db.allClassSpells = {
 	{18562,	3,	nil,			nil,			nil,			nil,			{18562,	25,	0},	},	--Swiftmend
 	{5217,	3,	nil,			nil,			{5217,	30,	10},	nil,			nil,			},	--Tiger's Fury
 	{740,	1,	nil,			nil,			nil,			nil,			{740,	180,	8},	},	--Tranquility
-	{102793,3,	nil,			nil,			nil,			nil,			{102793,60,	10},	},	--Ursol's Vortex
+	{102793,3,	nil,			nil,			nil,			{102793,60,	10},	{102793,60,	10},	},	--Ursol's Vortex
 	{48438,	3,	nil,			nil,			nil,			nil,			{48438,	10,	0},	},	--Wild Growth
 	
 	{205636,3,	nil,			{205636,60,	0},	nil,			nil,			nil,			},	--Force of Nature
@@ -8239,7 +8276,6 @@ module.db.allClassSpells = {
 	
 	{155835,3,	nil,			nil,			nil,			{155835,40,	0},	nil,			},	--Bristling Fur
 	{102558,3,	nil,			nil,			nil,			{102558,180,	30},	nil,			},	--Incarnation: Guardian of Ursoc
-	{236748,3,	nil,			nil,			nil,			{236748,30,	0},	nil,			},	--Intimidating Roar
 	{204066,3,	nil,			nil,			nil,			{204066,75,	0},	nil,			},	--Lunar Beam
 	
 	{102351,3,	nil,			nil,			nil,			nil,			{102351,30,	0},	},	--Cenarion Ward
@@ -8551,6 +8587,7 @@ do
 		
 		local isArtifactEqipped = 0
 		local ArtifactIlvlSlot1,ArtifactIlvlSlot2 = 0,0
+		local mainHandSlot, offHandSlot = 0,0
 		for i=1,#moduleInspect.db.itemsSlotTable do
 			local itemSlotID = moduleInspect.db.itemsSlotTable[i]
 			--local itemLink = GetInventoryItemLink(inspectedName, itemSlotID)
@@ -8596,15 +8633,19 @@ do
 											itemLink = itemLink,
 											itemID = itemID,
 											spellID = powerData.spellID,
+											tier = j,
 										}
 									end
 									
-									module.db.session_gGUIDs[name] = powerData.spellID
 									module.db.spell_isAzeriteTalent[powerData.spellID] = true
 								end
 							end
 						end
 					end
+				end
+
+				if AzeritePowers then
+					inspectData.azerite["i"..itemSlotID] = AzeritePowers
 				end
 				
 				for j=2, inspectScantip:NumLines() do
@@ -8637,19 +8678,21 @@ do
 							
 							inspectData['items_ilvl'][itemSlotID] = ilvl
 							
-							if isArtifactEqipped > 0 then
-								if itemSlotID == 16 then
-									ArtifactIlvlSlot1 = ilvl
-								else
-									ArtifactIlvlSlot2 = ilvl
-								end
+							if itemSlotID == 16 then
+								mainHandSlot = ilvl
+								ArtifactIlvlSlot1 = ilvl
+							elseif itemSlotID == 17 then
+								offHandSlot = ilvl
+								ArtifactIlvlSlot2 = ilvl
 							end
 						end
 						
 						if AzeritePowers then
 							for k=1,#AzeritePowers do
-								if text:find(AzeritePowers[k].name) == 3 then
+								if text:find(AzeritePowers[k].name.."$") == 3 then
 									inspectData.azerite[#inspectData.azerite + 1] = AzeritePowers[k]
+
+									module.db.session_gGUIDs[name] = AzeritePowers[k].spellID
 								end
 							end
 						end
@@ -8732,8 +8775,12 @@ do
 		end
 		if isArtifactEqipped > 0 then
 			inspectData['ilvl'] = inspectData['ilvl'] - ArtifactIlvlSlot1 - ArtifactIlvlSlot2 + max(ArtifactIlvlSlot1,ArtifactIlvlSlot2) * 2
+			
+		elseif mainHandSlot > 0 and offHandSlot == 0 then
+			inspectData['ilvl'] = inspectData['ilvl'] + mainHandSlot
 		end
-		inspectData['ilvl'] = inspectData['ilvl'] / ((inspectData['items'][17] or isArtifactEqipped > 0) and 16 or 15)
+		inspectData['ilvl'] = inspectData['ilvl'] / 16
+		
 
 		--------> ExCD2
 		for tierUID,count in pairs(inspectData['tiersets']) do
@@ -8775,7 +8822,7 @@ do
 	local queueTimer = 0
 	function moduleInspect:timer(elapsed)
 		tmr = tmr + elapsed
-		if tmr > (inspectForce and 1.2 or 3.5) then
+		if tmr > (inspectForce and 1 or 2) then
 			queueTimer = queueTimer + tmr
 			tmr = 0
 			if queueTimer > 60 then
@@ -8912,7 +8959,7 @@ do
 				for i,slotID in ipairs(moduleInspect.db.itemsSlotTable) do
 					local link = GetInventoryItemLink(inspectedName, slotID)
 				end
-				ScheduleTimer(InspectItems, inspectForce and 0.8 or 1.5, name, inspectedName, moduleInspect.db.inspectID)
+				ScheduleTimer(InspectItems, inspectForce and 0.65 or 1.3, name, inspectedName, moduleInspect.db.inspectID)
 				if not inspectForce then
 					--ScheduleTimer(InspectItems, 2.3, name, inspectedName, moduleInspect.db.inspectID)
 				end

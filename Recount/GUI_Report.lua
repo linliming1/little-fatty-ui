@@ -3,7 +3,7 @@ local Recount = _G.Recount
 local AceLocale = LibStub("AceLocale-3.0")
 local L = AceLocale:GetLocale("Recount")
 
-local revision = tonumber(string.sub("$Revision: 1309 $", 12, -3))
+local revision = tonumber(string.sub("$Revision: 1464 $", 12, -3))
 if Recount.Version < revision then
 	Recount.Version = revision
 end
@@ -19,6 +19,7 @@ local BNGetSelectedFriend = BNGetSelectedFriend
 local GetChannelList = GetChannelList
 local GetNumGroupMembers = GetNumGroupMembers
 local GetNumPartyMembers = GetNumPartyMembers or GetNumSubgroupMembers
+local IsInGuild = IsInGuild
 local UnitExists = UnitExists
 local UnitInRaid = UnitInRaid
 local UnitIsPlayer = UnitIsPlayer
@@ -43,8 +44,7 @@ local ReportLocations = {
 	end},
 	{L["Guild"], "GUILD", IsInGuild},
 	{L["Officer"], "OFFICER", IsInGuild},
-	-- H.Schuetz - added RealID
-	{"RealID", "REALID"},
+	{L["RealID"], "REALID"},
 	{L["Whisper"], "WHISPER"},
 	{L["Whisper Target"], "WHISPER2"}
 }
@@ -64,8 +64,8 @@ function me:CreateReportList()
 
 	local channels = {GetChannelList()}
 
-	for i = 1, table.getn(channels) / 2 do
-		table.insert(ReportList, {channels[i * 2 - 1]..". "..channels[i * 2], "CHANNEL", channels[i * 2 - 1]})
+	for i = 1, #channels / 3 do
+		table.insert(ReportList, {channels[i * 3 - 2]..". "..channels[i * 3 - 1], "CHANNEL", channels[i * 3 - 2]})
 	end
 end
 
@@ -116,7 +116,7 @@ end
 function me:UpdateReportWindow()
 	local Amount, Row
 	me:CreateReportList()
-	Amount = table.getn(ReportList)
+	Amount = #ReportList
 
 
 	for i = me.NumRows + 1, Amount do
@@ -211,7 +211,6 @@ end
 
 function me:SendReport()
 	local Num, Loc1, Loc2
-	-- H.Schuetz - New Variables for using with battleTag
 	local presenceName, battleTag, isBattleTagPresence, toonName, toonID, client, isOnline, totalBNet
 
 	Num = me.ReportWindow.slider:GetValue()
@@ -223,7 +222,6 @@ function me:SendReport()
 		end
 	end
 
-	-- H.Schuetz - Begin
 	if Loc1 == "REALID" then
 		totalBNet = BNGetNumFriends()
 		if (BNGetSelectedFriend() > 0) and (totalBNet > 0) then
@@ -236,7 +234,6 @@ function me:SendReport()
 			Recount:Print("No RealID/Battle Tag Selected")
 			return
 		end
-	-- H.Schuetz - End - Next Line starts with if and not with elseif in origin Version
 	elseif Loc1 == "WHISPER" then
 		Loc2 = me.ReportWindow.Whisper:GetText()
 		if Loc2 == nil or Loc2 == "" then

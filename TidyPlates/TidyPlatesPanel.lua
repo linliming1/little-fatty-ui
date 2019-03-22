@@ -348,6 +348,9 @@ local function BuildInterfacePanel(panel)
         ShowTidyPlatesHubPanel()
         self:Hide()
     end)
+    panel.LoadProfileOptionButton:SetScript("OnShow", function(self)
+        if ShowTidyPlatesHubTankPanel then self:Hide() end
+    end)
 
 	---------------
 	-- Column 1
@@ -575,6 +578,16 @@ for eventname in pairs(panelevents) do TidyPlatesInterfacePanel:RegisterEvent(ev
 -------------------------------------------------------------------------------------
 
 TidyPlatesSlashCommands = {}
+
+function TidyPlatesSlashCommands.debug_on()
+	TidyPlatesDebug = true
+end
+
+
+function TidyPlatesSlashCommands.debug_off()
+	TidyPlatesDebug = false
+end
+
 
 function slash_TidyPlates(arg)
 	if type(TidyPlatesSlashCommands[arg]) == 'function' then

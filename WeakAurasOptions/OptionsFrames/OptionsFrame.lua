@@ -123,6 +123,11 @@ local function CreateFrameSizer(frame, callback, position)
   return handle
 end
 
+local defaultWidth = 830
+local defaultHeight = 665
+local minWidth = 750
+local minHeight = 240
+
 function WeakAuras.CreateFrame()
   local WeakAuras_DropDownMenu = CreateFrame("frame", "WeakAuras_DropDownMenu", nil, "UIDropDownMenuTemplate");
   local frame;
@@ -143,7 +148,7 @@ function WeakAuras.CreateFrame()
   frame:EnableMouse(true);
   frame:SetMovable(true);
   frame:SetResizable(true);
-  frame:SetMinResize(610, 240);
+  frame:SetMinResize(minWidth, minHeight);
   frame:SetFrameStrata("DIALOG");
   frame.window = "default";
 
@@ -152,8 +157,8 @@ function WeakAuras.CreateFrame()
     xOffset, yOffset = db.frame.xOffset, db.frame.yOffset;
   end
   if not(xOffset and yOffset) then
-    xOffset = (610 - GetScreenWidth()) / 2;
-    yOffset = (492 - GetScreenHeight()) / 2;
+    xOffset = (defaultWidth - GetScreenWidth()) / 2;
+    yOffset = (defaultHeight - GetScreenHeight()) / 2;
   end
   frame:SetPoint("TOPRIGHT", UIParent, "TOPRIGHT", xOffset, yOffset);
   frame:Hide();
@@ -191,8 +196,10 @@ function WeakAuras.CreateFrame()
     width, height = db.frame.width, db.frame.height;
   end
   if not(width and height) then
-    width, height = 630, 492;
+    width, height = defaultWidth, defaultHeight;
   end
+  width = max(width, minWidth)
+  height = max(height, minHeight)
   frame:SetWidth(width);
   frame:SetHeight(height);
 
@@ -219,15 +226,16 @@ function WeakAuras.CreateFrame()
   importbutton:SetHitRectInsets(0,0,0,0)
   importbutton:SetChecked(db.import_disabled)
 
-  importbutton:SetScript("PostClick", function(self)
-    if self:GetChecked() then
+  importbutton.SetValue = function(importbutton)
+    if importbutton:GetChecked() then
       PlaySound(856)
       db.import_disabled = true
     else
       PlaySound(857)
       db.import_disabled = nil
     end
-  end)
+    WeakAuras.RefreshTooltipButtons()
+  end
   importbutton:SetScript("OnEnter", function(self)
     GameTooltip:SetOwner(self, "ANCHOR_CURSOR")
     GameTooltip:SetText(L["Disable Import"])
@@ -373,7 +381,7 @@ function WeakAuras.CreateFrame()
   local container = AceGUI:Create("InlineGroup");
   container.frame:SetParent(frame);
   container.frame:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -17, 12);
-  container.frame:SetPoint("TOPLEFT", frame, "TOPRIGHT", -423, -14);
+  container.frame:SetPoint("TOPLEFT", frame, "TOPRIGHT", -83 - WeakAuras.normalWidth * 340, -14);
   container.frame:Show();
   container.frame:SetClipsChildren(true);
   container.titletext:Hide();
@@ -419,7 +427,7 @@ function WeakAuras.CreateFrame()
   searchIcon:SetWidth(14);
   searchIcon:SetHeight(14);
   searchIcon:SetPoint("left", filterInput, "left", 2, -2);
-  filterInput:SetFont("Fonts\\FRIZQT__.TTF", 10);
+  filterInput:SetFont(STANDARD_TEXT_FONT, 10);
   frame.filterInput = filterInput;
   filterInput:Hide();
 
@@ -622,9 +630,13 @@ function WeakAuras.CreateFrame()
   unloadedButton:SetViewDescription(L["Toggle the visibility of all non-loaded displays"]);
   frame.unloadedButton = unloadedButton;
 
-  frame.FillOptions = function(self, optionTable)
+  frame.FillOptions = function(self, optionTable, selected)
     AceConfig:RegisterOptionsTable("WeakAuras", optionTable);
     AceConfigDialog:Open("WeakAuras", container);
+    -- TODO: remove this once legacy aura trigger is removed
+    if selected then
+      container.content.obj.children[1]:SelectTab(selected)
+    end
     container:SetTitle("");
   end
 
@@ -665,64 +677,96 @@ function WeakAuras.CreateFrame()
     WeakAuras.ResumeAllDynamicGroups();
   end
 
-  frame.PickOption = function(self, option)
+  local function GetTarget(pickedDisplay)
+    local targetId;
+    if (pickedDisplay) then
+      if (type(pickedDisplay) == "table" and tempGroup.controlledChildren and tempGroup.controlledChildren[1]) then
+        targetId = tempGroup.controlledChildren[1];
+      elseif (type(pickedDisplay) == "string") then
+        targetId = pickedDisplay;
+      end
+    end
+    return targetId;
+  end
+
+  frame.PickOption = function(self, option, fromGroup)
+    local targetId = GetTarget(self.pickedDisplay);
     self:ClearPicks();
+    if (targetId) then
+      local pickedButton = WeakAuras.GetDisplayButton(targetId);
+      if (pickedButton) then
+        pickedButton:Pick();
+      end
+    end
     self.moversizer:Hide();
     self.pickedOption = option;
     if(option == "New") then
-      newButton:Pick();
-
       local containerScroll = AceGUI:Create("ScrollFrame");
       containerScroll:SetLayout("flow");
       container:SetLayout("fill");
       container:AddChild(containerScroll);
 
       if(GetAddOnEnableState(UnitName("player"), "WeakAurasTemplates") ~= 0) then
+        local simpleLabel = AceGUI:Create("Label");
+        simpleLabel:SetFont(STANDARD_TEXT_FONT, 24, "OUTLINE");
+        simpleLabel:SetColor(NORMAL_FONT_COLOR.r, NORMAL_FONT_COLOR.g, NORMAL_FONT_COLOR.b);
+        simpleLabel:SetText(L["Simple"]);
+        simpleLabel:SetFullWidth(true);
+        containerScroll:AddChild(simpleLabel);
+
         local button = AceGUI:Create("WeakAurasNewButton");
-        button:SetTitle(L["From Template"]);
+        button:SetTitle(WeakAuras.newFeatureString .. L["From Template"]);
         button:SetDescription(L["Offer a guided way to create auras for your class"])
         button:SetIcon("Interface\\Icons\\INV_Misc_Book_06");
         button:SetClick(function()
-          WeakAuras.OpenTriggerTemplate();
+          WeakAuras.OpenTriggerTemplate(nil, targetId);
         end);
         containerScroll:AddChild(button);
+
+        local spacer1Label = AceGUI:Create("Label");
+        spacer1Label:SetText("")
+        containerScroll:AddChild(spacer1Label)
+
+        local advancedLabel = AceGUI:Create("Label");
+        advancedLabel:SetFont(STANDARD_TEXT_FONT, 24, "OUTLINE");
+        advancedLabel:SetColor(NORMAL_FONT_COLOR.r, NORMAL_FONT_COLOR.g, NORMAL_FONT_COLOR.b);
+        advancedLabel:SetText(L["Advanced"]);
+        advancedLabel:SetFullWidth(true);
+        containerScroll:AddChild(advancedLabel);
       end
 
       for regionType, regionData in pairs(regionOptions) do
-        local button = AceGUI:Create("WeakAurasNewButton");
-        button:SetTitle(regionData.displayName);
-        if(type(regionData.icon) == "string") then
-          button:SetIcon(regionData.icon);
-        elseif(type(regionData.icon) == "function") then
-          button:SetIcon(regionData.icon());
-        end
-        button:SetDescription(regionData.description);
-        button:SetClick(function()
-          local new_id = "New";
-          local num = 2;
-          while(db.displays[new_id]) do
-            new_id = "New "..num;
-            num = num + 1;
+        if (not (fromGroup and (regionType == "group" or regionType == "dynamicgroup"))) then
+          local button = AceGUI:Create("WeakAurasNewButton");
+          button:SetTitle(regionData.displayName);
+          if(type(regionData.icon) == "string") then
+            button:SetIcon(regionData.icon);
+          elseif(type(regionData.icon) == "function") then
+            button:SetIcon(regionData.icon());
           end
-
-          local data = {
-            id = new_id,
-            regionType = regionType,
-            activeTriggerMode = WeakAuras.trigger_modes.first_active,
-            disjunctive = "all",
-            trigger = {
-              type = "aura",
-              unit = "player",
-              debuffType = "HELPFUL"
-            },
-            load = {}
-          };
-          WeakAuras.Add(data);
-          WeakAuras.NewDisplayButton(data);
-          WeakAuras.PickAndEditDisplay(new_id);
-        end);
-        containerScroll:AddChild(button);
+          button:SetDescription(regionData.description);
+          button:SetClick(function()
+            WeakAuras.NewAura(nil, regionType, targetId);
+          end);
+          containerScroll:AddChild(button);
+        end
       end
+
+      local spacer2Label = AceGUI:Create("Label");
+      spacer2Label:SetText("");
+      containerScroll:AddChild(spacer2Label);
+
+      local externalLabel = AceGUI:Create("Label");
+      externalLabel:SetFont(STANDARD_TEXT_FONT, 24, "OUTLINE");
+      externalLabel:SetColor(NORMAL_FONT_COLOR.r, NORMAL_FONT_COLOR.g, NORMAL_FONT_COLOR.b);
+      externalLabel:SetText(L["External"]);
+      externalLabel:SetFullWidth(true);
+      containerScroll:AddChild(externalLabel);
+
+      local spacer3Label = AceGUI:Create("Label");
+      spacer3Label:SetText("");
+      containerScroll:AddChild(spacer3Label);
+
       local importButton = AceGUI:Create("WeakAurasNewButton");
       importButton:SetTitle(L["Import"]);
 
@@ -770,7 +814,7 @@ function WeakAuras.CreateFrame()
     end
   end
 
-  frame.PickDisplay = function(self, id)
+  frame.PickDisplay = function(self, id, tab) -- TODO: remove tab parametter once legacy aura trigger is removed
     self:ClearPicks();
     local data = WeakAuras.GetData(id);
 
@@ -779,7 +823,7 @@ function WeakAuras.CreateFrame()
       self.pickedDisplay = id;
       local data = db.displays[id];
       WeakAuras.ReloadTriggerOptions(data);
-      self:FillOptions(displayOptions[id]);
+      self:FillOptions(displayOptions[id], tab); -- TODO: remove tab parametter once legacy aura trigger is removed
       WeakAuras.regions[id].region:Collapse();
       WeakAuras.regions[id].region:Expand();
       self.moversizer:SetToRegion(WeakAuras.regions[id].region, db.displays[id]);
@@ -815,6 +859,11 @@ function WeakAuras.CreateFrame()
     else
       WeakAuras.PauseAllDynamicGroups();
       finishPicking();
+      if (data.controlledChildren and #data.controlledChildren == 0) then
+        WeakAurasOptions.pickedDisplay = data.id;
+        WeakAurasOptions:PickOption("New", true);
+        WeakAurasOptions.pickedDisplay = data.id;
+      end
     end
   end
 
@@ -859,6 +908,26 @@ function WeakAuras.CreateFrame()
     end
   end
 
+  frame.PickDisplayBatch = function(self, batchSelection)
+    for index, id in ipairs(batchSelection) do
+      local alreadySelected = false;
+      for _, v in pairs(tempGroup.controlledChildren) do
+        if(v == id) then
+          alreadySelected = true;
+          break;
+        end
+      end
+      if(not alreadySelected) then
+        WeakAuras.EnsureOptions(id);
+        displayButtons[id]:Pick();
+        tinsert(tempGroup.controlledChildren, id);
+      end
+    end
+    WeakAuras.ReloadTriggerOptions(tempGroup);
+    self:FillOptions(displayOptions[tempGroup.id]);
+    self.pickedDisplay = tempGroup;
+  end
+
   frame.RefreshPick = function(self)
     if(type(self.pickedDisplay) == "string") then
       WeakAuras.EnsureOptions(self.pickedDisplay);
@@ -866,6 +935,14 @@ function WeakAuras.CreateFrame()
     else
       WeakAuras.EnsureOptions(tempGroup.id);
       self:FillOptions(displayOptions[tempGroup.id]);
+    end
+  end
+
+  frame.RefillOptions = function(self)
+    if(type(self.pickedDisplay) == "string") then
+      self:FillOptions(displayOptions[frame.pickedDisplay]);
+    else
+      self:FillOptions(displayOptions[frame.pickedDisplay.id]);
     end
   end
 

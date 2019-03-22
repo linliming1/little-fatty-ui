@@ -192,7 +192,7 @@ local aceoptions = {
 						barRightClick = {
 							type = 'select',
 							values = {NONE=L["none"],OPTIONS=L["ChocolateBar Options"],
-										BLIZZ=L["Blizzard Options"], ["163UI"]="有爱控制台", },
+										BLIZZ=L["Blizzard Options"], ["163UI"]="爱不易控制台", },
 							order = 8,
 							name = L["Bar Right Click"],
 							desc = L["Select the action when right clicking on a bar."],
@@ -1348,19 +1348,8 @@ function ChocolateBar:OpenOptions(chocolateBars, data, input, pluginName, module
 
 	local AceCfgDlg = LibStub("AceConfigDialog-3.0")
 
-  ChocolateBar:UpdateOptions(chocolateBars)
-
 	if pluginName then
 		AceCfgDlg:SelectGroup("ChocolateBar", "chocolates",pluginName)
-	end
-
-	for name, obj in broker:DataObjectIterator() do
-		ChocolateBar:AddObjectOptions(name, obj)
-	end
-
-	for name, module in pairs(modules) do
-		self:AddModuleOptions(name ,module.options)
-		if module.OnOpenOptions then module:OnOpenOptions() end
 	end
 
 	if blizzard then

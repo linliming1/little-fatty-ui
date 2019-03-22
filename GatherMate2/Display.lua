@@ -49,6 +49,18 @@ local have_prof_skill = {}
 local active_tracking = {}
 local tracking_spells = {}
 
+local continentZoneList = {
+	[12]  = true, -- Kalimdor
+	[13]  = true, -- Azeroth
+	[101] = true, -- Outlands
+	[113] = true, -- Northrend
+	[424] = true, -- Pandaria
+	[572] = true, -- Draenor
+	[619] = true, -- Broken Isles
+	[875] = true, -- Zandalar
+	[876] = true, -- Kul Tiras
+}
+
 --[[
 	recycle a pin
 ]]
@@ -86,20 +98,18 @@ end
 local tooltip_template = "|c%02x%02x%02x%02x%s|r"
 local function showPin(self)
 	if (self.title) then
-		local tooltip, pinset
+		local pinset
 		if self.worldmap then
-			tooltip = WorldMapTooltip
 			pinset = worldmapPins
 		else
-			tooltip = GameTooltip
 			pinset = minimapPins
 		end
 		local x, y = self:GetCenter()
 		local parentX, parentY = UIParent:GetCenter()
 		if ( x > parentX ) then
-			tooltip:SetOwner(self, "ANCHOR_LEFT")
+			GameTooltip:SetOwner(self, "ANCHOR_LEFT")
 		else
-			tooltip:SetOwner(self, "ANCHOR_RIGHT")
+			GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
 		end
 
 		local t = db.trackColors
@@ -109,19 +119,15 @@ local function showPin(self)
 				text = text .. "\n" .. format(tooltip_template, t[pin.nodeType].Alpha*255, t[pin.nodeType].Red*255, t[pin.nodeType].Green*255, t[pin.nodeType].Blue*255, pin.title)
 			end
 		end
-		tooltip:SetText(text)
-		tooltip:Show()
+		GameTooltip:SetText(text)
+		GameTooltip:Show()
 	end
 end
 --[[
 	Pin OnLeave
 ]]
 local function hidePin(self)
-	if self.worldmap then
-		WorldMapTooltip:Hide()
-	else
-		GameTooltip:Hide()
-	end
+	GameTooltip:Hide()
 end
 --[[
 	Pin click handler
@@ -327,39 +333,21 @@ local digSites = {}
 
 function Display:DigsitesChanged()
 	table.wipe(digSites)
-	-- TODO: digsites
-	--[[local continents = {GetMapContinents()}
-	for continent = 1, #continents / 2 do
-		SetMapZoom(continent)
-		local totalPOIs = GetNumMapLandmarks()
-		for index = 1,totalPOIs do
-			local landmarkType, name, description, textureIndex, px, py
-			if C_WorldMap and C_WorldMap.GetMapLandmarkInfo then
-				landmarkType, name, description, textureIndex, px, py = C_WorldMap.GetMapLandmarkInfo(index)
-			else
-				landmarkType, name, description, textureIndex, px, py = GetMapLandmarkInfo(index)
-			end
-			if textureIndex == 177 then
-				local zoneName, mapFile, texPctX, texPctY, texX, texY, scrollX, scrollY = UpdateMapHighlight(px, py)
-				if mapFile then
-					digSites[mapFile] = true
-					-- Hack for STV
-					if (mapFile == "StranglethornVale") then
-						digSites["StranglethornJungle"] = true
-						digSites["TheCapeOfStranglethorn"] = true
-					end
-				end
+	for continent in pairs(continentZoneList) do
+		local digSites = C_ResearchInfo.GetDigSitesForMap(continent)
+		for i, digSiteInfo in ipairs(digSites) do
+			local positionMapInfo = C_Map.GetMapInfoAtPosition(continent, digSiteInfo.position.x, digSiteInfo.position.y)
+			if positionMapInfo and positionMapInfo.mapID ~= continent then
+				digSites[positionMapInfo.mapID] = true
 			end
 		end
-	end]]
+	end
 	self:UpdateMaps()
 end
 
 local function IsActiveDigSite()
 	local showDig = _G.GetCVarBool("digSites")
-	-- TODO: digsites
-	--return digSites[(GetMapInfo())] and showDig
-	return false
+	return digSites[zone] and showDig
 end
 
 function Display:UpdateVisibility()
@@ -441,6 +429,8 @@ function Display:getMapPin()
 	texture:SetAllPoints(pin)
 	texture:SetTexture(trackingCircle)
 	texture:SetTexCoord(0, 1, 0, 1)
+	texture:SetTexelSnappingBias(0)
+	texture:SetSnapToPixelGrid(false)
 	pin:RegisterForClicks("LeftButtonUp", "RightButtonUp");
 	pin:SetScript("OnEnter", showPin)
 	pin:SetScript("OnLeave", hidePin)

@@ -151,13 +151,13 @@ function rematch:Start()
 
 	-- check for the existence of an object that's in a new file and shut down rematch if it's not accessible.
 	-- this is caused by new files added and user updates the addon while logged in to the game
-	if rematch:AddonDidntCompletelyLoad(rematch.CreateODTable) then
+	if rematch:AddonDidntCompletelyLoad(rematch.ShowTextureHighlight) then
 		return
 	end
 
 	rematch:InitSavedVars()
 
-	rematch:FindBreedSource()
+	--rematch:FindBreedSource() -- (handled by petInfo now)
 	local locale = GetLocale()
 	if locale=="deDE" or locale=="frFR" then
 		rematch.localeSquish = true -- flag to make some room when locale has longer text
@@ -207,14 +207,36 @@ function rematch:Start()
 	end
 	-- watch for player forfeiting a match (playerForfeit is nil'ed during PET_BATTLE_OPENING_START)
 	hooksecurefunc(C_PetBattles,"ForfeitGame",function() rematch.playerForfeit=true end)
+
+	-- on login, notify mac users of the experimental version if the popup hasn't been shown before
+	if not settings.NotifiedExperimental then
+		settings.NotifiedExperimental = true -- whether on pc or mac, don't bother with this on future logins
+		if IsMacClient() then
+			settings.NotifiedExperimental = true
+			local dialog = rematch:ShowDialog("Experimental", 320, 260, "Rematch", nil, nil, nil, OKAY)
+			dialog:ClearAllPoints()
+			dialog:SetPoint("CENTER",0,64)
+			dialog:ShowText("\124cffffffffAttention MacOS users:\124r\n\nIf the game occasionally crashes when you open Rematch, and you'd like to help troubleshoot, an experimental version of the addon is available at the URL below for testing solutions.\n\nThank you for your patience!", 280, 140, "TOP", 0, -32)
+			dialog.MultiLine:SetSize(280,40)
+			dialog.MultiLine:SetPoint("BOTTOM",0,40)
+			dialog.MultiLine.EditBox:SetText("http://www.wowinterface.com/downloads/info24832-Rematch-Experimental.html")
+			dialog.MultiLine:Show()
+			dialog.MultiLine.EditBox:SetFocus()
+			dialog.MultiLine.EditBox:HighlightText()
+		end
+	end
+
 end
 
 function rematch:InitSavedVars()
 	RematchSaved = RematchSaved or {}
 	RematchSettings = RematchSettings or {}
-    if RematchSettings.AutoLoad == nil then RematchSettings.AutoLoad = true end
-    if RematchSettings.AutoLoadShow == nil then RematchSettings.AutoLoadShow = true end
-    if RematchSettings.ShowOnTarget == nil then RematchSettings.ShowOnTarget = true end
+	if not RematchSettings.ResetAutoLoad then
+        RematchSettings.ResetAutoLoad = true
+        RematchSettings.AutoLoad = nil
+        RematchSettings.AutoLoadShow = nil
+        RematchSettings.ShowOnTarget = nil
+    end
 	settings = RematchSettings
 	saved = RematchSaved
 	-- create settings sub-tables and default values if they don't exist
@@ -241,6 +263,51 @@ function rematch:InitSavedVars()
 		end
 	end
 	settings.SelectedTab = settings.SelectedTab or 1
+
+	rematch:ValidateTeams() -- make sure teams are okay
+end
+
+-- this will go through the RematchSaved savedvar and make sure everything is normal
+function rematch:ValidateTeams()
+	local found = false
+	for key,team in pairs(saved) do
+		-- verify the team is a table
+		if type(team)~="table" then
+			rematch:print(format("Corrupt team found: %s. Unrecoverable, sorry!", key))
+			saved[key] = nil
+			found = true
+		end
+		-- validate npcID is a legitimate number if it's a number
+		if saved[key] and type(key)=="number" and key>(2^32/2-1) then
+			local newKey = tostring(key)
+			local newName = format("%s %s",team.teamName or "NPC", newKey)
+			rematch:print(format("Corrupt team found: its new name is %s",newName))
+			saved[newName] = CopyTable(team)
+			saved[key] = nil
+			found = true
+		end
+		-- validate the team has 3 pet slots
+		if saved[key] then
+			for i=1,3 do
+				if type(team[i])~="table" then
+					rematch:print(format("Corrupt team found: bad pet in team %s", rematch:GetTeamTitle(key)))
+					team[i] = {}
+					found = true
+				end
+			end
+		end
+	end
+	if found then
+		rematch:print("At least one team appears corrupt. Your saved data may be lost. To recover:")
+		rematch:print("- Before exiting the game, make a backup of your World of Warcraft\\WTF folder.")
+		rematch:print("- ALL TEAMS ARE STORED IN WTF. NO TEAMS ARE STORED IN INTERFACE\\ADDONS!")
+		rematch:print("- Exit the game after making a backup. (Any changes while logged in will have no effect.)")
+		rematch:print("- Go to WTF\\Account\\accountname\\SavedVariables")
+		rematch:print("- Rename Rematch.lua to Rematch-old.lua")
+		rematch:print("- If there's a Rematch.lua.bak, make a backup of it and rename it Rematch.lua")
+		rematch:print("- If there is not a Rematch.lua.bak, you will need to restore teams from a prior backup.")
+		rematch:print("- If you have no prior backup, you can try continuing with the current data but it may cause severe problems.")
+	end
 end
 
 function rematch:PLAYER_TARGET_CHANGED()
@@ -256,7 +323,7 @@ function rematch:PLAYER_TARGET_CHANGED()
 			end
 			-- if PromptToLoad enabled, and this team isn't loaded, and target panel not on screen, and we can swap pets, prompt to load
 			if settings.PromptToLoad or settings.AutoLoad then
-				if saved[npcID] and settings.loadedTeam~=npcID and (npcID~=rematch.lastInteractNpcID or settings.PromptAlways) and not (InCombatLockdown() or C_PetBattles.IsInBattle() or C_PetBattles.GetPVPMatchmakingInfo()) then
+				if saved[npcID] and not (InCombatLockdown() or C_PetBattles.IsInBattle() or C_PetBattles.GetPVPMatchmakingInfo()) then
 					if settings.PromptToLoad and (not rematch.LoadoutPanel:IsVisible() and not rematch.MiniPanel:IsVisible()) then
 						if settings.PromptWithMinimized then
 							rematch:AutoShow()
@@ -271,7 +338,7 @@ function rematch:PLAYER_TARGET_CHANGED()
 						if settings.AutoLoadShow and (not rematch.LoadoutPanel:IsVisible() and not rematch.MiniPanel:IsVisible()) then
 							rematch:AutoShow()
 						end
-						rematch:LoadTeam(npcID)
+						rematch:loadSimilarTeam(npcID)
 						rematch:SetLastInteractNpcID(npcID)
 					end
 				end
@@ -304,7 +371,7 @@ function rematch:UPDATE_MOUSEOVER_UNIT()
 				if settings.AutoLoadShow and (not rematch.LoadoutPanel:IsVisible() and not rematch.MiniPanel:IsVisible()) then
 					rematch:AutoShow()
 				end
-				rematch:LoadTeam(npcID) -- then load it
+				rematch:loadSimilarTeam(npcID) -- then load it
 				rematch:SetLastInteractNpcID(npcID)
 			end
 		end
@@ -345,10 +412,8 @@ function rematch:CURSOR_UPDATE()
 		rematch.MiniPanel.Glow:Hide()
 		rematch:UnregisterEvent("CURSOR_UPDATE") -- cursor clear, stop watching cursor changes
 	end
-	if rematch.QueuePanel:IsVisible() then
-		rematch.QueuePanel:UpdateList()
-	elseif rematch.MiniQueue:IsVisible() then
-		rematch.MiniQueue:UpdateList()
+	if rematch.QueuePanel.List:IsVisible() then
+		rematch.QueuePanel.List:Update()
 	end
 end
 
@@ -443,6 +508,12 @@ function rematch:PET_BATTLE_CLOSE()
 		end
 		C_Timer.After(0,rematch.UpdateQueue) -- waiting a frame (client thinks we can't swap pets right now)
 		rematch:UpdateAutoLoadState()
+		
+		C_Timer.After(0.05,function() 
+			if settings.AutoLoad then 
+			rematch:loadSimilarTeam(rematch.recentTarget) 
+			end
+			end)	
 	end
 end
 
@@ -551,7 +622,6 @@ function rematch:PET_BATTLE_FINAL_ROUND(winner)
 			elseif winner==3 then
 				team.draws = (team.draws or 0) + 1 -- draw! :|
 			end
-			rematch:ToastWinRecord(rematch.LoadedTeamPanel,key,winner or 3)
 		end
 	end
 end

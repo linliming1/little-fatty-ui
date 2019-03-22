@@ -399,6 +399,11 @@ do
 				self:GetParent().sliderFunc(self,val)
 			end
 		end
+		local function OnSliderShow(self)
+			if self:GetParent().sliderShow then
+				self:GetParent().sliderShow(self)
+			end
+		end
 		local function SliderOnMouseWheel(self,delta)
 			self:SetValue(self:GetValue()+delta)
 		end
@@ -467,6 +472,7 @@ do
 			
 			self.slider:SetScript("OnValueChanged",OnSliderChanged)
 			self.slider:SetScript("OnMouseWheel", SliderOnMouseWheel)
+			self.slider:SetScript("OnShow",OnSliderShow)
 			
 			return self
 		end
@@ -726,12 +732,15 @@ do
 							button:SetEnabled(true)
 						end
 						
+						text:SetWordWrap(false)
+						
 						if data.slider then	-- {func = onChangedFunc, val = currVal, min = currMin, max = currMax}
 							button.slider:SetMinMaxValues(data.slider.min,data.slider.max)
 							button.sliderAfterText = data.slider.afterText
 							button.sliderFunc = nil
 							button.slider:SetValue(data.slider.val)
 							button.sliderFunc = data.slider.func
+							button.sliderShow = data.slider.show
 							button.slider:Show()
 						else
 							button.sliderFunc = nil

@@ -6,15 +6,15 @@ local addedOrder = {} --添加好友的顺序，提示找不到时去掉
 local login = nil
 local whisp = "BadBoy_Levels: You need to be level %d to whisper me."
 local err = "You have reached the maximum amount of friends, remove 2 for this addon to function properly!"
-local whisp100 = "有爱: 刚100级的角色无法密语我，请通过其他方式联系。"
+local whisp100 = "爱不易: 刚100级的角色无法密语我，请通过其他方式联系。"
 
 do
 	local L = GetLocale()
 	if L == "zhTW" then
-		whisp = "有爱: 你起碼要達到 %d 級才能密我。"
+		whisp = "愛不易: 你起碼要達到 %d 級才能密我。"
 		err = "你的好友列表滿了，按等级过滤需要你騰出2個好友空位!"
 	elseif L == "zhCN" then
-		whisp = "有爱: 你起码要达到 %d 级才能和我讲话。"
+		whisp = "爱不易: 你起码要达到 %d 级才能和我讲话。"
 		err = "你的好友列表已满，按等级过滤需要你腾出2个好友空位！"
 	end
 end
@@ -143,7 +143,7 @@ badboy:SetScript("OnEvent", function(_, evt, msg)
 						print("|cFF33FF99BadBoy_Levels|r: Level wasn't a number, tell BadBoy author! It was:", level)
 						error("|cFF33FF99BadBoy_Levels|r: Level wasn't a number, tell BadBoy author! It was: ".. tostring(level))
 					end
-					if level < filterTable[player] or (U1GetCfgValue("ChatFilter", "FilterByLevel/just100") and level == 100) then
+					if level < filterTable[player] or (U1GetCfgValue("ChatFilter", "FilterByLevel/just100") and (level == 100 or level == 110)) then
 						--lower than level 2, or a level defined by the user = bad,
 						--or lower than 58 and class is a Death Knight,
 						--so whisper the bad player what level they must be to whisper us
@@ -249,7 +249,7 @@ ChatFrame_AddMessageEventFilter("CHAT_MSG_WHISPER", function(...)
 		filterTable[trimmedPlayer] = level
         addedOrder[#addedOrder + 1] = trimmedPlayer
         CoreScheduleBucket("BadBoy_Levels_RemoveFriend", 2, clearAddedOrder)
-		AddFriend(trimmedPlayer, true) --add player to friends, the 2nd arg "true" is a fake arg added by request of tekkub, author of FriendsWithBenefits
+        C_FriendList.AddFriend(trimmedPlayer) --add player to friends, the 2nd arg "true" is a fake arg added by request of tekkub, author of FriendsWithBenefits
 	end
 	return true --filter everything not good (maybe) and not GM
 end)
@@ -259,7 +259,7 @@ ChatFrame_AddMessageEventFilter("CHAT_MSG_WHISPER_INFORM", function(_,_,msg,play
 	local trimmedPlayer = Ambiguate(player, "none")
 	if good[trimmedPlayer] then return end --Do nothing if on safe list
 	if filterTable[trimmedPlayer] and msg:find("^BadBoy.*"..filterTable[trimmedPlayer]) then return true end --Filter auto-response
-    if filterTable[trimmedPlayer] and msg:find("^有爱.*"..filterTable[trimmedPlayer]) then return true end --Filter auto-response
+    if filterTable[trimmedPlayer] and msg:find("^爱不易.*"..filterTable[trimmedPlayer]) then return true end --Filter auto-response
     if filterTable[trimmedPlayer] and msg:find(whisp100) then return true end --Filter auto-response
 	good[trimmedPlayer] = true --If we want to whisper someone, they're good
 end)

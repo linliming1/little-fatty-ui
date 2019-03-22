@@ -1,5 +1,8 @@
 EnableAddOn("!!!Libs") LoadAddOn("!!!Libs") --不能在CoreLibs之前，不能在163UIUI之后。之后根据有没有软件用库来决定是否加载
 
+--TODO aby8
+GuildControlUIRankSettingsFrameRosterLabel = GuildControlUIRankSettingsFrameRosterLabel or CreateFrame("Frame")
+
 function U1RemovedAddOn(...)
     local removed = {}
     for i=1, select('#', ...) do
@@ -53,7 +56,7 @@ if QueueStatusMinimapButton then
     QueueStatusMinimapButton:SetFrameStrata("HIGH")
 end
 
---按ESC时, AceConfigDialog先关闭, 并阻止界面窗口和有爱关闭
+--按ESC时, AceConfigDialog先关闭, 并阻止界面窗口和爱不易关闭
 hooksecurefunc("StaticPopup_EscapePressed", function()
     if LibStub("AceConfigDialog-3.0"):CloseAll() then
         GameMenuFrame:Show()
@@ -284,6 +287,7 @@ function U1FakeAchi(id,d,m,y)
     if not d then d,m,y = 4,1,17 end
 	local link = format("\124cffffff00\124Hachievement:%d:%s:1:%d:%d:%d:4294967295:4294967295:4294967295:4294967295\124h[%s]\124h\124r", id, UnitGUID("player"), d, m, y, select(2, GetAchievementInfo(id)))
 	print((link))
+    return link
 end
 
 --[[7.2 ChallengesUI
@@ -431,6 +435,12 @@ CoreDependCall("Blizzard_ArtifactUI", function()
     		self.currentAnimatedValue = self.targetAnimatedValue;
     		self.targetAnimatedValue = nil;
     	end
+    end
+end)
+
+hooksecurefunc("ChatFrame_OpenChat", function(text, ...)
+    if text == "/INSTANCE_CHAT" then
+        ChatFrame_OpenChat("/INSTANCE", ...)
     end
 end)
 

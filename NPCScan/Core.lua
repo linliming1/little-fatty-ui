@@ -20,7 +20,6 @@ local LibStub = _G.LibStub
 local AceConfigDialog = LibStub("AceConfigDialog-3.0")
 local HereBeDragons = LibStub("HereBeDragons-2.0")
 local NPCScan = LibStub("AceAddon-3.0"):NewAddon(AddOnFolderName, "AceConsole-3.0", "AceEvent-3.0", "AceTimer-3.0", "AceBucket-3.0", "LibSink-2.0", "LibToast-1.0")
-local VL = LibStub("AceLocale-3.0"):GetLocale(AddOnFolderName .. "Vignette")
 
 -- ----------------------------------------------------------------------------
 -- Debugger.
@@ -57,14 +56,8 @@ end
 local NPCIDFromName = {}
 private.NPCIDFromName = NPCIDFromName
 
-local QuestNPCs = {}
-private.QuestNPCs = QuestNPCs
-
 local QuestIDFromName = {}
 private.QuestIDFromName = QuestIDFromName
-
-local VignetteNPCs = {}
-private.VignetteNPCs = VignetteNPCs
 
 -- ----------------------------------------------------------------------------
 -- AddOn Methods.
@@ -145,151 +138,74 @@ function NPCScan:OnEnable()
 	-- ----------------------------------------------------------------------------
 	for mapID, map in pairs(Data.Maps) do
 		for npcID in pairs(map.NPCs) do
-			local npc = Data.NPCs[npcID]
-
-			if not npc then
-				npc = {}
-				Data.NPCs[npcID] = npc
-			end
+			local npc = private.InitializeNPC(npcID)
 
 			map.NPCs[npcID] = npc
 
 			npc.mapIDs = npc.mapIDs or {}
 			npc.mapIDs[#npc.mapIDs + 1] = mapID
-			npc.npcID = npcID
 
-			-- This sets values for NPCIDFromName, which is used for vignette detection.
-			self:GetNPCNameFromID(npcID)
+			table.sort(npc.mapIDs, private.SortByMapNameThenByID)
 		end
 	end
 
-	for npcID, npc in pairs(Data.NPCs) do
-		table.sort(npc.mapIDs, private.SortByMapNameThenByID)
+	private.InitializeAchievements()
 
-		if npc.questID then
-			local npcIDs = QuestNPCs[npc.questID]
-			if not npcIDs then
-				npcIDs = {}
-				QuestNPCs[npc.questID] = npcIDs
-			end
+	local hasChecked = {}
 
-			npcIDs[npcID] = true
-
-			local questName = NPCScan:GetQuestNameFromID(npc.questID)
-			if questName and questName ~= _G.UNKNOWN then
-				QuestIDFromName[questName] = npc.questID
-			end
-		end
-
-		if npc.vignetteName then
-			local vignetteName = VL[npc.vignetteName]
-
-			local npcIDs = VignetteNPCs[vignetteName]
-			if not npcIDs then
-				npcIDs = {}
-				VignetteNPCs[vignetteName] = npcIDs
-			end
-
-			npcIDs[npcID] = true
-		end
-	end
-
-	-- ----------------------------------------------------------------------------
-	-- Assign Achievement ID to appropriate NPCData entry.
-	-- ----------------------------------------------------------------------------
-	local CriteriaType = {
-		NPCKill = 0,
-		Quest = 27,
-		Spell = 28
+	local questMapIDs = {
+		[Enum.MapID.Argus] = true,
+		[Enum.MapID.BrokenIsles] = true,
+		[Enum.MapID.KulTiras] = true,
+		[Enum.MapID.Zandalar] = true,
 	}
 
-	local missingNPCs = {}
-	local achievementLabel = {}
-
-	for label, ID in pairs(Enum.AchievementID) do
-		achievementLabel[ID] = label
-	end
-
-	for achievementID, achievement in pairs(Data.Achievements) do
-		local _, _, _, isAchievementCompleted = _G.GetAchievementInfo(achievementID)
-
-		achievement.ID = achievementID
-		achievement.isCompleted = isAchievementCompleted
-
-		table.wipe(missingNPCs)
-
-		for criteriaIndex = 1, _G.GetAchievementNumCriteria(achievementID) do
-			local assetName, criteriaType, isCriteriaCompleted, _, _, _, _, assetID, _, criteriaID = _G.GetAchievementCriteriaInfo(achievementID, criteriaIndex)
-
-			if criteriaType == CriteriaType.NPCKill then
-				if assetID > 0 then
-					local found
-
-					for _, mapData in pairs(Data.Maps) do
-						if mapData.NPCs[assetID] then
-							found = true
-							break
-						end
-					end
-
-					if found then
-						local npc = Data.NPCs[assetID]
-						npc.achievementID = achievementID
-						npc.achievementCriteriaID = criteriaID
-						npc.isCriteriaCompleted = isCriteriaCompleted
-
-						achievement.criteriaNPCs[assetID] = true
-					else
-						missingNPCs[#missingNPCs + 1] = ("\n [%s] = true, -- %s"):format(assetID, assetName)
-					end
-				end
-			elseif criteriaType == CriteriaType.Quest then
-				if QuestNPCs[assetID] then
-					for npcID in pairs(QuestNPCs[assetID]) do
-						local npc = Data.NPCs[npcID]
-						npc.achievementID = achievementID
-						npc.achievementCriteriaID = criteriaID
-						npc.isCriteriaCompleted = isCriteriaCompleted
-
-						achievement.criteriaNPCs[npcID] = true
-					end
-				else
-					private.Debug("***** AchievementID.%s: Quest %s with assetID %d", achievementLabel[achievementID], assetName, assetID)
-				end
-			else
-				private.Debug("***** AchievementID.%s: Unknown criteria type %d, assetID %d", achievementLabel[achievementID], criteriaType, assetID)
-			end
-		end
-
-		if #missingNPCs > 0 then
-			private.Debug("***** AchievementID.%s: Missing NPC entry.", achievementLabel[achievementID])
-
-			for index = 1, #missingNPCs do
-				private.Debug(missingNPCs[index])
-			end
-
-			private.Debug("*****")
-		end
-	end
+	local vignetteMapIDs = {
+		[Enum.MapID.Argus] = true,
+		[Enum.MapID.BrokenIsles] = true,
+		[Enum.MapID.Draenor] = true,
+		[Enum.MapID.KulTiras] = true,
+		[Enum.MapID.Pandaria] = true,
+		[Enum.MapID.Zandalar] = true,
+	}
 
 	for mapID, map in pairs(Data.Maps) do
+		local continent = _G.MapUtil.GetMapParentInfo(mapID, _G.Enum.UIMapType.Continent, true)
+
+		local missingData = {}
 		local mapHeaderPrinted
 
 		for npcID in pairs(map.NPCs) do
-			if mapID >= 1015 then
-				local npc = map.NPCs[npcID]
+			local npc = map.NPCs[npcID]
 
-				if not npc.questID and not npc.achievementID then
-					if not mapHeaderPrinted then
-						mapHeaderPrinted = true
-						private.Debug("-- ----------------------------------------------------------------------------")
-						private.Debug("-- %s (%d)", HereBeDragons:GetLocalizedMap(mapID), mapID)
-						private.Debug("-- ----------------------------------------------------------------------------")
-					end
+			if not hasChecked[npcID] then
+				local questID = npc.questID or npc.achievementQuestID
 
-					private.Debug("NPC %d (%s) has no questID.", npcID, self:GetNPCNameFromID(npcID))
+				if not questID and (not continent or questMapIDs[continent.mapID]) then
+					missingData[npcID] = "questID"
 				end
+
+				if not npc.vignetteID and (not continent or vignetteMapIDs[continent.mapID]) then
+					if missingData[npcID] then
+						missingData[npcID] = ("%s, vignetteID"):format(missingData[npcID])
+					else
+						missingData[npcID] = "vignetteID"
+					end
+				end
+
+				hasChecked[npcID] = true
 			end
+		end
+
+		for npcID, missingText in pairs(missingData) do
+			if not mapHeaderPrinted then
+				mapHeaderPrinted = true
+				private.Debug("-- ----------------------------------------------------------------------------")
+				private.Debug("-- %s (%d)", HereBeDragons:GetLocalizedMap(mapID) or _G.UNKNOWN, mapID)
+				private.Debug("-- ----------------------------------------------------------------------------")
+			end
+
+			private.Debug("NPC %d (%s) is missing: %s.", npcID, self:GetNPCNameFromID(npcID), missingText)
 		end
 	end
 

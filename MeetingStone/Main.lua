@@ -8,8 +8,13 @@ Addon = LibStub('AceAddon-3.0'):NewAddon('MeetingStone', 'AceEvent-3.0', 'LibMod
 GUI = LibStub('NetEaseGUI-2.0')
 
 function Addon:OnInitialize()
-    self:RawHook('LFGListUtil_OpenBestWindow', 'Toggle', true)
-    self:RawHook('SetItemRef', true)
+    --[[ aby8
+    self:SecureHook('LFGListUtil_OpenBestWindow', function()
+        HideUIPanel(PVEFrame)
+        self:Toggle()
+    end)
+    --]]
+    -- self:RawHook('SetItemRef', true)
 
     self:RegisterMessage('MEETINGSTONE_NEW_VERSION')
     self:RegisterMessage('MEETINGSTONE_FILTER_DATA_UPDATED')
@@ -77,7 +82,7 @@ function Addon:Toggle()
                 MainPanel:SelectPanel(ActivitiesParent)
             elseif App:HasNewFollower() then
                 MainPanel:SelectPanel(AppParent)
-            elseif C_LFGList.GetActiveEntryInfo() then
+            elseif C_LFGList.HasActiveEntryInfo() then
                 MainPanel:SelectPanel(ManagerPanel)
             end
             Addon:ShowModule('MainPanel')
@@ -112,21 +117,21 @@ function Addon:GetFilterData()
     return self.filterPinyin, self.filterNormal
 end
 
-function Addon:SetItemRef(link, text, button, chatFrame)
-    local type, panel = strsplit(':', link)
-    if type == 'meetingstonepanel' then
-        panel = self:GetModule(panel, true)
-        if panel and MainPanel:GetPanelIndex(panel) then
-            Addon:ToggleModule('MainPanel')
-            MainPanel:SelectPanel(panel)
-        end
-        return
-    elseif type == 'meetingstonedialog' then
-        panel = _ENV[panel]
-        if panel then
-            ToggleFrame(panel)
-        end
-        return
-    end
-    return self.hooks.SetItemRef(link, text, button, chatFrame)
-end
+-- function Addon:SetItemRef(link, text, button, chatFrame)
+--     local type, panel = strsplit(':', link)
+--     if type == 'meetingstonepanel' then
+--         panel = self:GetModule(panel, true)
+--         if panel and MainPanel:GetPanelIndex(panel) then
+--             Addon:ToggleModule('MainPanel')
+--             MainPanel:SelectPanel(panel)
+--         end
+--         return
+--     elseif type == 'meetingstonedialog' then
+--         panel = _ENV[panel]
+--         if panel then
+--             ToggleFrame(panel)
+--         end
+--         return
+--     end
+--     return self.hooks.SetItemRef(link, text, button, chatFrame)
+-- end

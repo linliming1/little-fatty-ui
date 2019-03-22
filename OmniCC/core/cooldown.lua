@@ -1,121 +1,183 @@
---[[
-	cooldown.lua
-		Manages the cooldowns need for timers
---]]
+-- hooks for watching cooldown events
+local Addon = _G[...]
 
-local Cooldown = OmniCC:New('Cooldown')
+local GCD_SPELL_ID = 61304
+local COOLDOWN_TYPE_LOSS_OF_CONTROL = _G.COOLDOWN_TYPE_LOSS_OF_CONTROL
+local GetSpellCooldown = _G.GetSpellCooldown
+local GetTime = _G.GetTime
+local cooldowns = {}
 
+local function cooldown_CanShow(cooldown)
+    local start, duration = cooldown._occ_start, cooldown._occ_duration
 
---[[ Control ]]--
+    -- no active cooldown
+    if start <= 0 or duration <= 0 then
+        return false
+    end
 
-function Cooldown:Start(...)
-	if self:IsForbidden() then return end
-	
-	--163ui fix double timer
-	if(self.parent and self.parent.action and self.parent.chargeCooldown == self) then
-		local charges, maxCharges = GetActionCharges(self.parent.action)
-		if(charges == 0) then
-			Cooldown.Stop(self)
-			return
-		end
-	end
+    -- over min duration
+    local sets = cooldown._occ_settings
+    if not (sets and sets.enabled and duration > (sets.minDuration or 0)) then
+        return false
+    end
 
-	Cooldown.UpdateAlpha(self)
+    local t = GetTime()
 
-	if Cooldown.CanShow(self, ...) then
-		Cooldown.Setup(self)
-		self.omnicc:Start(...)
-	else
-		Cooldown.Stop(self)
-	end
+    -- expired cooldowns
+    if (start + duration) <= t then
+        return false
+    end
+
+    -- future cooldowns that don't start for at least a day
+    -- these are probably buggy ones
+    if (start - t) > 86400 then
+        return false
+    end
+
+    -- filter GCD
+    local gcdStart, gcdDuration = GetSpellCooldown(GCD_SPELL_ID)
+    if start == gcdStart and duration == gcdDuration then
+        return false
+    end
+
+    return true
 end
 
-function Cooldown:Setup()
-	if not self.omnicc then
-		self:HookScript('OnShow', Cooldown.OnShow)
-		self:HookScript('OnHide', Cooldown.OnHide)
-		self:HookScript('OnSizeChanged', Cooldown.OnSizeChanged)
-		self.omnicc = OmniCC.Timer:New(self)
-	end
+local function cooldown_GetKind(cooldown)
+    if cooldown.currentCooldownType == COOLDOWN_TYPE_LOSS_OF_CONTROL then
+        return "loc"
+    end
 
-	OmniCC:SetupEffect(self)
+    local parent = cooldown:GetParent()
+    if parent and parent.chargeCooldown == cooldown then
+        return "charge"
+    end
+
+    return "default"
 end
 
-function Cooldown:Stop()
-	local timer = self.omnicc
-	if timer and timer.enabled then
-		timer:Stop()
-	end
+local function cooldown_GetPriority(cooldown)
+    if cooldown._occ_kind ==  "charge" then
+        return 2
+    end
+
+    return 1
 end
 
-function Cooldown:CanShow(start, duration)
-	if not self.noCooldownCount and duration and start and start > 0 then
-		local sets = OmniCC:GetGroupSettingsFor(self)
-		if duration >= sets.minDuration and sets.enabled then
-			local globalstart, globalduration = GetSpellCooldown(61304)
-			return start ~= globalstart or duration ~= globalduration
-		 end
-	end
+local function cooldown_ShowText(cooldown)
+    local newDisplay = Addon.Display:GetOrCreate(cooldown:GetParent() or cooldown)
+    local oldDisplay = cooldown._occ_display
+
+    if oldDisplay and oldDisplay ~= newDisplay then
+        oldDisplay:RemoveCooldown(cooldown)
+    end
+
+    if newDisplay then
+        newDisplay:AddCooldown(cooldown)
+    end
+
+    cooldown._occ_display = newDisplay
 end
 
+local function cooldown_HideText(cooldown)
+    local display = cooldown._occ_display
 
---[[ Frame Events ]]--
+    if display then
+        display:RemoveCooldown(cooldown)
 
-function Cooldown:OnShow()
-	local timer = self.omnicc
-	if timer and timer.enabled then
-		if timer:GetRemain() > 0 then
-			timer.visible = true
-			timer:UpdateShown()
-		else
-			timer:Stop()
-		end
-	end
+        cooldown._occ_display  = nil
+    end
 end
 
-function Cooldown:OnHide()
-	local timer = self.omnicc
-	if timer and timer.enabled then
-		timer.visible = nil
-		timer:Hide()
-	end
+local function cooldown_UpdateText(cooldown)
+    if cooldown._occ_show and cooldown:IsVisible() then
+        cooldown_ShowText(cooldown)
+    else
+        cooldown_HideText(cooldown)
+    end
 end
 
-function Cooldown:OnSizeChanged(width, ...)
-	if self.omniWidth ~= width then
-		self.omniWidth = width
+local function cooldown_SetTimer(cooldown, start, duration)
+    if cooldown._occ_start == start and cooldown._occ_duration == duration then
+        return
+    end
 
-		local timer = self.omnicc
-		if timer then
-			timer:UpdateFontSize(width, ...)
-		end
-	end
+    cooldown._occ_start = start
+    cooldown._occ_duration = duration
+    cooldown._occ_kind = cooldown_GetKind(cooldown)
+    cooldown._occ_show = cooldown_CanShow(cooldown)
+    cooldown._occ_priority = cooldown_GetPriority(cooldown)
+
+    cooldown_UpdateText(cooldown)
 end
 
-function Cooldown:OnColorSet(...)
-	if self:IsForbidden() then return end
+local function cooldown_OnVisibilityUpdated(cooldown)
+    if cooldown.noCooldownCount or cooldown:IsForbidden() then return end
 
-	if not self.omniTask then
-		self.omniR, self.omniG, self.omniB, self.omniA = ...
-		Cooldown.UpdateAlpha(self)
-	end
+    cooldown_UpdateText(cooldown)
 end
 
+local function cooldown_Initialize(cooldown)
+    if cooldowns[cooldown] then return end
 
---[[ Misc ]]--
+    cooldowns[cooldown] = true
+    cooldown._occ_start = 0
+    cooldown._occ_duration = 0
+    cooldown._occ_settings = Addon:GetCooldownSettings(cooldown)
 
-function Cooldown:UpdateAlpha()
-	local alpha = OmniCC:GetGroupSettingsFor(self).spiralOpacity * (self.omniA or 1)
-
-	self.omniTask = true
-	OmniCC.Meta.SetSwipeColor(self, self.omniR or 0, self.omniG or 0, self.omniB or 0, alpha)
-	self.omniTask = nil
+    cooldown:HookScript("OnShow", cooldown_OnVisibilityUpdated)
+    cooldown:HookScript("OnHide", cooldown_OnVisibilityUpdated)
 end
 
-function Cooldown:ForAll(func, ...)
-	func = self[func]
+local function cooldown_OnSetCooldown(cooldown, start, duration)
+    if cooldown.noCooldownCount or cooldown:IsForbidden() then return end
 
-	for cooldown in pairs(OmniCC.Cache) do
-		func(cooldown, ...)
-	end
+    start = start or 0
+    duration = duration or 0
+
+    cooldown_Initialize(cooldown)
+    cooldown_SetTimer(cooldown, start, duration)
+end
+
+local function cooldown_OnSetCooldownDuration(cooldown)
+    if cooldown.noCooldownCount or cooldown:IsForbidden() then return end
+
+    local start, duration = cooldown:GetCooldownTimes()
+
+    start = (start or 0) / 1000
+    duration = (duration or 0) / 1000
+
+    cooldown_Initialize(cooldown)
+    cooldown_SetTimer(cooldown, start, duration)
+end
+
+local function cooldown_OnSetDisplayAsPercentage(cooldown)
+    if cooldown.noCooldownCount or cooldown:IsForbidden() then return end
+
+    cooldown.noCooldownCount = true
+
+    cooldown_HideText(cooldown)
+end
+
+-- exports
+function Addon:WatchCooldowns()
+    local Cooldown_MT = getmetatable(_G.ActionButton1Cooldown).__index
+
+    hooksecurefunc(Cooldown_MT, "SetCooldown", cooldown_OnSetCooldown)
+    hooksecurefunc(Cooldown_MT, "SetCooldownDuration", cooldown_OnSetCooldownDuration)
+    hooksecurefunc("CooldownFrame_SetDisplayAsPercentage", cooldown_OnSetDisplayAsPercentage)
+end
+
+function Addon:UpdateCooldownSettings()
+    for cooldown in pairs(cooldowns) do
+        local newSettings = self:GetCooldownSettings(cooldown)
+
+        if cooldown._occ_settings ~= newSettings then
+            cooldown._occ_settings = newSettings
+            cooldown._occ_start = 0
+            cooldown._occ_duration = 0
+
+            cooldown_OnSetCooldownDuration(cooldown)
+        end
+    end
 end

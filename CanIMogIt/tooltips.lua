@@ -40,7 +40,7 @@ local function printDebug(tooltip, itemLink, bag, slot)
     addDoubleLine(tooltip, "Item ID:", tostring(itemID))
     if not itemID then
         -- Keystones don't have an itemID...
-        addLine(tooltip, 'No ItemID found. Is this a Keystone?')
+        addLine(tooltip, 'No ItemID found. Is this a Keystone or Battle Pet?')
         return
     end
     local _, _, quality, _, _, itemClass, itemSubClass, _, equipSlot = GetItemInfo(itemID)
@@ -142,6 +142,11 @@ local function printDebug(tooltip, itemLink, bag, slot)
     end
 
     addLine(tooltip, '--------')
+
+    addDoubleLine(tooltip, "Tooltip:", tostring(CanIMogIt:CalculateTooltipText(itemLink, bag, slot)))
+
+    addLine(tooltip, '--------')
+
 end
 
 
@@ -163,6 +168,14 @@ local function addToTooltip(tooltip, itemLink, bag, slot)
     if CanIMogItOptions["debug"] then
         printDebug(tooltip, itemLink, bag, slot)
         tooltip.CIMI_tooltipWritten = true
+    end
+
+    -- If it's a battlepet, then don't add any lines. Battle Pet uses a
+    -- different tooltip frame than normal.
+    local isBattlepet = string.match(itemLink, ".*(battlepet):.*") == "battlepet"
+    if isBattlepet then
+        tooltip.CIMI_tooltipWritten = true
+        return
     end
 
     local text;
@@ -218,7 +231,7 @@ ItemRefShoppingTooltip1:HookScript("OnTooltipCleared", TooltipCleared)
 ItemRefShoppingTooltip2:HookScript("OnTooltipCleared", TooltipCleared)
 ShoppingTooltip1:HookScript("OnTooltipCleared", TooltipCleared)
 ShoppingTooltip2:HookScript("OnTooltipCleared", TooltipCleared)
-WorldMapTooltip.ItemTooltip.Tooltip:HookScript("OnTooltipCleared", TooltipCleared)
+GameTooltip.ItemTooltip.Tooltip:HookScript("OnTooltipCleared", TooltipCleared)
 
 
 local function CanIMogIt_AttachItemTooltip(tooltip)
@@ -237,7 +250,7 @@ ItemRefShoppingTooltip1:HookScript("OnTooltipSetItem", CanIMogIt_AttachItemToolt
 ItemRefShoppingTooltip2:HookScript("OnTooltipSetItem", CanIMogIt_AttachItemTooltip)
 ShoppingTooltip1:HookScript("OnTooltipSetItem", CanIMogIt_AttachItemTooltip)
 ShoppingTooltip2:HookScript("OnTooltipSetItem", CanIMogIt_AttachItemTooltip)
-WorldMapTooltip.ItemTooltip.Tooltip:HookScript("OnTooltipSetItem", CanIMogIt_AttachItemTooltip)
+GameTooltip.ItemTooltip.Tooltip:HookScript("OnTooltipSetItem", CanIMogIt_AttachItemTooltip)
 
 
 hooksecurefunc(GameTooltip, "SetMerchantItem",

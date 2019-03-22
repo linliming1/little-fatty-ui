@@ -1,4 +1,4 @@
-## Interface: 80000
+## Interface: 80100
 ## Title: |cff880303[爱不易]|r AbyUI 小功能集合
 ## X-Vendor: AbyUI
 
@@ -16,6 +16,10 @@ PingPing.lua
 ProfessionTabs.lua
 QuestFont.lua
 SlashCommands.lua
+Simc.xml
+Simc.lua
+FiveCombo.lua
+8.0\ChallengesGuildBest.xml
 
 yClassColors\core.lua
 yClassColors\battlefield.lua
@@ -35,4 +39,3 @@ yClassColors\who.lua
 7.0\EncounterJournalPlus_InstanceInfo.lua
 7.0\HideQuickJoin.lua
 7.0\ExaltedPlus.lua
-7.0\ArtifactPowerDouble.lua

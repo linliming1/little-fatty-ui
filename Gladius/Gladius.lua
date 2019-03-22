@@ -1,4 +1,4 @@
-﻿local abs = abs
+local abs = abs
 local math = math
 local max = max
 local pairs = pairs
@@ -7,6 +7,7 @@ local rawset = rawset
 local setmetatable = setmetatable
 local strfind = string.find
 local string = string
+local strmatch = strmatch
 local tonumber = tonumber
 local tostring = tostring
 local type = type
@@ -887,5 +888,6 @@ function Gladius:IsValidUnit(unit)
 		return
 	end
 
-	return strfind(unit, "arena") and not strfind(unit, "pet")
+	local unitID = strmatch(unit, "arena(%d+)")
+	return unitID and tonumber(unitID) <= 5
 end

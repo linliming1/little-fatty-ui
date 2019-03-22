@@ -81,35 +81,15 @@ function LfgService:CacheActivity(id)
 end
 
 function LfgService:_CacheActivity(id)
-    local _id, activityId, title, comment = C_LFGList.GetSearchResultInfo(id)
-    if not _id then
-        return
-    elseif not activityId then
-        return
-    end
-
-    -- local activityItem = self.ActivityDropdown:GetItem()
     local activity = Activity:New(id)
-
     if not activity:Update() then
-        -- debug(id, title, comment)
         return
     end
 
-    if activity:IsSoloActivity() and self.searchCode ~= activity:GetCode() then
+    if self.activityId and activity:GetActivityID() ~= self.activityId then
         return
     end
 
-    -- if activityItem then
-    --     if activityItem.activityId and not ACTIVITY_CUSTOM_DATA.A[activityItem.activityId] then
-    --         if activityItem.activityId ~= activity:GetActivityID() or activityItem.customId ~= activity:GetCustomID() then
-    --             return
-    --         end
-    --     end
-    --     if activity:IsSoloActivity() and activityItem.customId ~= activity:GetCustomID() then
-    --         return
-    --     end
-    -- end
     if activity:HasInvalidContent() then
         return
     end
@@ -129,8 +109,6 @@ function LfgService:LFG_LIST_SEARCH_RESULTS_RECEIVED(event)
     table.wipe(self.activityRemoved)
 
     self.inSearch = false
-
-    
 
     local applications = C_LFGList.GetApplications()
 
@@ -158,15 +136,16 @@ function LfgService:LFG_LIST_SEARCH_RESULT_UPDATED(_, id)
     if self.inSearch then
         return
     end
-    
     self:UpdateActivity(id)
     self:SendMessage('MEETINGSTONE_ACTIVITIES_RESULT_UPDATED')
 end
 
-function LfgService:Search(categoryId, searchText, baseFilter, searchCode)
+function LfgService:Search(categoryId, baseFilter, activityId)
+    
     self.ourSearch = true
-    self.searchCode = searchCode
-    C_LFGList.Search(categoryId, searchText, 0, baseFilter)
+    self.activityId = activityId
+
+    C_LFGList.Search(categoryId, 0, baseFilter)
     self.ourSearch = false
     self.dirty = false
 end

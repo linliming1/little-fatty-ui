@@ -19,19 +19,13 @@ function ItemSlot:Create()
 	item:SetScript('OnClick', self.OnClick)
 	item:RegisterForDrag('LeftButton')
 	item:RegisterForClicks('anyUp')
+	item.SplitStack = nil -- template onload screws up this
 	return item
-end
-
-function ItemSlot:Construct(id)
-	return CreateFrame('Button', MODULE .. 'ItemSlot' .. id, nil, 'ContainerFrameItemButtonTemplate')
 end
 
 function ItemSlot:GetBlizzard()
 end
 
-function ItemSlot:UpdatedLocked()
-	print(self:GetID())
-end
 
 --[[ Events ]]--
 
@@ -41,9 +35,8 @@ function ItemSlot:OnClick(button)
 	end
 
 	if IsModifiedClick('SPLITSTACK') then
-		if not self:IsLocked() then
-			self.SplitStack = ItemSlot.SplitStack -- have no idea why is necessary
-			OpenStackSplitFrame(select(2, self:GetInfo()), self, 'BOTTOMLEFT', 'TOPLEFT')
+		if not CursorHasItem() and not self.info.locked and self.info.count > 1 then
+			StackSplitFrame:OpenStackSplitFrame(self.info.count, self, 'BOTTOMLEFT', 'TOPLEFT')
 		end
 		return
 	end
@@ -120,3 +113,4 @@ end
 
 function ItemSlot:IsQuestItem() end
 function ItemSlot:IsNew() end
+function ItemSlot:IsPaid() end

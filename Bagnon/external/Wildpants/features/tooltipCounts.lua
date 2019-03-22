@@ -5,6 +5,7 @@
 
 local ADDON, Addon = ...
 local L = LibStub('AceLocale-3.0'):GetLocale(ADDON)
+local TooltipCounts = Addon:NewModule('TooltipCounts')
 
 local SILVER = '|cffc7c7cf%s|r'
 local LAST_BANK_SLOT = NUM_BAG_SLOTS + NUM_BANKBAGSLOTS
@@ -22,9 +23,9 @@ local function FindItemCount(owner, bag, itemID)
 	local info = Cache:GetBagInfo(owner, bag)
 
 	for slot = 1, (info.count or 0) do
-		local stack = Cache:GetItemInfo(owner, bag, slot)
-		if stack.id == itemID then
-			count = count + (stack.count or 1)
+		local id = Cache:GetItemID(owner, bag, slot)
+		if id == itemID then
+			count = count + (Cache:GetItemInfo(owner, bag, slot).count or 1)
 		end
 	end
 
@@ -70,9 +71,11 @@ local function AddOwners(tooltip, link)
 	for owner in Cache:IterateOwners() do
 		local info = Cache:GetOwnerInfo(owner)
 		local color = Addon:GetOwnerColorString(info)
-		local count, countText = ItemCount[owner][itemID], ItemText[owner][itemID]
+		local count, text = ItemCount[owner] and ItemCount[owner][itemID]
 
-		if countText == nil then
+		if count then
+			text = ItemText[owner][itemID]
+		else
 			if not info.isguild then
 				local equip = FindItemCount(owner, 'equip', itemID)
 				local vault = FindItemCount(owner, 'vault', itemID)
@@ -95,24 +98,28 @@ local function AddOwners(tooltip, link)
 					bank = owned - carrying
 				end
 
-				count, countText = FormatCounts(color, L.TipCountEquip, equip, L.TipCountBags, bags, L.TipCountBank, bank, L.TipCountVault, vault)
+				count, text = FormatCounts(color, L.TipCountEquip, equip, L.TipCountBags, bags, L.TipCountBank, bank, L.TipCountVault, vault)
 			elseif Addon.sets.countGuild then
 				local guild = 0
 				for i = 1, GetNumGuildBankTabs() do
 					guild = guild + FindItemCount(owner, i, itemID)
 				end
 
-				count, countText = FormatCounts(color, L.TipCountGuild, guild)
+				count, text = FormatCounts(color, L.TipCountGuild, guild)
+			else
+				count = 0
 			end
 
 			if info.cached then
-				ItemText[owner][itemID] = countText or false
+				ItemText[owner] = ItemText[owner] or {}
+				ItemText[owner][itemID] = text
+				ItemCount[owner] = ItemCount[owner] or {}
 				ItemCount[owner][itemID] = count
 			end
 		end
 
-		if countText then
-			tooltip:AddDoubleLine(format('|T%s:12:12|t ', Addon:GetOwnerIcon(info)) .. color:format(info.name), countText)
+		if count > 0 then
+			tooltip:AddDoubleLine(format('|T%s:12:12|t ', Addon:GetOwnerIcon(info)) .. color:format(info.name), text)
 			total = total + count
 			players = players + 1
 		end
@@ -163,16 +170,11 @@ local function HookTip(tooltip)
 end
 
 
---[[ Public Methods ]]--
+--[[ Startup ]]--
 
-function Addon:HookTooltips()
-	if self:MultipleOwnersFound() and self.sets.tipCount then
+function TooltipCounts:OnEnable()
+	if Addon.sets.tipCount then
 		if not Hooked then
-			for owner in Cache:IterateOwners() do
-				ItemCount[owner] = {}
-				ItemText[owner] = {}
-			end
-
 			HookTip(GameTooltip)
 			HookTip(ItemRefTooltip)
 			Hooked = true

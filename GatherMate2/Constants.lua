@@ -106,6 +106,16 @@ local node_ids = {
 		[NL["Fever of Stormrays"]]				= 185,
 		[NL["Highmountain Salmon School"]]		= 186,
 		[NL["Mossgill Perch School"]]			= 187,
+		-- BfA Pools
+		[NL["Frenzied Fangtooth School"]]		= 188,
+		[NL["Great Sea Catfish School"]]		= 189,
+		[NL["Lane Snapper School"]]				= 190,
+		[NL["Rasboralus School"]]				= 191,
+		[NL["Redtail Loach School"]]			= 192,
+		[NL["Sand Shifter School"]]				= 193,
+		[NL["Slimy Mackerel School"]]			= 194,
+		[NL["Tiragarde Perch School"]]			= 195,
+		[NL["U'taka School"]]					= 196,
 	},
 	["Mining"] = {
 		[NL["Copper Vein"]] 					= 201,
@@ -376,6 +386,9 @@ local node_ids = {
 		[NL["Demonic Archaeology Find"]]		= 617,
 		[NL["Highborne Archaeology Find"]]		= 618,
 		[NL["Highmountain Tauren Archaeology Find"]]	= 619,
+		-- bfa
+		[NL["Drust Archaeology Find"]]			= 620,
+		[NL["Zandalari Archaeology Find"]]		= 621,
 	},
 	["Logging"] = {
 		[NL["Small Timber"]]					= 701,
@@ -432,6 +445,7 @@ local rare_spawns = {
 	[263] = {[262]=true}, -- rich monelite deposit
 	[266] = {[265]=true}, -- rich platinum deposit
 	[268] = {[267]=true}, -- rich storm silver deposit
+	[486] = {[485]=true,[487]=true,[488]=true,[491]=true}, -- anchor weed
 }
 Collector.rareNodes = rare_spawns
 -- Format zone = { "Database", "new node id"}
@@ -552,6 +566,15 @@ local node_textures = {
 		[185] = icon_path.."Fish\\fish_hook.tga",
 		[186] = icon_path.."Fish\\fish_hook.tga",
 		[187] = icon_path.."Fish\\fish_hook.tga",
+		[188] = icon_path.."Fish\\frenzied_fangtooth.tga",
+		[189] = icon_path.."Fish\\great_sea_catfish.tga",
+		[190] = icon_path.."Fish\\lane_snapper.tga",
+		[191] = icon_path.."Fish\\rasboralus.tga",
+		[192] = icon_path.."Fish\\redtail_loach.tga",
+		[193] = icon_path.."Fish\\sand_shifter.tga",
+		[194] = icon_path.."Fish\\slimy_mackerel.tga",
+		[195] = icon_path.."Fish\\tiragarde_perch.tga",
+		[196] = icon_path.."Fish\\utaka.tga",
 	},
 	["Mining"] = {
 		[201] = icon_path.."Mine\\copper.tga",
@@ -615,14 +638,14 @@ local node_textures = {
 		[259] = icon_path.."Mine\\empyrium.tga",
 		[260] = icon_path.."Mine\\empyrium.tga",
 		[261] = icon_path.."Mine\\empyrium.tga",
-		[262] = icon_path.."Mine\\empyrium.tga", -- todo
-		[263] = icon_path.."Mine\\empyrium.tga", -- todo
-		[264] = icon_path.."Mine\\empyrium.tga", -- todo
-		[265] = icon_path.."Mine\\empyrium.tga", -- todo
-		[266] = icon_path.."Mine\\empyrium.tga", -- todo
-		[267] = icon_path.."Mine\\empyrium.tga", -- todo
-		[268] = icon_path.."Mine\\empyrium.tga", -- todo
-		[269] = icon_path.."Mine\\empyrium.tga", -- todo
+		[262] = icon_path.."Mine\\monelite.tga",
+		[263] = icon_path.."Mine\\monelite.tga",
+		[264] = icon_path.."Mine\\monelite.tga",
+		[265] = icon_path.."Mine\\platinum.tga",
+		[266] = icon_path.."Mine\\platinum.tga",
+		[267] = icon_path.."Mine\\stormsilver.tga",
+		[268] = icon_path.."Mine\\stormsilver.tga",
+		[269] = icon_path.."Mine\\stormsilver.tga",
 	},
 	["Extract Gas"] = {
 		[301] = icon_path.."Gas\\windy_cloud.tga",
@@ -718,13 +741,13 @@ local node_textures = {
 		[482] = icon_path.."Herb\\felherb.tga",
 		[483] = icon_path.."Herb\\felherb.tga",
 		[484] = icon_path.."Herb\\astralglory.tga",
-		[485] = icon_path.."Herb\\astralglory.tga", -- todo
-		[486] = icon_path.."Herb\\astralglory.tga", -- todo
-		[487] = icon_path.."Herb\\astralglory.tga", -- todo
-		[488] = icon_path.."Herb\\astralglory.tga", -- todo
-		[489] = icon_path.."Herb\\astralglory.tga", -- todo
-		[490] = icon_path.."Herb\\astralglory.tga", -- todo
-		[491] = icon_path.."Herb\\astralglory.tga", -- todo
+		[485] = icon_path.."Herb\\akundas_bite.tga",
+		[486] = icon_path.."Herb\\anchor_weed.tga",
+		[487] = icon_path.."Herb\\riverbud.tga",
+		[488] = icon_path.."Herb\\seastalk.tga",
+		[489] = icon_path.."Herb\\sirens_pollen.tga",
+		[490] = icon_path.."Herb\\star_moss.tga",
+		[491] = icon_path.."Herb\\winters_kiss.tga",
 	},
 	["Treasure"] = {
 		[501] = icon_path.."Treasure\\clam.tga",
@@ -807,6 +830,8 @@ local node_textures = {
 		[617] = icon_path.."Archaeology\\shovel.tga",
 		[618] = icon_path.."Archaeology\\shovel.tga",
 		[619] = icon_path.."Archaeology\\shovel.tga",
+		[620] = icon_path.."Archaeology\\shovel.tga",
+		[621] = icon_path.."Archaeology\\shovel.tga",
 	},
 	["Logging"] = {
 		[701] = icon_path.."Logging\\timber.tga",

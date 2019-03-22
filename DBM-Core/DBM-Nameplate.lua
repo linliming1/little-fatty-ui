@@ -149,6 +149,10 @@ local function HookNameplate(frame)
     frame:HookScript('OnHide',Nameplate_OnHide)
 end
 
+local function Nameplate_AutoHide(self, isGUID, unit, spellId, texture)
+	self:Hide(isGUID, unit, spellId, texture)
+end
+
 local function Nameplate_UnitAdded(frame,unit)
     if not frame or not unit then return end
 
@@ -203,7 +207,11 @@ function nameplateFrame:SupportedNPMod()
 end
 
 --isGUID: guid or name (bool)
-function nameplateFrame:Show(isGUID, unit, spellId, texture, duration, desaturate)
+--addLine true or false/nil, if present, tells it to create a line between player and nameplate aura
+--ie, anchored to UIParent Center (ie player is in center) and to bottom of nameplate aura.
+--Line will be handled entirely by aura, no need for second object/functions. When aura hides, line hides.
+--Maybe additional arg for line color (since not all environments are equal. might want a red line in a blue room and a blue line in a red room, etc
+function nameplateFrame:Show(isGUID, unit, spellId, texture, duration, desaturate, addLine)
     -- nameplate icons are disabled;
     if DBM.Options.DontShowNameplateIcons then return end
 
@@ -214,7 +222,7 @@ function nameplateFrame:Show(isGUID, unit, spellId, texture, duration, desaturat
 
     -- Supported by nameplate mod, passing to their handler;
     if self:SupportedNPMod() then
-        DBM:FireEvent("BossMod_ShowNameplateAura", isGUID, unit, currentTexture, duration, desaturate)
+        DBM:FireEvent("BossMod_ShowNameplateAura", isGUID, unit, currentTexture, duration, desaturate, addLine)
         DBM:Debug("DBM.Nameplate Found supported NP mod, only sending Show callbacks", 3)
         return
     end
@@ -238,6 +246,9 @@ function nameplateFrame:Show(isGUID, unit, spellId, texture, duration, desaturat
         local frame = GetNamePlateForUnit(unit)
         if frame then
             Nameplate_UnitAdded(frame, unit)
+            if duration then
+            	DBM:Schedule(duration, Nameplate_AutoHide, self, isGUID, unit, spellId, texture)
+            end
         end
     else
         --GUID, less efficient because it must scan all plates to find
@@ -246,6 +257,9 @@ function nameplateFrame:Show(isGUID, unit, spellId, texture, duration, desaturat
             local foundUnit = frame.namePlateUnitToken or (frame.UnitFrame and frame.UnitFrame.unit)
             if foundUnit and UnitGUID(foundUnit) == unit then
                 Nameplate_UnitAdded(frame, foundUnit)
+            	if duration then
+            		DBM:Schedule(duration, Nameplate_AutoHide, self, isGUID, unit, spellId, texture)
+            	end
                 break
             end
         end

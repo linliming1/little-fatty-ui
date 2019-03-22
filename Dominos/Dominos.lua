@@ -41,8 +41,9 @@ function Addon:OnInitialize()
 
 	--create a loader for the options menu
 	local f = CreateFrame('Frame', nil, _G['InterfaceOptionsFrame'])
-	f:SetScript('OnShow', function(self)
-		self:SetScript('OnShow', nil)
+
+	f:SetScript('OnShow', function()
+		f:SetScript('OnShow', nil)
 		LoadAddOn(CONFIG_ADDON_NAME)
 	end)
 
@@ -50,13 +51,23 @@ function Addon:OnInitialize()
 	local kb = LibStub('LibKeyBound-1.0')
 	kb.RegisterCallback(self, 'LIBKEYBOUND_ENABLED')
 	kb.RegisterCallback(self, 'LIBKEYBOUND_DISABLED')
+
+    --aby8 force azerite
+    if self.db.profile and self.db.profile.frames and self.db.profile.frames.artifact then
+        if not self.db.profile.update801 then
+            self.db.profile.frames.artifact.mode = 'azerite';
+            self.db.profile.update801 = true
+        end
+        if not self.db.profile.update807 then
+            (self.db.profile.frames.artifact.display or {}).bonus = true;
+            self.db.profile.update807 = true
+        end
+    end
 end
 
 function Addon:OnEnable()
 	self:UpdateUseOverrideUI()
 	self:Load()
-
-	self.MultiActionBarGridFixer:SetShowGrid(self:ShowGrid())
 end
 
 --[[ Version Updating ]]--
@@ -93,7 +104,7 @@ end
 function Addon:UpdateSettings(major, minor, bugfix)
 	--inject new roll bar defaults
 	if major == '5' and minor == '0' and bugfix < '14' then
-		for profile, sets in pairs(self.db.sv.profiles) do
+		for _, sets in pairs(self.db.sv.profiles) do
 			if sets.frames then
 				local rollBarFrameSets = sets.frames['roll']
 				if rollBarFrameSets then
@@ -124,7 +135,7 @@ function Addon:Load()
 		end
 	end
 
-	for i, module in self:IterateModules() do
+	for _, module in self:IterateModules() do
 		local success, msg = pcall(module_load, module)
 		if not success then
 			self:Printf('Failed to load %s\n%s', module:GetName(), msg)
@@ -144,7 +155,7 @@ function Addon:Unload()
 	end
 
 	--unload any module stuff
-	for i, module in self:IterateModules() do
+	for _, module in self:IterateModules() do
 		local success, msg = pcall(module_unload, module)
 		if not success then
 			self:Printf('Failed to unload %s\n%s', module:GetName(), msg)
@@ -263,11 +274,12 @@ function Addon:ListProfiles()
 end
 
 function Addon:MatchProfile(name)
-	local name = name:lower()
+	name = name:lower()
+
 	local nameRealm = name .. ' - ' .. GetRealmName():lower()
 	local match
 
-	for i, k in ipairs(self.db:GetProfiles()) do
+	for _, k in ipairs(self.db:GetProfiles()) do
 		local key = k:lower()
 		if key == name then
 			return k
@@ -306,7 +318,8 @@ end
 --[[ Settings...Setting ]]--
 
 function Addon:SetFrameSets(id, sets)
-	local id = tonumber(id) or id
+	id = tonumber(id) or id
+
 	self.db.profile.frames[id] = sets
 
 	return self.db.profile.frames[id]
@@ -502,7 +515,6 @@ end
 function Addon:SetShowGrid(enable)
 	self.db.profile.showgrid = enable or false
 	self.ActionBar:ForAll('UpdateGrid')
-	self.MultiActionBarGridFixer:SetShowGrid(enable)
 end
 
 function Addon:ShowGrid()

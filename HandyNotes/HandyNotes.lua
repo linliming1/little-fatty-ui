@@ -2,11 +2,6 @@
 HandyNotes
 ]]
 
--- This is the WoW 8.0 version
-if select(4, GetBuildInfo()) < 80000 then
-	return
-end
-
 ---------------------------------------------------------
 -- Addon declaration
 HandyNotes = LibStub("AceAddon-3.0"):NewAddon("HandyNotes", "AceConsole-3.0", "AceEvent-3.0")
@@ -97,7 +92,9 @@ local function getNewPin()
 	local texture = pin:CreateTexture(nil, "OVERLAY")
 	pin.texture = texture
 	texture:SetAllPoints(pin)
-	pin:RegisterForClicks("LeftButtonDown", "LeftButtonUp", "RightButtonDown", "RightButtonUp")
+	texture:SetTexelSnappingBias(0)
+	texture:SetSnapToPixelGrid(false)
+	pin:RegisterForClicks("AnyUp", "AnyDown")
 	pin:SetMovable(true)
 	pin:Hide()
 	return pin
@@ -284,7 +281,7 @@ local function IterateNodes(pluginName, uiMapID, minimap)
 			return next, emptyTbl
 		end
 		local iter, data, state = handler:GetNodes(mapFile, minimap, level)
-		local t = { mapFile = mapFile, level, iter = iter, data = data }
+		local t = { mapFile = mapFile, level = level, iter = iter, data = data }
 		return LegacyNodeIterator, t, state
 	else
 		error(("Plugin %s does not have GetNodes or GetNodes2"):format(pluginName))
@@ -296,25 +293,14 @@ end
 
 HandyNotes.WorldMapDataProvider = CreateFromMixins(MapCanvasDataProviderMixin)
 
-function HandyNotes.WorldMapDataProvider:OnShow()
-	--self:RegisterEvent("WORLD_MAP_UPDATE")
-end
-
-function HandyNotes.WorldMapDataProvider:OnHide()
-	--self:UnregisterEvent("WORLD_MAP_UPDATE")
-end
-
-function HandyNotes.WorldMapDataProvider:OnEvent(event, ...)
-	--[[if event == "WORLD_MAP_UPDATE" then
-		self:RefreshAllData()
-	end]]
-end
-
 function HandyNotes.WorldMapDataProvider:RemoveAllData()
-	self:GetMap():RemoveAllPinsByTemplate("HandyNotesWorldMapPinTemplate")
+	if self:GetMap() then
+		self:GetMap():RemoveAllPinsByTemplate("HandyNotesWorldMapPinTemplate")
+	end
 end
 
 function HandyNotes.WorldMapDataProvider:RefreshAllData(fromOnShow)
+	if not self:GetMap() then return end
 	self:RemoveAllData()
 
 	for pluginName in pairs(HandyNotes.plugins) do
@@ -342,7 +328,9 @@ function HandyNotes.WorldMapDataProvider:RefreshPlugin(pluginName)
 		if not HandyNotes.plugins[pluginName].GetNodes2 then
 			mapFile = select(3, HBDMigrate:GetLegacyMapInfo(uiMapID2 or uiMapID))
 		end
-		self:GetMap():AcquirePin("HandyNotesWorldMapPinTemplate", pluginName, x, y, iconpath, scale, alpha, coord, uiMapID2 or uiMapID, mapFile)
+		if x and y then
+			self:GetMap():AcquirePin("HandyNotesWorldMapPinTemplate", pluginName, x, y, iconpath, scale, alpha, coord, uiMapID2 or uiMapID, mapFile)
+		end
 	end
 end
 
@@ -351,7 +339,6 @@ HandyNotesWorldMapPinMixin = CreateFromMixins(MapCanvasPinMixin)
 
 function HandyNotesWorldMapPinMixin:OnLoad()
 	self:UseFrameLevelType("PIN_FRAME_LEVEL_AREA_POI")
-	--self:RegisterForClicks("LeftButtonDown", "LeftButtonUp", "RightButtonDown", "RightButtonUp")
 	self:SetMovable(true)
 	self:SetScalingLimits(1, 1.0, 1.2);
 end
@@ -405,11 +392,13 @@ function HandyNotesWorldMapPinMixin:OnMouseUp(button)
 end
 
 function HandyNotes:UpdateWorldMapPlugin(pluginName)
+	if not HandyNotes:IsEnabled() then return end
 	HandyNotes.WorldMapDataProvider:RefreshPlugin(pluginName)
 end
 
 -- This function updates all the icons on the world map for every plugin
 function HandyNotes:UpdateWorldMap()
+	if not HandyNotes:IsEnabled() then return end
 	HandyNotes.WorldMapDataProvider:RefreshAllData()
 end
 
@@ -472,7 +461,7 @@ function HandyNotes:UpdateMinimapPlugin(pluginName)
 			icon.mapFile = select(3, HBDMigrate:GetLegacyMapInfo(uiMapID2 or uiMapID))
 		else
 			icon.mapFile = nil
-		 end
+		end
 		icon.uiMapID = uiMapID2 or uiMapID
 	end
 end
@@ -628,7 +617,7 @@ function HandyNotes:OnInitialize()
 
 	-- Register options table and slash command
 	LibStub("AceConfigRegistry-3.0"):RegisterOptionsTable("HandyNotes", options)
-	self:RegisterChatCommand("handynotes", function() LibStub("AceConfigDialog-3.0"):Open("HandyNotes") end)
+	self:RegisterChatCommand("handynotes", function() LibStub("AceConfigDialog-3.0"):Open("HandyNotes") LibStub("AceConfigDialog-3.0"):SelectGroup("HandyNotes", "plugins") end)
 	LibStub("AceConfigDialog-3.0"):AddToBlizOptions("HandyNotes", "HandyNotes")
 
 	-- Get the option table for profiles
@@ -655,7 +644,9 @@ function HandyNotes:OnDisable()
 		HBDPins:RemoveAllMinimapIcons("HandyNotes" .. pluginName)
 		clearAllPins(minimapPins[pluginName])
 	end
-	WorldMapFrame:RemoveDataProvider(HandyNotes.WorldMapDataProvider)
+	if WorldMapFrame.dataProviders[HandyNotes.WorldMapDataProvider] then
+		WorldMapFrame:RemoveDataProvider(HandyNotes.WorldMapDataProvider)
+	end
 	HBD.UnregisterCallback(self, "PlayerZoneChanged")
 end
 

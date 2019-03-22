@@ -359,7 +359,7 @@ function TomTom:ShowHideCoordBlock()
             TomTomBlock:SetFrameStrata("LOW")
             TomTomBlock:SetMovable(true)
             TomTomBlock:EnableMouse(true)
-            TomTomBlock:SetClampedToScreen()
+            TomTomBlock:SetClampedToScreen(true)
             TomTomBlock:RegisterForDrag("LeftButton")
             TomTomBlock:RegisterForClicks("RightButtonUp")
             TomTomBlock:SetPoint("TOP", Minimap, "BOTTOM", -20, -10)
@@ -643,7 +643,7 @@ end
 
 function TomTom:SendWaypoint(uid, channel)
     local data = uid
-    local m, f, x, y = unpack(data)
+    local m, x, y = unpack(data)
     local msg = string.format("%d:%f:%f:%s", m, x, y, data.title or "")
     C_ChatInfo.SendAddonMessage("TOMTOM4", msg, channel)
 end
@@ -1012,8 +1012,8 @@ end
 function TomTom:DebugListLocalWaypoints()
     local m,x,y = self:GetCurrentPlayerPosition()
     local ctxt = RoundCoords(x, y, 2)
-    local czone = hbd:GetLocalizedMap(m)
-    self:Printf(L["You are at (%s) in '%s' (map: %d)"], ctxt, czone or "UNKNOWN", m)
+    local czone = hbd:GetLocalizedMap(m) or "UNKNOWN"
+    self:Printf(L["You are at (%s) in '%s' (map: %s)"], ctxt, czone , tostring(m))
     if waypoints[m] then
         for key, wp in pairs(waypoints[m]) do
             local ctxt = RoundCoords(wp[2], wp[3], 2)
@@ -1030,16 +1030,17 @@ end
 function TomTom:DebugListAllWaypoints()
     local m,x,y = self:GetCurrentPlayerPosition()
     local ctxt = RoundCoords(x, y, 2)
-    local czone = hbd:GetLocalizedMap(m)
-    self:Printf(L["You are at (%s) in '%s' (map: %d)"], ctxt, czone or "UNKNOWN", m)
+    local czone = hbd:GetLocalizedMap(m) or "UNKNOWN"
+    self:Printf(L["You are at (%s) in '%s' (map: %s)"], ctxt, czone, tostring(m))
     for m in pairs(waypoints) do
+        local c,z,w = TomTom:GetCZWFromMapID(m)
         local zoneName = hbd:GetLocalizedMap(m)
-        self:Printf("%s:", zoneName)
+        self:Printf("%s: (map: %d, zone: %s, continent: %s, world: %s)", zoneName, m, tostring(z), tostring(c), tostring(w))
         for key, wp in pairs(waypoints[m]) do
             local ctxt = RoundCoords(wp[2], wp[3], 2)
             local desc = wp.title and wp.title or L["Unknown waypoint"]
             local indent = "   "
-            self:Printf(L["%s%s - %s (map: %d)"], indent, desc, ctxt, wp[1])
+            self:Printf(L["%s%s - %s %s %s"], indent, desc, ctxt, wp[1], (wp.minimap_icon or "*"), (wp.worldmap_icon or "*"))
         end
     end
 end
@@ -1057,26 +1058,32 @@ end
 
 function TomTom:GetCZWFromMapID(m)
     local zone, continent, world
+    local mapInfo = nil
 
-    local mapInfo = C_Map.GetMapInfo(m)
+    if not m then return nil, nil, nil; end
+
     repeat
         mapInfo = C_Map.GetMapInfo(m)
-        if mapInfo.mapInfo == 3 then
+        if not mapInfo then
+            -- No more parents, return what we have
+            return continent, zone, world
+        end
+        if mapInfo.mapType == Enum.UIMapType.Zone then
             -- Its a zone map
             zone = m
-        elseif mapInfo.mapInfo == 2 then
+        elseif mapInfo.mapType == Enum.UIMapType.Continent then
             continent = m
-        elseif mapInfo.mapInfo == 1 then
+        elseif mapInfo.mapType == Enum.UIMapType.World then
             world = m
         end
         m = mapInfo.parentMapID
-    until (m == 946)
-    return continent, world, zone
+    until (m == 0)
+    return continent, zone, world
 end
 
 function TomTom:GetClosestWaypoint()
     local m,x,y = self:GetCurrentPlayerPosition()
-	local c = TomTom:GetCZWFromMapID(m)
+    local c,z,w = TomTom:GetCZWFromMapID(m)
 
     local closest_waypoint = nil
     local closest_dist = nil
@@ -1085,7 +1092,7 @@ function TomTom:GetClosestWaypoint()
 		-- Simple search within this zone
 		if waypoints[m] then
 			for key, waypoint in pairs(waypoints[m]) do
-				local dist, x, y = TomTom:GetDistanceToWaypoint(waypoint)
+				local dist = TomTom:GetDistanceToWaypoint(waypoint)
 				if (dist and closest_dist == nil) or (dist and dist < closest_dist) then
 					closest_dist = dist
 					closest_waypoint = waypoint
@@ -1095,9 +1102,9 @@ function TomTom:GetClosestWaypoint()
 	else
 		-- Search all waypoints on this continent
 		for map, waypoints in pairs(waypoints) do
-			if c == TomTom:GetCZWFromMapID(m) then
+			if c == TomTom:GetCZWFromMapID(map) then
 				for key, waypoint in pairs(waypoints) do
-					local dist, x, y = TomTom:GetDistanceToWaypoint(waypoint)
+					local dist = TomTom:GetDistanceToWaypoint(waypoint)
 					if (dist and closest_dist == nil) or (dist and dist < closest_dist) then
 						closest_dist = dist
 						closest_waypoint = waypoint
@@ -1117,6 +1124,21 @@ function TomTom:SetClosestWaypoint()
     if uid then
         local data = uid
         TomTom:SetCrazyArrow(uid, TomTom.profile.arrow.arrival, data.title)
+        local m, x, y = unpack(data)
+        local zoneName = hbd:GetLocalizedMap(m)
+        local ctxt = RoundCoords(x, y, 2)
+        local desc = data.title and data.title or ""
+        local sep = data.title and " - " or ""
+        local msg = string.format(L["|cffffff78TomTom:|r Selected waypoint (%s%s%s) in %s"], desc, sep, ctxt, zoneName)
+        ChatFrame1:AddMessage(msg)
+    else
+        local msg
+        if not self.profile.arrow.closestusecontinent then
+           msg = L["|cffffff78TomTom:|r Could not find a closest waypoint in this zone."]
+        else
+           msg = L["|cffffff78TomTom:|r Could not find a closest waypoint in this continent."]
+        end
+        ChatFrame1:AddMessage(msg)
     end
 end
 
@@ -1146,13 +1168,41 @@ SLASH_TOMTOM_WAY3 = "/tomtomway"
 
 TomTom.NameToMapId = {}
 local NameToMapId = TomTom.NameToMapId
+
+local overrides = {
+    [125] = {mapType = Enum.UIMapType.Zone}, -- Dalaran
+    [126] = {mapType = Enum.UIMapType.Micro},
+    [195] = {suffix = "1"}, -- Kaja'mine
+    [196] = {suffix = "2"}, -- Kaja'mine
+    [197] = {suffix = "3"}, -- Kaja'mine
+    [501] = {mapType = Enum.UIMapType.Zone}, -- Dalaran
+    [502] = {mapType = Enum.UIMapType.Micro},
+    [579] = {suffix = "1"}, -- Lunarfall Excavation
+    [580] = {suffix = "2"}, -- Lunarfall Excavation
+    [581] = {suffix = "3"}, -- Lunarfall Excavation
+    [585] = {suffix = "1"}, -- Frostwall Mine
+    [586] = {suffix = "2"}, -- Frostwall Mine
+    [587] = {suffix = "3"}, -- Frostwall Mine
+    [625] = {mapType = Enum.UIMapType.Orphan}, -- Dalaran
+    [626] = {mapType = Enum.UIMapType.Micro}, -- Dalaran
+    [627] = {mapType = Enum.UIMapType.Zone},
+    [628] = {mapType = Enum.UIMapType.Micro},
+    [629] = {mapType = Enum.UIMapType.Micro},
+    [943] = {suffix = FACTION_HORDE}, -- Arathi Highlands
+    [1044] = {suffix = FACTION_ALLIANCE},
+}
+
 do
     -- Fetch the names of the zones
     for id in pairs(hbd.mapData) do
---        if (hbd.mapData[id].mapType == Enum.UIMapType.Zone) or (hbd.mapData[id].mapType == Enum.UIMapType.Micro) then
-        if hbd.mapData[id][1] > 0 then
+        local mapType = (overrides[id] and overrides[id].mapType) or hbd.mapData[id].mapType
+        if (mapType == Enum.UIMapType.Zone) or
+           (mapType == Enum.UIMapType.Micro) then
             -- Record only Zone or Micro maps
             local name = hbd.mapData[id].name
+            if (overrides[id] and overrides[id].suffix) then
+                name = name .. " " .. overrides[id].suffix
+            end
             if name and NameToMapId[name] then
                 if type(NameToMapId[name]) ~= "table" then
                     -- convert to table
@@ -1162,6 +1212,7 @@ do
             else
                 NameToMapId[name] = id
             end
+            NameToMapId["#" .. id] = id
         end
     end
     -- Handle any duplicates
@@ -1171,9 +1222,14 @@ do
             NameToMapId[name] = nil
             for idx, mapId in pairs(mapID) do
                 local parent = hbd.mapData[mapId].parent
-                local parentName = hbd.mapData[parent].name
+                local parentName = (parent and (parent > 0) and hbd.mapData[parent].name)
                 if parentName then
-                    newEntries[name .. ":" .. parentName] = mapId
+                    -- We rely on the implicit acending order of mapID's so the lowest one wins
+                    if not newEntries[name .. ":" .. parentName] then
+                        newEntries[name .. ":" .. parentName] = mapId
+                    else
+                        newEntries[name .. ":" .. tostring(mapId)] = mapId
+                    end
                 end
             end
         end
@@ -1188,7 +1244,7 @@ local wrongseparator = "(%d)" .. (tonumber("1.1") and "," or ".") .. "(%d)"
 local rightseparator =   "%1" .. (tonumber("1.1") and "." or ",") .. "%2"
 
 -- Make comparison only lowercase letters and numbers
-local function lowergsub(s) return s:lower():gsub("[^%a%d]", "") end
+local function lowergsub(s) return s:lower():gsub("^[%a%d]", "") end
 
 SlashCmdList["TOMTOM_WAY"] = function(msg)
     msg = msg:gsub("(%d)[%.,] (%d)", "%1 %2"):gsub(wrongseparator, rightseparator)
@@ -1203,6 +1259,9 @@ SlashCmdList["TOMTOM_WAY"] = function(msg)
         return
     elseif ltoken == "list" then
         TomTom:DebugListAllWaypoints()
+        return
+    elseif ltoken == "arrow" then
+        TomTom:DebugCrazyArrow()
         return
     elseif ltoken == "reset" then
         local ltoken2 = tokens[2] and tokens[2]:lower()

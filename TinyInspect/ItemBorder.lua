@@ -9,19 +9,26 @@ local LibEvent = LibStub:GetLibrary("LibEvent.7000")
 local function SetItemAngularBorder(self, quality, itemIDOrLink)
     if (not self) then return end
     if (not self.angularFrame) then
-        local parent = self.IconBorder or self
+        local anchor, w, h = self.IconBorder or self, self:GetSize()
+        local ww, hh = anchor:GetSize()
+        if (ww == 0 or hh == 0) then
+            anchor = self.Icon or self.icon or self
+            w, h = anchor:GetSize()
+        else
+            w, h = min(w, ww), min(h, hh)
+        end
         self.angularFrame = CreateFrame("Frame", nil, self)
         self.angularFrame:SetFrameLevel(5)
-        self.angularFrame:SetSize(parent:GetSize())
-        self.angularFrame:SetPoint("CENTER", parent, "CENTER")
+        self.angularFrame:SetSize(w, h)
+        self.angularFrame:SetPoint("CENTER", anchor, "CENTER", 0, 0)
         self.angularFrame:Hide()
         self.angularFrame.mask = CreateFrame("Frame", nil, self.angularFrame)
-        self.angularFrame.mask:SetSize(parent:GetWidth()-2, parent:GetHeight()-2)
+        self.angularFrame.mask:SetSize(w-2, h-2)
         self.angularFrame.mask:SetPoint("CENTER")
         self.angularFrame.mask:SetBackdrop({edgeFile = "Interface\\Tooltips\\UI-Tooltip-Background", edgeSize = 2})
         self.angularFrame.mask:SetBackdropBorderColor(0, 0, 0)
         self.angularFrame.border = CreateFrame("Frame", nil, self.angularFrame)
-        self.angularFrame.border:SetSize(parent:GetWidth(), parent:GetHeight())
+        self.angularFrame.border:SetSize(w, h)
         self.angularFrame.border:SetPoint("CENTER")
         self.angularFrame.border:SetBackdrop({edgeFile = "Interface\\Buttons\\WHITE8X8", edgeSize = 1})
     end
@@ -45,7 +52,7 @@ end)
 
 --設置物品直角邊框
 LibEvent:attachTrigger("SET_ITEM_ANGULARBORDER", function(self, frame, quality, itemIDOrLink)
-    if (quality and quality > 0) then
+    if (quality) then
         local r, g, b = GetItemQualityColor(quality)
         if (quality <= 1) then
             r = r - 0.3
@@ -58,3 +65,14 @@ LibEvent:attachTrigger("SET_ITEM_ANGULARBORDER", function(self, frame, quality, 
         frame:Hide()
     end
 end)
+
+--直角邊框时需要调整艾泽拉斯项链等级框架
+local RankFrame = CharacterNeckSlot and CharacterNeckSlot.RankFrame
+if (false and RankFrame) then
+    RankFrame:SetFrameLevel(6)
+    RankFrame.Texture:Hide()
+    RankFrame:SetPoint("CENTER", CharacterNeckSlot, "BOTTOM", 0, 8)
+    local fontFile, fontSize, fontFlags = TextStatusBarText:GetFont()
+    RankFrame.Label:SetFont(fontFile, fontSize, "THINOUTLINE")
+    RankFrame.Label:SetTextColor(0, 0.9, 0.9)
+end

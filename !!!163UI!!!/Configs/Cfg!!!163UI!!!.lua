@@ -1,11 +1,13 @@
 local L = select(2,...).L
 U1_NEW_ICON = '|TInterface\\OptionsFrame\\UI-OptionsFrame-NewFeatureIcon:0:0:0:-1|t'
 
-function U1CfgMakeCVarOption(title, cvar, options)
+-- default 仅在插件first run的时候运行，如果是nil则不会设置默认值
+function U1CfgMakeCVarOption(title, cvar, default, options)
     local info = copy(options) or {}
 
     info.text = title
     info.var = "cvar_"..cvar
+    info.dontCompareDefaultWhenSave = true -- 保存时不根据默认值清空，放弃控制玩家默认值的能力，在玩家用其他插件或被其他人上号，回来的时候可以恢复
     local origin_callback = info.callback
 
     if pcall(GetCVarDefault, cvar) then
@@ -13,11 +15,20 @@ function U1CfgMakeCVarOption(title, cvar, options)
             if info.type == "checkbox" or info.type == nil then
                 return GetCVarBool(cvar)
             else
-                return GetCVar(cvar)
+                local v = tostring(GetCVar(cvar))
+                if v == "nil" then return tostring(GetCVarDefault(cvar)) else return v end
             end
         end
         info.callback = function(cfg, v, loading)
-            if loading then return end --加载的时候不根据保存的值设置
+            if loading then
+                if U1DB.configs[cfg._path] == nil then
+                    -- 没用过爱不易不会设置, 跳过default
+                    return
+                end
+                -- 此时v就是U1DB.configs[cfg._path], getvalue加载时不调用
+            end
+            --if cfg._path == "163ui_moreoptions/cvar_floatingCombatTextCombatDamage" then print(v, U1DB.configs[cfg._path], cfg.getvalue()) pdebug() end
+            --加载的时候不根据保存的值设置，目的是这些变量在玩家初次游戏时不变化，只有在玩家去修改的时候才会影响到玩家
             if( false and InCombatLockdown()) then
                 U1Message("战斗中无法设置此选项,请结束战斗后重试.")
             else
@@ -28,9 +39,9 @@ function U1CfgMakeCVarOption(title, cvar, options)
                 end
             end
         end
-        info.default = info.default or function()
-            return info.getvalue()
-        end
+        if info.default ~= nil then U1Message("CVAR选项的default没效果，在参数上设置", info.cvar) end
+        if default ~= nil then info.defaultFirstRun = default end
+        --if info.default == nil then info.default = GetCVarDefault(cvar) end --这里不能用getvalue，否则会乱
     else
         info.disabled = 1
         info.tip = format("已失效``当前版本没有'%s'这个设置变量'", cvar)
@@ -43,18 +54,18 @@ end
 
 U1RegisterAddon("!!!Libs", { load = "NORMAL", protected = 1, hide = 1 }) EnableAddOn("!!!Libs") --163UI必须第一个加载，不能依赖其他的，只能这样
 U1RegisterAddon("!!!163UI.pics!!!", { title = "插件说明图片", hide = 1, defaultEnable = 0 });
-U1RegisterAddon("!!!163UI.3dcodecmd!!!", { title = "有爱核心", load = "NORMAL", hide = 1, protected = 1, defaultEnable = 1 });
+U1RegisterAddon("!!!163UI.3dcodecmd!!!", { title = "爱不易核心", load = "NORMAL", hide = 1, protected = 1, defaultEnable = 1 });
 
 U1RegisterAddon("!!!163UI!!!", {
-    title = L["有爱"],
+    title = L["爱不易"],
     tags = {TAG_MANAGEMENT},
-    desc = L["有爱是新一代整合插件。其设计理念是兼顾整合插件的易用性和单体插件的灵活性，同时适合普通和高级用户群体。|n|n    功能上，有爱实现了任意插件的随需加载，并可先进入游戏再逐一加载插件，此为全球首创。此外还有标签分类、拼音检索、界面缩排等特色功能。"],
+    desc = L["爱不易是新一代整合插件。其设计理念是兼顾整合插件的易用性和单体插件的灵活性，同时适合普通和高级用户群体。|n|n    功能上，爱不易实现了任意插件的随需加载，并可先进入游戏再逐一加载插件，此为全球首创。此外还有标签分类、拼音检索、界面缩排等特色功能。"],
     protected = 1,
     icon = "Interface\\AddOns\\!!!163UI!!!\\Textures\\UI2-logo",
 
     nopic = 1,
 
-    author = L["|cffcd1a1c[有爱原创]|r"],
+    author = L["|cffcd1a1c[爱不易原创]|r"],
 
     {
         text = "额外设置",
@@ -68,30 +79,6 @@ U1RegisterAddon("!!!163UI!!!", {
             U1SelectAddon("163UI_Plugins") UUI.Right.TabChange(1)
         end
     },
-        --[[text = L["有爱客户端相关"], type = "text",
-        {
-            var = "displayLinkageStatusAsBuff",
-            default = false,
-            text = "有爱连接状态显示为Buff",
-            tip = "说明`关闭此选项*不会*导致有爱连接断开，以及影响签到的时间积累",
-            callback = function(cfg, v, loading)
-                if Toggle3DCodeCmdBuff  then
-                    Toggle3DCodeCmdBuff()
-                end
-            end
-        },]]
-        {
-            var = "displayScrshotEmoticonBtn",
-            default = false,
-            text = "显示有爱截图和表情按钮",
-            tip = "说明`在聊天条里显示爱有截图和自定义表情按钮",
-            callback = function(cfg, v, loading)
-                U1DB.configs["!!!163ui!!!/displayLinkageStatusAsBuff"] = false
-                if Toggle3DCodeCmdChatFrameBtnShown  then
-                    Toggle3DCodeCmdChatFrameBtnShown()
-                end
-            end
-        },
     {
         var = "alwaysCompareItems",
         default = '1',
@@ -198,8 +185,8 @@ U1RegisterAddon("!!!163UI!!!", {
     {
         var = "disableLaterLoading",
         text = L["延迟加载插件"],
-        tip = L["说明`有爱独家支持，可以先读完蓝条然后再逐一加载插件。会大大加快读条速度，但是加载大型插件时会有卡顿。如果不喜欢这种方式，请取消勾选即可，下次进游戏时就会采用新设置。` `对比测试：`未开启时，在第7.5秒后读完蓝条同时加载完全部插件`开启后，在第3.8秒读完蓝条，第8.0秒加载完全部插件"],
-        default = 1,
+        tip = L["说明`爱不易独家支持，可以先读完蓝条然后再逐一加载插件。会大大加快读条速度，但是加载大型插件时会有卡顿。如果不喜欢这种方式，请取消勾选即可，下次进游戏时就会采用新设置。` `对比测试：`未开启时，在第7.5秒后读完蓝条同时加载完全部插件`开启后，在第3.8秒读完蓝条，第8.0秒加载完全部插件"],
+        default = 0,
         getvalue = function() return not U1DB.disableLaterLoading end,
         callback = function(cfg, v, loading)
             U1DB.disableLaterLoading = not v;
@@ -227,15 +214,22 @@ U1RegisterAddon("!!!163UI!!!", {
             if loading then
                 local config = cfg._path
                 local playS, playSF = PlaySound, PlaySoundFile
-                local function shouldRedirect(channel)
+                local wipe, playing, looping, updater = table.wipe, {}, {}, CreateFrame("Frame", "U1_SOUND_REDIRECT")
+                looping[SOUNDKIT.UI_BONUS_LOOT_ROLL_LOOP or ""] = true --LootFrame
+                updater:SetScript("OnUpdate", function(self) wipe(playing) end)
+                if CreateLoopingSoundEffectEmitter then hooksecurefunc("CreateLoopingSoundEffectEmitter", function(startingSound, loopingSound) looping[loopingSound] = true end) end
+                local function shouldRedirect(channel, sound)
+                    if looping[sound] then return end
                     if(not U1GetCfgValue(config)) then return end
                     channel = channel and channel:upper() or "SFX"
                     if(channel == "MASTER") then return end
+                    if playing[sound] then return end
                     if(GetCVarBool("Sound_EnableSFX") and channel~="MUSIC" and channel~="MASTER" and channel~="AMBIENCE") then return end
+                    playing[sound] = true
                     return true
                 end
-                hooksecurefunc("PlaySound", function(sound, channel) if shouldRedirect(channel) then playS(sound, "Master") end end)
-                hooksecurefunc("PlaySoundFile", function(sound, channel) if shouldRedirect(channel) then playSF(sound, "Master") end end)
+                hooksecurefunc("PlaySound", function(sound, channel) if shouldRedirect(channel, sound) then playS(sound, "Master") end end)
+                hooksecurefunc("PlaySoundFile", function(sound, channel) if shouldRedirect(channel, sound) then playSF(sound, "Master") end end)
             else
                 if v then
                     if GetCVarBool("Sound_EnableSFX") then
@@ -243,8 +237,10 @@ U1RegisterAddon("!!!163UI!!!", {
                     end
                     SetCVar("Sound_EnableSFX", "0")
                     SetCVar("Sound_EnableAmbience", "0")
+                    Sound_GameSystem_RestartSoundSystem()
                 end
             end
+            CoreUIShowOrHide(U1_SOUND_REDIRECT, v)
         end
     },
     {
@@ -324,7 +320,7 @@ U1RegisterAddon("!!!163UI!!!", {
     {
         text = "重置界面框体顺序",
         confirm = "此操作需要重载界面，您是否确定？",
-        tip = "说明`经过有爱团队的测试，暴雪目前的界面存在一个BUG，当打开过多界面时，框体层次顺序可能会出错，使得某些按钮被遮挡无法看到，或者无法点击。` `当出现类似问题的时候，尝试点击此按钮，会重置所有框体的层次并重载界面，问题一般就会修复。",
+        tip = "说明`经过爱不易团队的测试，暴雪目前的界面存在一个BUG，当打开过多界面时，框体层次顺序可能会出错，使得某些按钮被遮挡无法看到，或者无法点击。` `当出现类似问题的时候，尝试点击此按钮，会重置所有框体的层次并重载界面，问题一般就会修复。",
         callback = function(cfg, v, loading)
             local f = EnumerateFrames()
             while f do

@@ -236,7 +236,7 @@ function TS.CreateButtons(f)
     CoreUIEnableTooltip(btnLink(),L["BtnLinkTipTitle"],L["BtnLinkTip"]);
 
     --信息广播
-    --【有爱：团员信息统计】 - 总览：
+    --【爱不易：团员信息统计】 - 总览：
     --★桂花猫猫 圣骑 装等:896.3 橙装:肩,手 引领:萨,海 秘境:174 15层:10天 M翡翠:2/7 H勇气:3/3 暗夜:10/10 H暗夜:9/10
     local annLine = {}
     local function GetPlayerAnnText(name)
@@ -305,7 +305,7 @@ function TS.CreateButtons(f)
         button2 = TEXT(CANCEL),
         OnAccept = function(self)
             local tab = TS.TABS[f.tabIdx]
-            SendChatMessage("【有爱：团员信息统计】 - "..tab.tab.."：", self.data);
+            SendChatMessage("【爱不易：团员信息统计】 - "..tab.tab.."：", self.data);
             for i=1,#names do
                 local line = GetPlayerAnnText(names[i])
                 if line then
@@ -699,6 +699,7 @@ function TS.SetupColumns(f)
                 if not player.gsGot then widget:SetTextColor(0.5,0.5,0.5,1) else widget:SetTextColor(r,b,g) end
             end
         },
+        --[[
         {
             header = L["HeaderHealth"],
             headerSpan = 1,
@@ -706,7 +707,7 @@ function TS.SetupColumns(f)
             tip = "当前最大血量(万)",
             create = function(col,btn,idx) return btn:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall"):SetJustifyH("CENTER"):Size(col.width, 24) end,
             update = function(line, widget, idx, colIdx)
-                local health = line.player_name and UnitHealthMax(line.player_name)
+                local health = line.player_name and UnitHealthMax(line.player_name) --固定显示5万
                 if line.player and line.player.name then
                     health = health > 0 and health or UnitHealthMax(line.player.name)
                     if health > 0 then
@@ -718,6 +719,7 @@ function TS.SetupColumns(f)
                 widget:SetText(health and health > 0 and floor(health /10000) or "?")
             end
         },
+        --]]
         --[[
         {
             header = ITEM_MOD_PVP_POWER_SHORT,
@@ -748,7 +750,7 @@ function TS.SetupColumns(f)
                 if not player.gsGot then widget:SetTextColor(0.5,0.5,0.5) else widget:SetTextColor(1,1,1) end
             end
         },
-
+        --[=[
         {
             header = "橙装",
             headerSpan = 1,
@@ -785,8 +787,8 @@ function TS.SetupColumns(f)
                 end
             end
         },
+        --]=]
 
-        --[[
         {
             header = "引领潮流",
             headerSpan = 1,
@@ -812,7 +814,6 @@ function TS.SetupColumns(f)
                 end
             end
         },
-        --]]
     }
 
     TS.NUM_FIX_COLUMNS = #TS.cols

@@ -17,9 +17,13 @@ U1RegisterAddon("163UI_Plugins", {
     load = "NORMAL",
     tags = { TAG_MANAGEMENT },
     icon = "Interface\\ICONS\\INV_Misc_Blizzcon09_GraphicsCard",
-    desc = "各种贴心小功能，组合在一起，原来和有爱核心在一起，现在独立出来了。",
+    desc = "各种贴心小功能，组合在一起，原来和爱不易核心在一起，现在独立出来了。",
     nopic = 1,
 
+    {
+        var = "AutoSwapRacial", text = U1_NEW_ICON.."自动替换种族天赋", default = false,
+        tip = "说明`（测试功能）在达萨罗之战剧情更换种族时，自动替换动作栏上的主动种族天赋。",
+    },
     {
         var = "CastSound",
         text = U1_NEW_ICON.."战斗节奏音",
@@ -76,7 +80,7 @@ U1RegisterAddon("163UI_Plugins", {
         {
             var = "autotrace",
             default = true,
-            text = "自动追踪刚提升的声望"
+            text = "满级后自动追踪刚提升的声望"
         }
     },
 
@@ -85,7 +89,7 @@ U1RegisterAddon("163UI_Plugins", {
         default = false,
         text = U1_NEW_ICON.."完全屏蔽剧情台词窗口",
         confirm = "建议通过双击空格关闭台词窗口，\n完全屏蔽可能会导致剧情不连贯。\n您确定吗?",
-        tip = "说明`7.0新增的窗口，如果启用此选项，则完全屏蔽，毫无痕迹。建议不要启用，有爱提供了双击空格直接关闭当前台词的功能。",
+        tip = "说明`7.0新增的窗口，如果启用此选项，则完全屏蔽，毫无痕迹。建议不要启用，爱不易提供了双击空格直接关闭当前台词的功能。",
         callback = function(cfg, v, loading) U1Toggle_SkipTalkingHead(v) end,
     },
 
@@ -93,7 +97,7 @@ U1RegisterAddon("163UI_Plugins", {
         var = "HideQuickJoin",
         text = "屏蔽快速加入提示",
         default = false,
-        tip = "说明`7.1新增的快速加入提示消息，有爱贴心提供屏蔽功能。",
+        tip = "说明`7.1新增的快速加入提示消息，爱不易贴心提供屏蔽功能。",
         callback = function(cfg, v, loading) U1Toggle_QuickJoinToasts(not v, loading) end,
     },
 
@@ -121,10 +125,10 @@ U1RegisterAddon("163UI_Plugins", {
         end
     },
 
---    {
---        var = "QuestWatchSort", text = U1_NEW_ICON.."任务追踪按距离排序", default = true, callback = load,
---        tip = "说明`按任务远近进行排序``暴雪的任务排序功能失效很久了,有爱为您临时提供解决方案",
---    },
+    {
+        var = "QuestWatchSort", text = U1_NEW_ICON.."任务追踪按距离排序", default = false, callback = load,
+        tip = "说明`按任务远近进行排序``暴雪的任务排序功能失效很久了,爱不易为您临时提供解决方案",
+    },
 
     {
         var = "163UI_Quest", text = "任务奖励信息与半自动交接", default = true, callback = load,
@@ -221,6 +225,12 @@ U1RegisterAddon("163UI_Plugins", {
         tip = "说明`某些场景下会出现一个单独的动作按钮，有时此按钮会因为某些原因导致看不到，为不影响玩家游戏，尤其是BOSS战斗，可以打开此选项，使用一个自定义的替代按钮。",
     },
 
+    {
+        var = "FiveCombo", text = U1_NEW_ICON.."满星时动作条技能高亮", default = true, callback = load,
+        visible = (U1PlayerClass == "ROGUE" or U1PlayerClass == "DRUID"),
+        tip = "说明`潜行者和德鲁伊有效，满星的时候动作条技能闪烁，此功能来自多玩盒子哥",
+    },
+
 --[=[
     {
         var = 'print_huangli_onload',
@@ -231,4 +241,4 @@ U1RegisterAddon("163UI_Plugins", {
 
 })
 
-U1RegisterAddon("GrievousHelper", { title = "重伤助手(自动摘武器)", defaultEnable = 1, parent = "163UI_Plugins", })
+--U1RegisterAddon("GrievousHelper", { title = "重伤助手(自动摘武器)", defaultEnable = 1, parent = "163UI_Plugins", })
