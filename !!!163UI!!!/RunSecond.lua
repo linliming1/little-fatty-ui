@@ -3,6 +3,18 @@ EnableAddOn("!!!Libs") LoadAddOn("!!!Libs") --不能在CoreLibs之前，不能�
 --TODO aby8
 GuildControlUIRankSettingsFrameRosterLabel = GuildControlUIRankSettingsFrameRosterLabel or CreateFrame("Frame")
 
+--WIP: SavedInstance ToyPlus
+--[[
+hooksecurefunc(GameTooltip, "Show", function()
+    local qtip = LibStub("LibQTip-1.0", true)
+    if qtip then
+        for _, v in pairs(qtip.activeTooltips) do
+            qtip:Release(v)
+        end
+    end
+end)
+]]
+
 function U1RemovedAddOn(...)
     local removed = {}
     for i=1, select('#', ...) do
@@ -70,7 +82,7 @@ CoreDependCall("Blizzard_GarrisonUI", function()
     end
 end)
 
---- 给任务追踪里的任务物品和技能增加一个安全按钮
+--- 给任务追踪里的任务物品和技能增加一个安全按钮,包括普通任务,世界任务,以及场景战役的法术
 CoreDependCall("Blizzard_ObjectiveTracker", function()
     local hook_Scenario_AddSpells = function(self, objectiveBlock, spellInfo)
         objectiveBlock = objectiveBlock or ScenarioObjectiveBlock
@@ -114,7 +126,7 @@ CoreDependCall("Blizzard_ObjectiveTracker", function()
     CoreOnEvent("PLAYER_REGEN_DISABLED", hook_Scenario_AddSpells)
 
     local wqItems163 = {} --物品按钮定时刷新隐藏, 不能setparent，也不能SetAllPoints()
-    local function update_WorldQuestItemButtons()
+    local function update_QuestItemButtons()
         if InCombatLockdown() then return end
         for bliz, btn163 in pairs(wqItems163) do
             if type(btn163) == "string" then
@@ -141,32 +153,37 @@ CoreDependCall("Blizzard_ObjectiveTracker", function()
             end
         end
     end
-    local hook_WorldQuest_Update = function(self)
-        --if not IsAddOnLoaded("!KalielsTracker") then return end
-        self = self or WORLD_QUEST_TRACKER_MODULE
-        if not self.ShowWorldQuests then return end
+    local hook_Quest_Update = function(module, isWorldQuests)
+        return function(self)
+            --if not IsAddOnLoaded("!KalielsTracker") then return end
+            self = self or module
+            if isWorldQuests and not self.ShowWorldQuests then return end
+            if _G.AbyQuestWatchSortUpdate then return end
 
-        -- 除了watches之外，还有一个当前区域的世界任务，所以不循环GetNumWorldQuestWatches直接循环usedBlocks
-        --- @see Blizzard_ObjectiveTracker\Blizzard_BonusObjectiveTracker.lua   UpdateTrackedWorldQuests(module)
-        --- @see Blizzard_ObjectiveTracker\Blizzard_BonusObjectiveTracker.lua   AddBonusObjectiveQuest
-        --- @see Blizzard_ObjectiveTracker\Blizzard_ObjectiveTracker.lua        DEFAULT_OBJECTIVE_TRACKER_MODULE:GetBlock(id)
-        for questID, block in pairs(WORLD_QUEST_TRACKER_MODULE.usedBlocks) do
-            if block and block.itemButton and block.itemButton:IsShown() then
-                local questLogIndex = GetQuestLogIndexByID(questID);
-                local link, item, charges, showItemWhenComplete = GetQuestLogSpecialItemInfo(questLogIndex);
-                if link then
-                    local blizBtn = block.itemButton
-                    if wqItems163[blizBtn] and type(wqItems163[blizBtn])=="table" then wqItems163[blizBtn].link = link else wqItems163[blizBtn] = link end
+            -- 除了watches之外，还有一个当前区域的世界任务，所以不循环GetNumWorldQuestWatches直接循环usedBlocks
+            --- @see Blizzard_ObjectiveTracker\Blizzard_BonusObjectiveTracker.lua   UpdateTrackedWorldQuests(module)
+            --- @see Blizzard_ObjectiveTracker\Blizzard_BonusObjectiveTracker.lua   AddBonusObjectiveQuest
+            --- @see Blizzard_ObjectiveTracker\Blizzard_ObjectiveTracker.lua        DEFAULT_OBJECTIVE_TRACKER_MODULE:GetBlock(id)
+            for template, ub in pairs(module.usedBlocks) do
+                for questID, block in pairs(ub) do
+                    if block and block.itemButton and block.itemButton:IsShown() then
+                        local questLogIndex = C_QuestLog.GetLogIndexForQuestID(questID);
+                        local link, item, charges, showItemWhenComplete = GetQuestLogSpecialItemInfo(questLogIndex);
+                        if link then
+                            local blizBtn = block.itemButton
+                            if wqItems163[blizBtn] and type(wqItems163[blizBtn])=="table" then wqItems163[blizBtn].link = link else wqItems163[blizBtn] = link end
+                        end
+                    end
                 end
             end
+            update_QuestItemButtons()
         end
-
-        update_WorldQuestItemButtons()
     end
-    hooksecurefunc(WORLD_QUEST_TRACKER_MODULE, "Update", hook_WorldQuest_Update)
-    CoreOnEvent("PLAYER_REGEN_ENABLED", update_WorldQuestItemButtons)
-    CoreOnEvent("PLAYER_REGEN_DISABLED", update_WorldQuestItemButtons)
-    CoreScheduleTimer(true, 0.5, update_WorldQuestItemButtons)
+    hooksecurefunc(WORLD_QUEST_TRACKER_MODULE, "Update", hook_Quest_Update(WORLD_QUEST_TRACKER_MODULE, true))
+    hooksecurefunc(QUEST_TRACKER_MODULE, "Update", hook_Quest_Update(QUEST_TRACKER_MODULE, false))
+    CoreOnEvent("PLAYER_REGEN_ENABLED", update_QuestItemButtons)
+    CoreOnEvent("PLAYER_REGEN_DISABLED", update_QuestItemButtons)
+    CoreScheduleTimer(true, 0.5, update_QuestItemButtons)
 end)
 
 CoreDependCall("Blizzard_InspectUI", function()
@@ -185,6 +202,7 @@ end)--]]
 
 --[[------------------------------------------------------------
 prevent blocking message, /dump WorldMapFrame:IsProtected()
+no use after 8.0
 ---------------------------------------------------------------]]
 if WorldMapFrame.UIElementsFrame and WorldMapFrame.UIElementsFrame.ActionButton then
     local offscreenFrame = CreateFrame("Frame", UIParent)
@@ -328,26 +346,56 @@ end)
 --被世界任务完成框遮挡
 CastingBarFrame:SetFrameStrata("DIALOG")
 
-if false and select(2, GetBuildInfo()) == "24330" then
-    hooksecurefunc("SendChatMessage", function(msg, ...)
-        local needSend = false
-        while(true) do
-            local start, finish, level, aff1, aff2, aff3, name = msg:find("\124cffa335ee\124Hkeystone:%d+:(%d+):(%d*):(%d*):(%d*)\124h%[(.-)%]\124h\124r")
-            if level then
-                --【钥石：艾萨拉之眼 10层：繁盛：暴怒：强韧】
-                local txt = format("【%s %d层", name, level)
-                if aff1 ~= "" then txt = txt.."："..C_ChallengeMode.GetAffixInfo(aff1) end
-                if aff2 ~= "" then txt = txt.."："..C_ChallengeMode.GetAffixInfo(aff2) end
-                if aff3 ~= "" then txt = txt.."："..C_ChallengeMode.GetAffixInfo(aff3) end
-                txt = txt .. "】"
-                msg = msg:sub(1,start-1) .. txt .. msg:sub(finish+1)
-                needSend = true
-            else
-                break
+do
+    -- 初次拾取钥石的信息
+    -- 7.0 "\124cffa335ee\124Hitem:158923::::::::120:65:4063232:::248:9:9:11:2:::\124h[史诗钥石]\124h\124r",
+    -- 9.1 "\124cffa335ee\124Hitem:180653::::::::60:70::::6:17:380:18:18:19:10:20:8:21:4:22:128:::::\124h[史诗钥石]\124h\124r"
+    local function KeystoneLevel(Hyperlink)
+        local itemId, map, level = string.match(Hyperlink, "|Hitem:(%d+)::::::::%d*:%d*:%d*:%d*:%d*:%d*:%d*:(%d+):%d*:(%d+):%d*:(%d*):%d*:(%d*):%d*:(%d*):.-|h(.-)|h")
+        if itemId == "180653" then
+            local name = C_ChallengeMode.GetMapUIInfo(map)
+            if name then Hyperlink = Hyperlink:gsub("|h%[(.-)%]|h", "|h["..format(CHALLENGE_MODE_KEYSTONE_HYPERLINK, name, level).."]|h") end
+        end
+        return Hyperlink
+    end
+
+    local filterLootKeyStone = function(self, event, msg, ...)
+        msg = msg:gsub("(\124Hitem:(%d+)::::::::%d*:%d*:%d*:%d*:%d*:%d+:%d+:.-|h.-|h)", KeystoneLevel)
+        return false, msg, ...
+    end
+    ChatFrame_AddMessageEventFilter("CHAT_MSG_LOOT", filterLootKeyStone)
+
+    local function GetInventoryKeystone()
+        for container=BACKPACK_CONTAINER, NUM_BAG_SLOTS do
+            local slots = GetContainerNumSlots(container)
+            for slot=1, slots do
+                local _, _, _, _, _, _, slotLink = GetContainerItemInfo(container, slot)
+                local itemString = slotLink and slotLink:match("|Hkeystone:([0-9:]+)|h(%b[])|h")
+                if itemString then
+                    return slotLink, itemString
+                end
             end
         end
-        if needSend then
-            SendChatMessage(msg, ...)
+    end
+
+    CoreOnEvent("ITEM_CHANGED", function(event, old, new)
+        local id = new and GetItemInfoInstant(new)
+        if id == 180653 then
+            CoreScheduleBucket("AbyUIShowKeyStone", 0.5, function()
+                local link = GetInventoryKeystone()
+                if link then
+                    local msg = "得到新钥石：" .. link
+                    --"\124cffa335ee\124Hkeystone:180653:380:18:10:8:4:128\124h[钥石：赤红深渊 (18)]\124h\124r"
+                    local affixes = {}
+                    affixes[1],affixes[2],affixes[3],affixes[4] = link:match("|Hkeystone:%d+:%d+:%d+:(%d*):(%d*):(%d*):(%d*)[0-9:]-|h(%b[])|h")
+                    for _, affix in pairs(affixes) do
+                        if affix and affix ~= "" then
+                            msg = msg .. " " .. C_ChallengeMode.GetAffixInfo(affix)
+                        end
+                    end
+                    U1Message(msg)
+                end
+            end)
         end
     end)
 end
@@ -456,3 +504,65 @@ CoreOnEvent("COMBAT_LOG_EVENT_UNFILTERED", function(event, ...)
     end
 end)
 --]]
+
+--[[------------------------------------------------------------
+8.0 recursive
+---------------------------------------------------------------]]
+hooksecurefunc(GameTooltip, "SetOwner", function(self, parent, anchor)
+    if parent == UIParent and anchor == "ANCHOR_NONE" then
+        local tip
+        tip = ShoppingTooltip1; if select(2, tip:GetPoint()) == self then tip:ClearAllPoints() end
+        tip = ShoppingTooltip2; if select(2, tip:GetPoint()) == self then tip:ClearAllPoints() end
+    end
+end)
+
+--[[------------------------------------------------------------
+9.0.1 BossBanner_ConfigureLootFrame -> SetItemButtonQuality -> SetItemButtonOverlay
+hooksecurefunc("IsArtifactRelicItem", function()
+    if BossBanner and BossBanner.LootFrames then
+        local lf = BossBanner.LootFrames[#BossBanner.LootFrames]
+        if not lf.IconHitBox.IconOverlay2 then
+            lf.IconHitBox.IconOverlay2 = {
+                Show = noop,
+                Hide = noop,
+                SetAtlas = noop,
+            }
+        end
+    end
+end)
+---------------------------------------------------------------]]
+
+--[[------------------------------------------------------------
+9.0 噬渊reload显示帮助信息
+---------------------------------------------------------------]]
+CoreOnEvent("PLAYER_ENTERING_WORLD", function()
+    for frame in HelpTip.framePool:EnumerateActive() do
+      if frame and frame.info and frame.info.text == EYE_OF_JAILER_TUTORIAL then
+          frame:Close()
+          break
+      end
+    end
+    return true
+end)
+
+--[[------------------------------------------------------------
+9.0 拍卖钓鱼价
+---------------------------------------------------------------]]
+CoreDependCall("Blizzard_AuctionHouseUI", function()
+    local sellFrame = AuctionHouseFrame.CommoditiesSellFrame
+    hooksecurefunc(sellFrame, "UpdatePriceSelection", function(self)
+        local itemLocation = self:GetItem();
+        if itemLocation then
+            local firstSearchResult = C_AuctionHouse.GetCommoditySearchResultInfo(C_Item.GetItemID(itemLocation), 1);
+            if firstSearchResult and self:GetUnitPrice() == firstSearchResult.unitPrice then
+                if firstSearchResult.quantity <= 3 then
+                    local sr2 = C_AuctionHouse.GetCommoditySearchResultInfo(C_Item.GetItemID(itemLocation), 2);
+                    if sr2 and sr2.unitPrice >  firstSearchResult.unitPrice * 1.1 then
+                        self:GetCommoditiesSellList():SetSelectedEntry(sr2);
+                        U1Message(format("%s %s(卖家:|cffff0000%s|r)疑似钓鱼价，已为您避开", C_Item.GetItemLink(itemLocation) or "拍卖品", GetMoneyString(firstSearchResult.unitPrice), firstSearchResult.owners[1] or UNKNOWN))
+                    end
+                end
+            end
+        end
+    end)
+end)

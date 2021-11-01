@@ -167,6 +167,10 @@ function CooldownSweep:OnNewInstance(icon)
 	-- cooldown2 displays charges.
 	self.cooldown2 = CreateFrame("Cooldown", self:GetChildNameBase() .. "Cooldown2", icon, "CooldownFrameTemplate")
 	
+	-- Let OmniCC detect this as the charge cooldown frame.
+	-- https://github.com/ascott18/TellMeWhen/issues/1784
+	icon.chargeCooldown = self.cooldown2
+	
 	self:SetSkinnableComponent("Cooldown", self.cooldown)
 end
 
@@ -228,6 +232,16 @@ function CooldownSweep:SetupForIcon(icon)
 	self.cooldown2:SetDrawEdge(self.ShowTimer)
 	self.cooldown2:SetDrawSwipe(false)
 	self.cooldown2:SetDrawBling(false)
+
+	-- https://github.com/ascott18/TellMeWhen/issues/1914:
+	-- If a meta icon switches between hidden/shown timer text
+	-- but does not switch to an actual different duration,
+	-- OmniCC will see that the duration is the same and elect to
+	-- do nothing. This fixes that.
+	if OmniCC and OmniCC.Cooldown and OmniCC.Cooldown.Refresh then
+		OmniCC.Cooldown.Refresh(self.cooldown, true)
+		OmniCC.Cooldown.Refresh(self.cooldown2, true)
+	end
 
 
 	local attributes = icon.attributes

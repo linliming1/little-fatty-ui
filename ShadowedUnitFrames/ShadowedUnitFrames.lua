@@ -1,11 +1,11 @@
---[[ 
+--[[
 	Shadowed Unit Frames, Shadowed of Mal'Ganis (US) PvP
 ]]
 
 ShadowUF = select(2, ...)
 
 local L = ShadowUF.L
-ShadowUF.dbRevision = 59
+ShadowUF.dbRevision = 62
 ShadowUF.playerUnit = "player"
 ShadowUF.enabledUnits = {}
 ShadowUF.modules = {}
@@ -43,9 +43,9 @@ function ShadowUF:OnInitialize()
 			hidden = {cast = false, playerPower = true, buffs = false, party = true, raid = false, player = true, pet = true, target = true, focus = true, boss = true, arena = true, playerAltPower = false},
 		},
 	}
-	
+
 	self:LoadUnitDefaults()
-		
+
 	-- Initialize DB
 	self.db = LibStub:GetLibrary("AceDB-3.0"):New("ShadowedUFDB", self.defaults, true)
 	self.db.RegisterCallback(self, "OnProfileChanged", "ProfilesChanged")
@@ -59,18 +59,18 @@ function ShadowUF:OnInitialize()
 				tbl[index] = false
 				return false
 			end
-			
+
 			local func, msg = loadstring("return " .. (ShadowUF.Tags.defaultTags[index] or ShadowUF.db.profile.tags[index].func or ""))
 			if( func ) then
 				func = func()
 			elseif( msg ) then
 				error(msg, 3)
 			end
-			
+
 			tbl[index] = func
 			return tbl[index]
 	end})
-	
+
 	if( not self.db.profile.loadedLayout ) then
 		self:LoadDefaultLayout()
 	else
@@ -112,6 +112,22 @@ end
 
 function ShadowUF:CheckUpgrade()
 	local revision = self.db.profile.revision or self.dbRevision
+	if (revision <= 61 ) then
+		if self.db.profile.bars.texture == "Smooth" then
+			self.db.profile.bars.texture = "Smoother"
+		end
+	end
+	if (revision <= 60 ) then
+		for unit, config in pairs(self.db.profile.units) do
+			if( unit == "player" or unit == "party" or unit == "target" or unit == "raid" or unit == "focus" or unit == "mainassist" or unit == "maintank" ) then
+				config.indicators.sumPending = {enabled = true, anchorPoint = "C", size = 40, x = 0, y = 0, anchorTo = "$parent"}
+			end
+		end
+	end
+	if (revision <= 59 ) then
+		self.db.profile.font.shadowX = 1.0
+		self.db.profile.font.shadowY = -1.0
+	end
 	if( revision <= 58 ) then
 		for unit, config in pairs(self.db.profile.units) do
 			if config.text then
@@ -232,8 +248,8 @@ function ShadowUF:LoadUnits()
 	local instanceType = CanHearthAndResurrectFromArea() and "pvp" or select(2, IsInInstance())
 	if( instanceType == "scenario" ) then instanceType = "party" end
 
-  	if( not instanceType ) then instanceType = "none" end
-	
+	if( not instanceType ) then instanceType = "none" end
+
 	for _, type in pairs(self.unitList) do
 		local enabled = self.db.profile.units[type].enabled
 		if( ShadowUF.Units.zoneUnits[type] ) then
@@ -245,9 +261,9 @@ function ShadowUF:LoadUnits()
 				enabled = true
 			end
 		end
-		
+
 		self.enabledUnits[type] = enabled
-		
+
 		if( enabled ) then
 			self.Units:InitializeFrame(type)
 		else
@@ -259,7 +275,7 @@ end
 function ShadowUF:LoadUnitDefaults()
 	for _, unit in pairs(self.unitList) do
 		self.defaults.profile.positions[unit] = {point = "", relativePoint = "", anchorPoint = "", anchorTo = "UIParent", x = 0, y = 0}
-		
+
 		-- The reason why the defaults are so sparse, is because the layout needs to specify most of this. The reason I set tables here is basically
 		-- as an indication that hey, the unit wants this, if it doesn't that it won't want it.
 		self.defaults.profile.units[unit] = {
@@ -278,7 +294,7 @@ function ShadowUF:LoadUnitDefaults()
 				{enabled = true, name = L["Right text"], text = "", anchorTo = "$emptyBar", anchorPoint = "CRI", width = 0.60, size = 0, x = -3, y = 0, default = true},
 				['*'] = {enabled = true, text = "", anchorTo = "", anchorPoint = "C", size = 0, x = 0, y = 0},
 			},
-			indicators = {raidTarget = {enabled = true, size = 0}}, 
+			indicators = {raidTarget = {enabled = true, size = 0}},
 			highlight = {},
 			auraIndicators = {enabled = false},
 			auras = {
@@ -286,7 +302,7 @@ function ShadowUF:LoadUnitDefaults()
 				debuffs = {enabled = false, perRow = 10, maxRows = 4, selfScale = 1.30, show = {player = true, boss = true, raid = true, misc = true}, enlarge = {SELF = true}, timers = {ALL = true}},
 			},
 		}
-		
+
 		if( not self.fakeUnits[unit] ) then
 			self.defaults.profile.units[unit].combatText = {enabled = true, anchorTo = "$parent", anchorPoint = "C", x = 0, y = 0}
 
@@ -296,7 +312,7 @@ function ShadowUF:LoadUnitDefaults()
 				self.defaults.profile.units[unit].healAbsorb = {enabled = true, cap = 1.30}
 			end
 		end
-		
+
 		if( unit ~= "player" ) then
 			self.defaults.profile.units[unit].range = {enabled = false, oorAlpha = 0.80, inAlpha = 1.0}
 
@@ -312,6 +328,7 @@ function ShadowUF:LoadUnitDefaults()
 			self.defaults.profile.units[unit].indicators.role = {enabled = true, size = 0}
 			self.defaults.profile.units[unit].indicators.status = {enabled = false, size = 19}
 			self.defaults.profile.units[unit].indicators.resurrect = {enabled = true}
+			self.defaults.profile.units[unit].indicators.sumPending = {enabled = true}
 
 			if( unit ~= "focus" and unit ~= "target" ) then
 				self.defaults.profile.units[unit].indicators.ready = {enabled = true, size = 0}
@@ -579,7 +596,7 @@ function ShadowUF:RegisterModule(module, key, name, isBar, class, spec, level)
 			module.moduleSpec[id] = true
 		end
 	end
-	
+
 	table.insert(self.moduleOrder, module)
 end
 
@@ -601,28 +618,31 @@ local resetTimer
 function ShadowUF:ProfileReset()
 	if( not resetTimer ) then
 		resetTimer = CreateFrame("Frame")
-		resetTimer:SetScript("OnUpdate", function(self)
+		resetTimer:SetScript("OnUpdate", function(f)
 			ShadowUF:ProfilesChanged()
-			self:Hide()
+			f:Hide()
 		end)
 	end
-	
+
 	resetTimer:Show()
 end
 
 function ShadowUF:ProfilesChanged()
 	if( self.layoutImporting ) then return end
 	if( resetTimer ) then resetTimer:Hide() end
-	
+
 	self.db:RegisterDefaults(self.defaults)
-	
+
 	-- No active layout, register the default one
 	if( not self.db.profile.loadedLayout ) then
 		self:LoadDefaultLayout()
 	else
 		self:CheckUpgrade()
+		self:CheckBuild()
 	end
-	
+
+	self.db.profile.revision = self.dbRevision
+
 	self:FireModuleEvent("OnProfileChange")
 	self:LoadUnits()
 	self:HideBlizzardFrames()
@@ -653,6 +673,7 @@ end
 local function hideBlizzardFrames(taint, ...)
 	for i=1, select("#", ...) do
 		local frame = select(i, ...)
+		UnregisterUnitWatch(frame)
 		frame:UnregisterAllEvents()
 		frame:Hide()
 
@@ -679,10 +700,10 @@ function ShadowUF:HideBlizzardFrames()
 	if( self.db.profile.hidden.party and not active_hiddens.party ) then
 		for i=1, MAX_PARTY_MEMBERS do
 			local name = "PartyMemberFrame" .. i
-			hideBlizzardFrames(true, _G[name], _G[name .. "HealthBar"], _G[name .. "ManaBar"])
+			hideBlizzardFrames(false, _G[name], _G[name .. "HealthBar"], _G[name .. "ManaBar"])
 		end
-		
-		-- This stops the compact party frame from being shown		
+
+		-- This stops the compact party frame from being shown
 		UIParent:UnregisterEvent("GROUP_ROSTER_UPDATE")
 
 		-- This just makes sure
@@ -699,20 +720,20 @@ function ShadowUF:HideBlizzardFrames()
 				CompactRaidFrameManager:UnregisterAllEvents()
 				CompactRaidFrameContainer:UnregisterAllEvents()
 				if( InCombatLockdown() ) then return end
-	
+
 				CompactRaidFrameManager:Hide()
 				local shown = CompactRaidFrameManager_GetSetting("IsShown")
 				if( shown and shown ~= "0" ) then
 					CompactRaidFrameManager_SetSetting("IsShown", "0")
 				end
 			end
-			
+
 			hooksecurefunc("CompactRaidFrameManager_UpdateShown", function()
 				if( self.db.profile.hidden.raid ) then
 					hideRaid()
 				end
 			end)
-			
+
 			hideRaid()
 			CompactRaidFrameContainer:HookScript("OnShow", hideRaid)
 			CompactRaidFrameManager:HookScript("OnShow", hideRaid)
@@ -722,10 +743,10 @@ function ShadowUF:HideBlizzardFrames()
 	if( self.db.profile.hidden.buffs and not active_hiddens.buffs ) then
 		hideBlizzardFrames(false, BuffFrame, TemporaryEnchantFrame)
 	end
-	
+
 	if( self.db.profile.hidden.player and not active_hiddens.player ) then
 		hideBlizzardFrames(false, PlayerFrame, PlayerFrameAlternateManaBar)
-			
+
 		-- We keep these in case someone is still using the default auras, otherwise it messes up vehicle stuff
 		PlayerFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
 		PlayerFrame:RegisterEvent("UNIT_ENTERING_VEHICLE")
@@ -744,15 +765,15 @@ function ShadowUF:HideBlizzardFrames()
 	if( self.db.profile.hidden.pet and not active_hiddens.pet ) then
 		hideBlizzardFrames(false, PetFrame)
 	end
-	
+
 	if( self.db.profile.hidden.target and not active_hiddens.target ) then
 		hideBlizzardFrames(false, TargetFrame, ComboFrame, TargetFrameToT)
 	end
-	
+
 	if( self.db.profile.hidden.focus and not active_hiddens.focus ) then
 		hideBlizzardFrames(false, FocusFrame, FocusFrameToT)
 	end
-		
+
 	if( self.db.profile.hidden.boss and not active_hiddens.boss ) then
 		for i=1, MAX_BOSS_FRAMES do
 			local name = "Boss" .. i .. "TargetFrame"
@@ -797,8 +818,8 @@ function ShadowUF:ShowInfoPanel()
 
 	ShadowUF.db.global.infoID = #(infoMessages)
 	if( infoID < 0 or infoID >= #(infoMessages) ) then return end
-	
-	local frame = CreateFrame("Frame", nil, UIParent)
+
+	local frame = CreateFrame("Frame", nil, UIParent, BackdropTemplateMixin and "BackdropTemplate" or nil)
 	frame:SetClampedToScreen(true)
 	frame:SetFrameStrata("HIGH")
 	frame:SetToplevel(true)
@@ -835,8 +856,8 @@ function ShadowUF:ShowInfoPanel()
 	frame.hide:SetHeight(20)
 	frame.hide:SetWidth(100)
 	frame.hide:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 8, 8)
-	frame.hide:SetScript("OnClick", function(self)
-		self:GetParent():Hide()
+	frame.hide:SetScript("OnClick", function(f)
+		f:GetParent():Hide()
 	end)
 end
 
@@ -852,7 +873,7 @@ CONFIGMODE_CALLBACKS["Shadowed Unit Frames"] = function(mode)
 	elseif( mode == "OFF" ) then
 		ShadowUF.db.profile.locked = true
 	end
-	
+
 	ShadowUF.modules.movers:Update()
 end
 
@@ -864,7 +885,7 @@ SlashCmdList["SHADOWEDUF"] = function(msg)
 	msg = msg and string.lower(msg)
 	if( msg and string.match(msg, "^profile (.+)") ) then
 		local profile = string.match(msg, "^profile (.+)")
-		
+
 		for id, name in pairs(ShadowUF.db:GetProfiles()) do
 			if( string.lower(name) == profile ) then
 				ShadowUF.db:SetProfile(name)
@@ -872,11 +893,11 @@ SlashCmdList["SHADOWEDUF"] = function(msg)
 				return
 			end
 		end
-		
+
 		ShadowUF:Print(string.format(L["Cannot find any profiles named \"%s\"."], profile))
 		return
-    end
-
+	end
+	
     if msg and msg == "lock" then
         ShadowUF.db.profile.locked = not ShadowUF.db.profile.locked
         ShadowUF.modules.movers:Update()
@@ -888,7 +909,7 @@ SlashCmdList["SHADOWEDUF"] = function(msg)
 		DEFAULT_CHAT_FRAME:AddMessage(string.format(L["Failed to load ShadowedUF_Options, cannot open configuration. Error returned: %s"], reason and _G["ADDON_" .. reason] or ""))
 		return
 	end
-	
+
 	ShadowUF.Config:Open()
 end
 

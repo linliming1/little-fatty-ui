@@ -1,11 +1,10 @@
 local mod	= DBM:NewMod(1487, "DBM-Party-Legion", 4, 721)
 local L		= mod:GetLocalizedStrings()
 
-mod:SetRevision(("$Revision: 2 $"):sub(12, -3))
+mod:SetRevision("20201116014239")
 mod:SetCreatureID(95674, 99868)
 mod:SetEncounterID(1807)
 mod:DisableEEKillDetection()
-mod:SetZone()
 
 mod:RegisterCombat("combat")
 
@@ -31,7 +30,7 @@ local specWarnFixateOver				= mod:NewSpecialWarningEnd(196838, nil, nil, nil, 1)
 local specWarnWolves					= mod:NewSpecialWarningSwitch("ej12600", "Tank")
 
 local timerLeapCD						= mod:NewCDTimer(31, 197556, nil, nil, nil, 3)--31-36
---local timerClawFrenzyCD					= mod:NewCDTimer(9.7, 196512, nil, "Tank", nil, 5, nil, DBM_CORE_TANK_ICON)--All over the place
+--local timerClawFrenzyCD					= mod:NewCDTimer(9.7, 196512, nil, "Tank", nil, 5, nil, DBM_CORE_L.TANK_ICON)--All over the place
 local timerHowlCD						= mod:NewCDTimer(31.5, 196543, nil, "SpellCaster", nil, 2)--Poor data
 local timerFixateCD						= mod:NewCDTimer(36, 196838, nil, nil, nil, 3)--Poor data
 local timerWolvesCD						= mod:NewCDTimer(35, "ej12600", nil, nil, nil, 1, 199184)
@@ -115,7 +114,7 @@ function mod:SPELL_CAST_SUCCESS(args)
 	local spellId = args.spellId
 	if spellId == 196567 then--Stealth (boss retreat)
 		--Stop all timers but not combat
-		for i, v in ipairs(self.timers) do
+		for _, v in ipairs(self.timers) do
 			v:Stop()
 		end
 		--Artificially set no wipe to 10 minutes

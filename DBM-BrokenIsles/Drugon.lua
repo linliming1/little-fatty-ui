@@ -1,11 +1,11 @@
-local mod	= DBM:NewMod(1789, "DBM-BrokenIsles", nil, 822)
+local mod	= DBM:NewMod(1789, "DBM-BrokenIsles", 1, 822)
 local L		= mod:GetLocalizedStrings()
 
-mod:SetRevision(("$Revision: 3 $"):sub(12, -3))
+mod:SetRevision("20210721041434")
 mod:SetCreatureID(110378)
 mod:SetEncounterID(1949)
 mod:SetReCombatTime(20)
-mod:SetZone()
+mod:EnableWBEngageSync()--Enable syncing engage in outdoors
 
 mod:RegisterCombat("combat")
 
@@ -22,7 +22,6 @@ local warnAvalanche				= mod:NewTargetAnnounce(219542, 3)
 local warnSnowPlow				= mod:NewTargetAnnounce(219602, 4)
 
 local specWarnAvalanche			= mod:NewSpecialWarningYou(219542, nil, nil, nil, 1, 2)
-local yellAvalanche				= mod:NewYell(219542)
 local specWarnSnowCrash			= mod:NewSpecialWarningDodge(219493, "Melee", nil, nil, 4, 2)
 local specWarnSnowPlow			= mod:NewSpecialWarningRun(219602, nil, nil, nil, 4, 2)
 local specWarnSnowPlowOver		= mod:NewSpecialWarningFades(219602, nil, nil, nil, 1, 2)
@@ -35,13 +34,12 @@ mod:AddReadyCheckOption(43448, false)
 
 function mod:AvaTarget(targetname, uId)
 	if not targetname then
-		warnAvalanche:Show(DBM_CORE_UNKNOWN)
+		warnAvalanche:Show(DBM_CORE_L.UNKNOWN)
 		return
 	end
 	if targetname == UnitName("player") then
 		specWarnAvalanche:Show()
 		specWarnAvalanche:Play("runaway")
-		yellAvalanche:Yell()
 	else
 		warnAvalanche:Show(targetname)
 	end

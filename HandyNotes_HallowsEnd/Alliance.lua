@@ -72,11 +72,6 @@ points[50] = { -- "StranglethornJungle"
 	[53166698] = 28964, -- Fort Livingston
 }
 
-points[224] = { -- "StranglethornVale"
-	[37907993] = 12397, -- Booty Bay, Southern Stranglethorn
-	[52094310] = 28964, -- Fort Livingston, Northern Stranglethorn
-}
-
 points[51] = { -- "SwampOfSorrows"
 	[71651410] = 28967, -- Bogpaddle
 	[28933240] = 28968, -- The Harbourage
@@ -316,13 +311,6 @@ points[249] = { -- "Uldum"
 	[54683301] = 29017, -- Ramkahen
 }
 
-points[203] = { -- "Vashjir"
-	[78653071] = 28981, -- Deepmist Grotto, Kelp'thar Forest
-	[64195159] = 28982, -- Silver Tide Hollow, Shimmering Expanse
-	[64566242] = 28983, -- Tranquil Wash, Shimmering Expanse
-	[39576790] = 28985, -- Darkbreak Cove, Abyssal Depths
-}
-
 points[204] = { -- "VashjirDepths"
 	[54677212] = 28985, -- Darkbreak Cove
 }
@@ -346,8 +334,8 @@ points[422] = { -- "DreadWastes"
 }
 
 points[418] = { -- "Krasarang"
-	[51437729] = 32034, -- Marista
-	[75930691] = 32036, -- Zhu's Watch
+	[53447649] = 32034, -- Marista
+	[79830072] = 32036, -- Zhu's Watch
 }
 
 points[379] = { -- "KunLaiSummit"

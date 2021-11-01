@@ -1,13 +1,11 @@
-## Interface: 80100
+## Interface: 90100
 ## Title: Bagnon Config
 ## Author: Tuller and Jaliborc (João Cardoso)
 ## Notes: An options menu for Bagnon
 ## Dependencies: Bagnon
 ## LoadOnDemand: 1
-## Version: 8.1.8
 
-main.lua
-common\Wildpants_Config.xml
+..\Bagnon\addons\config\config.xml
 
 
 ## Title-zhCN: |cff880303[爱不易]|r Bagnon 整合背包配置

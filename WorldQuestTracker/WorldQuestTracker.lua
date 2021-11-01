@@ -1,4 +1,6 @@
 
+ 
+--new 8.1.5 C_TaskQuest.GetQuestTimeLeftSeconds
 
 hooksecurefunc (WorldQuestDataProviderMixin, "RefreshAllData", function (self, fromOnShow)
 	--is triggering each 0.5 seconds
@@ -30,48 +32,14 @@ if (true) then
 	--return - nah, not today
 end
 
-
 local WorldQuestTracker = WorldQuestTrackerAddon
 local ff = WorldQuestTrackerFinderFrame
 local rf = WorldQuestTrackerRareFrame
 
-
-
--- 219978
--- /run SetSuperTrackedQuestID(44033);
--- TaskPOI_OnClick
- 
-
-
-local GameCooltip = GameCooltip2
---local Saturate = Saturate
-local floor = floor
---local ceil = ceil
---local ipairs = ipairs
-local GetItemInfo = GetItemInfo
-local GetCurrentMapZone = GetCurrentMapZone
-local GetQuestsForPlayerByMapID = C_TaskQuest.GetQuestsForPlayerByMapID
 local HaveQuestData = HaveQuestData
-local QuestMapFrame_IsQuestWorldQuest = QuestMapFrame_IsQuestWorldQuest or QuestUtils_IsQuestWorldQuest
-local GetNumQuestLogRewardCurrencies = GetNumQuestLogRewardCurrencies
-local GetQuestLogRewardInfo = GetQuestLogRewardInfo
-local GetQuestLogRewardCurrencyInfo = GetQuestLogRewardCurrencyInfo
-local GetQuestLogRewardMoney = GetQuestLogRewardMoney
-local GetQuestTagInfo = GetQuestTagInfo
-local GetNumQuestLogRewards = GetNumQuestLogRewards
+local isWorldQuest = QuestUtils_IsQuestWorldQuest
 local GetQuestInfoByQuestID = C_TaskQuest.GetQuestInfoByQuestID
 local GetQuestTimeLeftMinutes = C_TaskQuest.GetQuestTimeLeftMinutes
-
-local MapRangeClamped = DF.MapRangeClamped
-local FindLookAtRotation = DF.FindLookAtRotation
-local GetDistance_Point = DF.GetDistance_Point
-
---importing FindLookAtRotation
-if (not FindLookAtRotation) then
-	FindLookAtRotation = function (_, x1, y1, x2, y2)
-		return atan2 (y2 - y1, x2 - x1) + pi
-	end
-end
 
 local _
 
@@ -85,6 +53,7 @@ WorldQuestTracker.WorldMapSupportWidgets = {}
 WorldQuestTracker.PartyQuestsPool = {}
 WorldQuestTracker.CurrentZoneQuests = {}
 WorldQuestTracker.CachedQuestData = {}
+WorldQuestTracker.CachedConduitData = {}
 WorldQuestTracker.CurrentMapID = 0
 WorldQuestTracker.LastWorldMapClick = 0
 WorldQuestTracker.MapSeason = 0
@@ -107,7 +76,7 @@ if (not LibWindow) then
 	print ("|cFFFFAA00World Quest Tracker|r: libwindow not found, did you just updated the addon? try reopening the client.|r")
 end
 
-local ARROW_UPDATE_FREQUENCE = 0.016
+
 
 local WorldMapScrollFrame = WorldMapFrame.ScrollContainer
 
@@ -176,6 +145,10 @@ function WorldQuestTracker:OnInit()
 	local SharedMedia = LibStub:GetLibrary ("LibSharedMedia-3.0")
 	SharedMedia:Register ("statusbar", "Iskar Serenity", [[Interface\AddOns\WorldQuestTracker\media\bar_serenity]])
 	
+	C_Timer.After (5, function()
+		WorldQuestTracker.InitiateFlyMasterTracker()
+	end)
+
 	C_Timer.After (2, function()
 		if (WorldQuestTracker.db:GetCurrentProfile() ~= "Default") then
 			WorldQuestTracker.db:SetProfile ("Default")
@@ -192,7 +165,12 @@ function WorldQuestTracker:OnInit()
 		
 		-- ~review disabling scale since it have some issues for some users
 		WorldQuestTracker.db.profile.map_frame_scale_enabled = false
+
+		--this options is deprecated, switching it to false for all users
+		WorldQuestTracker.db.profile.disable_world_map_widgets = false
 	end)
+
+	WorldQuestTracker.TomTomUIDs = {}
 
 	if (LibWindow) then
 		if (WorldQuestTracker.db:GetCurrentProfile() == "Default") then
@@ -205,6 +183,12 @@ function WorldQuestTracker:OnInit()
 			if (not WorldQuestTrackerFinderFrame.IsRegistered) then
 				WorldQuestTracker.RegisterGroupFinderFrameOnLibWindow()
 			end
+		end
+	end
+	
+	if (WorldQuestTracker.db.profile.raredetected and WorldQuestTracker.MapData.RaresToScan) then
+		for npcId, _ in pairs (WorldQuestTracker.db.profile.raredetected) do
+			WorldQuestTracker.MapData.RaresToScan [npcId] = true
 		end
 	end
 	
@@ -234,7 +218,7 @@ function WorldQuestTracker:OnInit()
 	C_Timer.After (11, WorldQuestTracker.RequestRares)
 	C_Timer.After (12, WorldQuestTracker.CheckForOldRareFinderData)
 	
-	local canLoad = IsQuestFlaggedCompleted (WORLD_QUESTS_AVAILABLE_QUEST_ID)
+	local canLoad = C_QuestLog.IsQuestFlaggedCompleted(WORLD_QUESTS_AVAILABLE_QUEST_ID)
 	
 	local re_ZONE_CHANGED_NEW_AREA = function()
 		WorldQuestTracker:ZONE_CHANGED_NEW_AREA()
@@ -403,9 +387,9 @@ function WorldQuestTracker:OnInit()
 
 		--> Court of Farondis 42420
 		--> The Dreamweavers 42170
-		--print ("world quest:", questID, QuestMapFrame_IsQuestWorldQuest (questID), XP, gold)
+		--print ("world quest:", questID, isWorldQuest(questID), XP, gold)
 	
-		if (QuestMapFrame_IsQuestWorldQuest (questID)) then
+		if (isWorldQuest(questID)) then
 			--print (event, questID, XP, gold)
 			--QUEST_TURNED_IN 44300 0 772000
 			-- QINFO: 0 nil nil Petrified Axe Haft true 370
@@ -415,8 +399,7 @@ function WorldQuestTracker:OnInit()
 			
 			FlashClientIcon()
 			
-			if (QuestMapFrame_IsQuestWorldQuest (questID)) then --wait, is this inception?
-				--local title, questType, texture, factionID, tagID, tagName, worldQuestType, rarity, isElite, tradeskillLineIndex, selected, isSpellTarget, timeLeft, isCriteria, gold, goldFormated, rewardName, rewardTexture, numRewardItems, itemName, itemTexture, itemLevel, quantity, quality, isUsable, itemID, isArtifact, artifactPower, isStackable = WorldQuestTracker:GetQuestFullInfo (questID)
+			if (isWorldQuest(questID)) then --wait, is this inception?
 				local title, factionID, tagID, tagName, worldQuestType, rarity, isElite, tradeskillLineIndex, tagID, tagName, worldQuestType, rarity, isElite, tradeskillLineIndex, allowDisplayPastCritical, gold, goldFormated, rewardName, rewardTexture, numRewardItems, itemName, itemTexture, itemLevel, quantity, quality, isUsable, itemID, isArtifact, artifactPower, isStackable, stackAmount = WorldQuestTracker.GetOrLoadQuestData (questID)
 				
 				--print (title, questType, texture, factionID, tagID, tagName, worldQuestType, rarity, isElite, tradeskillLineIndex)
@@ -575,14 +558,14 @@ function WorldQuestTracker:OnInit()
 	
 	function WorldQuestTracker:QUEST_LOOT_RECEIVED (event, questID, item, amount, ...)
 		--print ("LOOT", questID, item, amount, ...)
-		if (QuestMapFrame_IsQuestWorldQuest (questID)) then
+		if (isWorldQuest(questID)) then
 		--	local title, questType, texture, factionID, tagID, tagName, worldQuestType, rarity, isElite, tradeskillLineIndex, selected, isSpellTarget, timeLeft, isCriteria, gold, goldFormated, rewardName, rewardTexture, numRewardItems, itemName, itemTexture, itemLevel, quantity, quality, isUsable, itemID, isArtifact, artifactPower, isStackable = WorldQuestTracker:GetQuestFullInfo (questID)
 		--	print ("QINFO:", goldFormated, rewardName, numRewardItems, itemName, isArtifact, artifactPower)
 		end
 	end
 	
     WorldQuestTracker.TAXIMAP_OPENED = noop
-    WorldQuestTracker.TAXIMAP_CLOSED = noop  --aby8 disable WorldQuestTracker_Taxi.lua
+    WorldQuestTracker.TAXIMAP_CLOSED = noop  --abyui8 disable WorldQuestTracker_Taxi.lua
 	WorldQuestTracker:RegisterEvent ("TAXIMAP_OPENED")
 	WorldQuestTracker:RegisterEvent ("TAXIMAP_CLOSED")
 	WorldQuestTracker:RegisterEvent ("ZONE_CHANGED_NEW_AREA")
@@ -608,8 +591,8 @@ end
 	--formata o tempo restante que a quest tem
 	local D_HOURS = "%dH"
 	local D_DAYS = "%dD"
-	function WorldQuestTracker.GetQuest_TimeLeft (questID, formated)
-		local timeLeftMinutes = GetQuestTimeLeftMinutes (questID)
+	function WorldQuestTracker.GetQuest_TimeLeft(questID, formated)
+		local timeLeftMinutes = GetQuestTimeLeftMinutes(questID)
 		if (timeLeftMinutes) then
 			if (formated) then
 				local timeString
@@ -629,21 +612,39 @@ end
 			end
 		else
 			--since 20/12/2018 time left sometimes is returning nil
-			return 1
+			return 60
 		end
 	end
 
 	--pega os dados da quest
-	function WorldQuestTracker.GetQuest_Info (questID)
-		if (not HaveQuestData (questID)) then
+	function WorldQuestTracker.GetQuest_Info(questID)
+		if (not HaveQuestData(questID)) then
+			if (WorldQuestTracker.__debug) then
+				WorldQuestTracker:Msg("no HaveQuestData(1) for quest", questID)
+			end
 			return
 		end
-		local title, factionID = GetQuestInfoByQuestID (questID)
-		local tagID, tagName, worldQuestType, rarity, isElite, tradeskillLineIndex = GetQuestTagInfo (questID)
-		return title, factionID, tagID, tagName, worldQuestType, rarity, isElite, tradeskillLineIndex
+
+		local title, factionID = GetQuestInfoByQuestID(questID)
+
+		local tagInfo = C_QuestLog.GetQuestTagInfo(questID)
+		if (not tagInfo) then
+			if (WorldQuestTracker.__debug) then
+				WorldQuestTracker:Msg("no tagInfo(3) for quest", questID)
+			end
+			return
+		end
+
+		local tagID = tagInfo.tagID
+		local tagName = tagInfo.tagName
+		local worldQuestType = tagInfo.worldQuestType
+		local rarity = tagInfo.quality
+		local isElite = tagInfo.isElite
+
+		return title, factionID, tagID, tagName, worldQuestType, rarity, isElite
 	end
 
-	--pega o icone para as quest que dao goild
+	--pega o icone para as quest que dao gold
 	local goldCoords = {0, 1, 0, 1}
 	function WorldQuestTracker.GetGoldIcon()
 		return [[Interface\AddOns\WorldQuestTracker\media\icon_gold]], goldCoords
@@ -751,7 +752,7 @@ end
 
 --point of interest frame ~poiframe ~frame ~start
 --local worldFramePOIs = CreateFrame ("frame", "WorldQuestTrackerWorldMapPOI", WorldMapFrame.BorderFrame)
-local worldFramePOIs = CreateFrame ("frame", "WorldQuestTrackerWorldMapPOI", WorldMapFrame.ScrollContainer)
+local worldFramePOIs = CreateFrame ("frame", "WorldQuestTrackerWorldMapPOI", WorldMapFrame.ScrollContainer, "BackdropTemplate")
 worldFramePOIs:SetAllPoints()
 worldFramePOIs:SetFrameLevel (6701)
 local fadeInAnimation = worldFramePOIs:CreateAnimationGroup()
@@ -811,13 +812,12 @@ end
 local tutorial_one = function()
 
 	local widget = WorldQuestTracker.WorldSummaryQuestsSquares [1]
-	print (widget, widget and widget:IsShown())
 
 	local alert = CreateFrame ("frame", "WorldQuestTrackerTutorialAlert1", worldFramePOIs, "MicroButtonAlertTemplate")
 	alert:SetFrameLevel (302)
 	alert.label = L["S_TUTORIAL_CLICKTOTRACK"]
 	alert.Text:SetSpacing (4)
-	MicroButtonAlert_SetText (alert, alert.label)
+	MicroButtonAlert_SetText2 (alert, alert.label)
 	
 	if (widget and widget:IsShown()) then
 		alert:SetPoint ("bottom", widget, "top", 0, 28)
@@ -837,7 +837,7 @@ local tutorial_two = function()
 		alert:SetFrameLevel (302)
 		alert.label = L["S_TUTORIAL_WORLDBUTTONS"]
 		alert.Text:SetSpacing (4)
-		MicroButtonAlert_SetText (alert, alert.label)
+		MicroButtonAlert_SetText2 (alert, alert.label)
 		
 		alert:SetPoint ("bottom", WorldQuestTrackerToggleQuestsSummaryButton, "top", 0, 28)
 		
@@ -856,10 +856,10 @@ end
 local tutorial_three = function()
 	local alert = CreateFrame ("frame", "WorldQuestTrackerTutorialAlert3", worldFramePOIs, "MicroButtonAlertTemplate")
 	alert:SetFrameLevel (302)
-	alert.label = "点击'汇总'，可显示统计数据，以及其他角色的任务列表."
+	alert.label = L["S_TUTORIAL_STATISTICS_BUTTON"]
 	alert.Text:SetSpacing (4)
-	MicroButtonAlert_SetText (alert, alert.label)
-	alert:SetPoint ("bottomleft", WorldQuestTrackerRewardHistoryButton, "topleft", 0, 32)
+	MicroButtonAlert_SetText2 (alert, alert.label)
+	alert:SetPoint ("bottomleft", WorldQuestTrackerStatisticsButton, "topleft", 0, 32)
 	alert.Arrow:ClearAllPoints()
 	alert.Arrow:SetPoint ("topleft", alert, "bottomleft", 10, 0)
 	alert.CloseButton:HookScript ("OnClick", hook_AlertCloseButton)
@@ -869,24 +869,18 @@ local tutorial_three = function()
 end
 
 local tutorial_four = function()
-
-	local alert = CreateFrame ("frame", "WorldQuestTrackerTutorialAlert4", worldFramePOIs, "MicroButtonAlertTemplate")
-	alert:SetFrameLevel (302)
-	alert.label = L["S_TUTORIAL_MAPALIGN"]
-	alert.Text:SetSpacing (4)
-	MicroButtonAlert_SetText (alert, alert.label)
-	alert:SetPoint ("bottom", WorldQuestTracker.MapAnchorButton, "top", 0, 32)
-	alert.Arrow:ClearAllPoints()
-	alert.Arrow:SetPoint ("topleft", alert, "bottomleft", 65, 0)
-	alert.CloseButton:HookScript ("OnClick", hook_AlertCloseButton)
-	alert:Show()
-	
+	--tutorial four was the tutorial for the centralized button, which has been removed
+	--it just increases the tutorial ID here
 	WorldQuestTracker.db.profile.TutorialPopupID = WorldQuestTracker.db.profile.TutorialPopupID + 1
-
 end
 
 function WorldQuestTracker.ShowTutorialAlert()
-	
+
+	if (true) then
+		--disabled tutorials for 9.0.1, due to "MicroButtonAlertTemplate" being nil, need to replace with the new animation
+		return
+	end
+
 	WorldQuestTracker.db.profile.TutorialPopupID = WorldQuestTracker.db.profile.TutorialPopupID or 1
 	
 	--WorldQuestTracker.db.profile.TutorialPopupID = 3
@@ -897,36 +891,31 @@ function WorldQuestTracker.ShowTutorialAlert()
 			return
 		end
 	
-		if (not WorldMapFrame:IsShown() or not IsQuestFlaggedCompleted (WORLD_QUESTS_AVAILABLE_QUEST_ID or 1) or InCombatLockdown()) then
+		if (not WorldMapFrame:IsShown() or not C_QuestLog.IsQuestFlaggedCompleted (WORLD_QUESTS_AVAILABLE_QUEST_ID or 1) or InCombatLockdown()) then
 			C_Timer.After (10, wait_ShowTutorialAlert)
 			WorldQuestTracker.TutorialAlertOnHold = true
 			return
 		end
-		
-		if (GetExpansionLevel() == 6 or UnitLevel ("player") == 110) then --legion
-			WorldMapFrame:SetMapID (WorldQuestTracker.MapData.ZoneIDs.BROKENISLES)
-		elseif (GetExpansionLevel() == 7 or UnitLevel ("player") == 120) then --bfa
-			WorldMapFrame:SetMapID (WorldQuestTracker.MapData.ZoneIDs.KULTIRAS)
-		end
-		
+
+		WorldMapFrame:SetMapID (WorldQuestTracker.MapData.ZoneIDs.KULTIRAS)
 		WorldQuestTracker.UpdateWorldQuestsOnWorldMap (true)
 		
-		C_Timer.After (4, tutorial_one)
+		--C_Timer.After (4, tutorial_one)
 		return
 		
 	elseif (WorldQuestTracker.db.profile.TutorialPopupID == 2) then
 	
-		C_Timer.After (.5, tutorial_two)
+		--C_Timer.After (.5, tutorial_two)
 		return
 
 	elseif (WorldQuestTracker.db.profile.TutorialPopupID == 3) then
 	
-		C_Timer.After (.5, tutorial_three)
+		--C_Timer.After (.5, tutorial_three)
 		return
 		
 	elseif (WorldQuestTracker.db.profile.TutorialPopupID == 4) then
 	
-		C_Timer.After (.5, tutorial_four)
+		--C_Timer.After (.5, tutorial_four)
 		return
 		
 	end
@@ -967,10 +956,8 @@ hooksecurefunc ("QuestMapFrame_Close", function()
 	WorldQuestTracker.NeedUpdateLoadingIconAnchor()
 end)
 
-
---C_Timer.NewTicker (5, function()WorldQuestTracker.PlayLoadingAnimation()end)
 function WorldQuestTracker.CreateLoadingIcon()
-	local f = CreateFrame ("frame", nil, WorldMapFrame)
+	local f = CreateFrame ("frame", nil, WorldMapFrame, "BackdropTemplate")
 	f:SetSize (48, 48)
 	f:SetPoint ("bottom", WorldMapScrollFrame, "top", 0, -75) --289/2 = 144
 	f:SetFrameLevel (3000)
@@ -1005,7 +992,7 @@ function WorldQuestTracker.CreateLoadingIcon()
 	f.Text:Hide()
 	f.TextBackground:Hide()
 	
-	f.CircleAnimStatic = CreateFrame ("frame", nil, f)
+	f.CircleAnimStatic = CreateFrame ("frame", nil, f, "BackdropTemplate")
 	f.CircleAnimStatic:SetAllPoints()
 	f.CircleAnimStatic.Alpha = f.CircleAnimStatic:CreateTexture (nil, "overlay")
 	f.CircleAnimStatic.Alpha:SetTexture ([[Interface\COMMON\StreamFrame]])
@@ -1014,7 +1001,7 @@ function WorldQuestTracker.CreateLoadingIcon()
 	f.CircleAnimStatic.Background:SetTexture ([[Interface\COMMON\StreamBackground]])
 	f.CircleAnimStatic.Background:SetAllPoints()
 	
-	f.CircleAnim = CreateFrame ("frame", nil, f)
+	f.CircleAnim = CreateFrame ("frame", nil, f, "BackdropTemplate")
 	f.CircleAnim:SetAllPoints()
 	f.CircleAnim.Spinner = f.CircleAnim:CreateTexture (nil, "artwork")
 	f.CircleAnim.Spinner:SetTexture ([[Interface\COMMON\StreamCircle]])
@@ -1064,7 +1051,42 @@ SLASH_WQTRACKER2 = "/worldquesttracker"
 
 function SlashCmdList.WQTRACKER (msg, editbox)
 
-	if (msg == "statusbar") then
+	if (msg == "reinstall") then
+		local b = CreateFrame("button", "WQTResetConfigButton", UIParent, "OptionsButtonTemplate")
+		tinsert(UISpecialFrames, "WQTResetConfigButton")
+		
+		b:SetSize (250, 40)
+		b:SetText ("REINSTALL")
+		b:SetScript ("OnClick", function() 
+			WQTrackerDB = {}
+			WQTrackerDBChr = {}
+			ReloadUI()
+		end)
+		b:SetPoint ("center", UIParent, "center", 0, 0)
+
+	elseif (msg == "test") then
+		local playerLevel = UnitLevel("player")
+		if (playerLevel < 51) then
+			WorldQuestTracker:Msg("Character level too low for shadowlands, minimum is 51 for alts.")
+		end
+
+		local bastionQuests = C_TaskQuest.GetQuestsForPlayerByMapID(1533, 1533)
+		WorldQuestTracker:Msg("Finding quests on Bastion Map")
+		if (bastionQuests and type(bastionQuests) == "table") then
+			WorldQuestTracker:Msg("Found quests, amount:", #bastionQuests)
+		else
+			WorldQuestTracker:Msg("Blizzard's GetQuestsForPlayerByMapID() returned invalid data.")
+		end
+
+	elseif (msg == "debug") then
+		WorldQuestTracker.__debug = not WorldQuestTracker.__debug
+		if (WorldQuestTracker.__debug) then
+			WorldQuestTracker:Msg("debug is now enabled.")
+		else
+			WorldQuestTracker:Msg("debug is disabled.")
+		end
+
+	elseif (msg == "statusbar") then
 		WorldQuestTracker.db.profile.bar_visible = true
 		WorldQuestTracker.RefreshStatusBarVisibility()
 		return
@@ -1173,14 +1195,300 @@ function SlashCmdList.WQTRACKER (msg, editbox)
 			
 		end
 		
-		
+	else
+		WorldQuestTracker:Msg("version:", WQT_VERSION)
 		
 	end
 end
 
+--all quests are with red circle for invasion quests
+--need to fill the factions of Shadowlands
+--need to test the group finder
+
+--old and simple alerts frame, all globals has been renamed to avoid conflicts
+local g_visibleMicroButtonAlerts = {};
+local g_acknowledgedMicroButtonAlerts = {};
+
+--Micro Button alerts
+function MicroButtonAlert_SetText2(self, text)
+	self.Text:SetText(text or "");
+end
+
+function MicroButtonAlert_OnLoad2(self)
+	if self.MicroButton then
+		self:SetParent(self.MicroButton);
+		self:SetFrameStrata("DIALOG");
+	end
+	self.Text:SetSpacing(4);
+	MicroButtonAlert_SetText2(self, self.label);
+end
+
+function MicroButtonAlert_OnShow2(self)
+	self:SetHeight(self.Text:GetHeight() + 42);
+	if ( self.tutorialIndex and GetCVarBitfield("closedInfoFrames", self.tutorialIndex) ) then
+		self:Hide();
+	end
+end
+
+function MicroButtonAlert_OnAcknowledged2(self)
+	g_acknowledgedMicroButtonAlerts[self] = true;
+end
+
+function MicroButtonAlert_OnHide2(self)
+	g_visibleMicroButtonAlerts[self] = nil;
+	MainMenuMicroButton_UpdateAlertsEnabled(self);
+end
 
 
+----------------------------------------------------------------------------------------------------------------------------------------------------------------
+local p = CreateFrame("frame")
+p:RegisterEvent("TALKINGHEAD_REQUESTED")
+p:SetScript("OnEvent", function (self, event, arg1)
+	if (event == "TALKINGHEAD_REQUESTED") then
 
+		--get where the player is
+		local _, zoneType = GetInstanceInfo()
+
+		if (zoneType == "none") then
+			if (not WorldQuestTracker.db.profile.talking_heads_openworld) then
+				return
+			end
+
+		elseif (zoneType == "party") then
+			if (not WorldQuestTracker.db.profile.talking_heads_dungeon) then
+				return
+			end
+			
+		elseif (zoneType == "raid") then
+			if (not WorldQuestTracker.db.profile.talking_heads_raid) then
+				return
+			end
+
+		elseif (zoneType == "scenario") then
+			if (not WorldQuestTracker.db.profile.talking_heads_torgast) then
+				return
+			end
+		end
+
+		local displayInfo, cameraID, vo, duration, lineNumber, numLines, name, text, isNewTalkingHead = C_TalkingHead.GetCurrentLineInfo()
+		if (WorldQuestTracker.db.profile.talking_heads_heard[vo]) then
+			C_Timer.After(0.05, TalkingHeadFrame_CloseImmediately)
+		else
+			if (vo) then
+				WorldQuestTracker.db.profile.talking_heads_heard[vo] = true
+			end
+		end
+	end
+end)
+
+
+----------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+function WorldQuestTracker.InitiateFlyMasterTracker()
+	--get the location
+	--/dump C_Map.GetPlayerMapPosition(C_Map.GetBestMapForUnit("player"), "player")
+	--flymaster npc location
+	local flymasterX = 0.60903662443161 -- -1906.8000488281
+	local flymasterY = 0.6869769692421 -- 1210.3000488281
+	--korthia portal location
+	local korthiaPortalX = 0.35661220550537 --0.31601178646088
+	local korthiaPortalY = 0.30656772851944 --0.24368673563004
+
+	--upper oribos map id
+	local secondFloormapId = 1671
+	local isFlymasterTrakcerEnabled = false
+
+	local currentPlayerX = 0
+	local currentPlayerY = 0
+
+	local oribosFlyMasterFrame = CreateFrame("frame", "WorldQuestTrackerOribosFlyMasterFrame", UIParent, "BackdropTemplate")
+	oribosFlyMasterFrame:SetPoint("center", "UIParent", "center", 0, 0)
+	oribosFlyMasterFrame:SetSize(116, 60)
+	DetailsFramework:ApplyStandardBackdrop(oribosFlyMasterFrame)
+	oribosFlyMasterFrame:Hide()
+
+	oribosFlyMasterFrame:RegisterEvent("PLAYER_STARTED_MOVING")
+	oribosFlyMasterFrame:RegisterEvent("PLAYER_STOPPED_MOVING")
+
+	local playerIsMoving = false
+
+	oribosFlyMasterFrame:SetScript("OnEvent", function(self, event)
+		if (event == "PLAYER_STARTED_MOVING") then
+			playerIsMoving = true
+
+		elseif (event == "PLAYER_STOPPED_MOVING") then
+			playerIsMoving = false
+		end
+	end)
+
+	if (not IsPlayerMoving()) then
+		oribosFlyMasterFrame:SetAlpha(0)
+		oribosFlyMasterFrame:EnableMouse(false)
+	end
+
+	oribosFlyMasterFrame.statusBar = CreateFrame("frame", "WorldQuestTrackerOribosFlyMasterFrameStatusBar", oribosFlyMasterFrame, "BackdropTemplate")
+	oribosFlyMasterFrame.statusBar:SetPoint("bottomleft", oribosFlyMasterFrame, "bottomleft", 0, 0)
+	oribosFlyMasterFrame.statusBar:SetPoint("bottomright", oribosFlyMasterFrame, "bottomright", 0, 0)
+	oribosFlyMasterFrame.statusBar:SetHeight(12)
+	DetailsFramework:ApplyStandardBackdrop(oribosFlyMasterFrame.statusBar)
+
+	oribosFlyMasterFrame.FlightMasterIcon = oribosFlyMasterFrame:CreateTexture(nil, "overlay")
+	oribosFlyMasterFrame.FlightMasterIcon:SetPoint("topleft", oribosFlyMasterFrame, "topleft", 35, -3)
+	oribosFlyMasterFrame.FlightMasterIcon:SetSize(16, 16)
+	oribosFlyMasterFrame.FlightMasterIcon:SetAlpha(0.7)
+	oribosFlyMasterFrame.FlightMasterIcon:SetTexture([[Interface\TAXIFRAME\UI-Taxi-Icon-White]])
+
+	oribosFlyMasterFrame.KorthiaIcon = oribosFlyMasterFrame:CreateTexture(nil, "overlay")
+	oribosFlyMasterFrame.KorthiaIcon:SetPoint("topleft", oribosFlyMasterFrame.FlightMasterIcon, "topright", 15, 0)
+	oribosFlyMasterFrame.KorthiaIcon:SetSize(16, 16)
+	oribosFlyMasterFrame.KorthiaIcon:SetAlpha(0.7)
+	oribosFlyMasterFrame.KorthiaIcon:SetBlendMode("ADD")
+	oribosFlyMasterFrame.KorthiaIcon:SetTexture([[Interface\AddOns\WorldQuestTracker\media\korthia_portal_icon]])
+
+	oribosFlyMasterFrame.Arrow = oribosFlyMasterFrame:CreateTexture(nil, "overlay")
+	oribosFlyMasterFrame.Arrow:SetPoint("top", oribosFlyMasterFrame.FlightMasterIcon, "bottom", 6, 1)
+	oribosFlyMasterFrame.Arrow:SetSize(32, 32)
+	oribosFlyMasterFrame.Arrow:SetAlpha(1)
+	oribosFlyMasterFrame.Arrow:SetTexture([[Interface\AddOns\WorldQuestTracker\media\ArrowGridT]])
+
+	oribosFlyMasterFrame.KorthiaArrow = oribosFlyMasterFrame:CreateTexture(nil, "overlay")
+	oribosFlyMasterFrame.KorthiaArrow:SetPoint("topleft", oribosFlyMasterFrame.Arrow, "topright", 0, 0)
+	oribosFlyMasterFrame.KorthiaArrow:SetSize(32, 32)
+	oribosFlyMasterFrame.KorthiaArrow:SetAlpha(1)
+	oribosFlyMasterFrame.KorthiaArrow:SetTexture([[Interface\AddOns\WorldQuestTracker\media\ArrowGridT]])
+
+	local onCloseButton = function()
+		oribosFlyMasterFrame:Hide()
+		WorldQuestTracker.db.profile.flymaster_tracker_enabled = false
+	end
+	oribosFlyMasterFrame.CloseButton = DF:CreateButton(oribosFlyMasterFrame, onCloseButton, 20, 20, "X", -1, nil, nil, nil, nil, nil, DF:GetTemplate ("button", "WQT_NEWS_BUTTON"), DF:GetTemplate ("font", "WQT_TOGGLEQUEST_TEXT"))
+	oribosFlyMasterFrame.CloseButton:SetPoint("topleft", oribosFlyMasterFrame, "topleft", 1, -1)
+	oribosFlyMasterFrame.CloseButton:SetSize(20, 20)
+	oribosFlyMasterFrame.CloseButton:SetAlpha(.2)
+
+	oribosFlyMasterFrame.CloseButton.have_tooltip = "Disable this window, can be enabled again in the World Quest Tracker options."
+
+	oribosFlyMasterFrame.Title = DF:CreateLabel(oribosFlyMasterFrame.statusBar, "World Quest Tracker")
+	oribosFlyMasterFrame.Title:SetPoint("bottom", oribosFlyMasterFrame, "bottom", 0, 1)
+	oribosFlyMasterFrame.Title.align =  "|"
+	oribosFlyMasterFrame.Title.textcolor = {.8, .8, .8, .35}
+
+	local trackerOnTick = function(self, deltaTime)
+		--update the player position
+		local mapPosition = C_Map.GetPlayerMapPosition(WorldQuestTracker.GetCurrentStandingMapAreaID(), "player")
+		if (not mapPosition) then
+			return
+		end
+		currentPlayerX, currentPlayerY = mapPosition.x, mapPosition.y
+
+		--update flight master arrow
+			local questYaw = (DF.FindLookAtRotation (_, currentPlayerX, currentPlayerY, flymasterX, flymasterY) + (math.pi/2)) % (math.pi*2)
+			local playerYaw = GetPlayerFacing() or 0
+			local angle = (((questYaw + playerYaw)%(math.pi*2))+math.pi)%(math.pi*2)
+			local imageIndex = 1+(floor (DF.MapRangeClamped (_, 0, (math.pi*2), 1, 144, angle)) + 48)%144 --48� quadro � o que aponta para o norte
+			local line = ceil (imageIndex / 12)
+			local coord = (imageIndex - ((line-1) * 12)) / 12
+			self.Arrow:SetTexCoord (coord-0.0833, coord, 0.0833 * (line-1), 0.0833 * line)
+
+			--[=[
+				local distance = CalculateDistance(currentPlayerX, currentPlayerY, flymasterX, flymasterY)
+				if (distance < 0.1) then
+					local alpha = DF:GetRangePercent(0, 0.1, distance)
+					oribosFlyMasterFrame:SetAlpha(alpha)
+				else
+					oribosFlyMasterFrame:SetAlpha(1)
+				end
+			--]=]
+
+			if (playerIsMoving) then
+				if (oribosFlyMasterFrame:GetAlpha() < 1) then
+					oribosFlyMasterFrame:SetAlpha(oribosFlyMasterFrame:GetAlpha() + (deltaTime*7))
+				end
+				oribosFlyMasterFrame:EnableMouse(true)
+			else
+				if (oribosFlyMasterFrame:GetAlpha() > 0) then
+					oribosFlyMasterFrame:SetAlpha(oribosFlyMasterFrame:GetAlpha() - deltaTime/5)
+				else
+					oribosFlyMasterFrame:EnableMouse(false)
+				end
+			end
+
+		--update korthia arrow
+			local questYaw = (DF.FindLookAtRotation (_, currentPlayerX, currentPlayerY, korthiaPortalX, korthiaPortalY) + (math.pi/2)) % (math.pi*2)
+			local playerYaw = GetPlayerFacing() or 0
+			local angle = (((questYaw + playerYaw)%(math.pi*2))+math.pi)%(math.pi*2)
+			local imageIndex = 1+(floor (DF.MapRangeClamped (_, 0, (math.pi*2), 1, 144, angle)) + 48)%144 --48� quadro � o que aponta para o norte
+			local line = ceil (imageIndex / 12)
+			local coord = (imageIndex - ((line-1) * 12)) / 12
+			self.KorthiaArrow:SetTexCoord (coord-0.0833, coord, 0.0833 * (line-1), 0.0833 * line)
+
+			--[=[
+				local distance = CalculateDistance(currentPlayerX, currentPlayerY, korthiaPortalX, korthiaPortalY)
+				if (distance < 0.1) then
+					local alpha = DF:GetRangePercent(0, 0.1, distance)
+					oribosFlyMasterFrame:SetAlpha(alpha)
+				else
+					oribosFlyMasterFrame:SetAlpha(1)
+				end
+			--]=]
+
+		if (UnitOnTaxi("player")) then
+			oribosFlyMasterFrame.disableFlymasterTracker()
+			return
+		end
+	end
+
+	local LibWindow = LibStub("LibWindow-1.1")
+	LibWindow.RegisterConfig(oribosFlyMasterFrame, WorldQuestTracker.db.profile.flymaster_tracker_frame_pos)
+	LibWindow.MakeDraggable(oribosFlyMasterFrame)
+	LibWindow.RestorePosition(oribosFlyMasterFrame)
+	oribosFlyMasterFrame:EnableMouse(true)
+
+	local enableFlymasterTracker = function()
+		if (WorldQuestTracker.db.profile.flymaster_tracker_enabled) then
+			oribosFlyMasterFrame:Show()
+			oribosFlyMasterFrame:SetScript("OnUpdate", trackerOnTick)
+			isFlymasterTrakcerEnabled = true
+			
+			if (not IsPlayerMoving()) then
+				oribosFlyMasterFrame:SetAlpha(0)
+				oribosFlyMasterFrame:EnableMouse(false)
+			end
+		end
+	end
+	oribosFlyMasterFrame.enableFlymasterTracker = enableFlymasterTracker
+
+	local disableFlymasterTracker = function()
+		oribosFlyMasterFrame:Hide()
+		oribosFlyMasterFrame:SetScript("OnUpdate", nil)
+		isFlymasterTrakcerEnabled = false
+	end
+	oribosFlyMasterFrame.disableFlymasterTracker = disableFlymasterTracker
+
+	local checkIfIsInOribosSecondFloor = function()
+		local currentMapId = C_Map.GetBestMapForUnit("player")
+		if (currentMapId == secondFloormapId) then
+			if (not UnitOnTaxi("player")) then
+				if (not isFlymasterTrakcerEnabled) then
+					enableFlymasterTracker()
+				end
+			end
+		else
+			if (isFlymasterTrakcerEnabled) then
+				disableFlymasterTracker()
+			end
+		end
+	end
+
+	local oribosFlyMasterEventFrame = CreateFrame("frame", "WorldQuestTrackerOribosFlyMasterEventFrame")
+	oribosFlyMasterEventFrame:SetScript("OnEvent", function(self, event, ...)
+		C_Timer.After(1, checkIfIsInOribosSecondFloor)
+	end)
+	oribosFlyMasterEventFrame:RegisterEvent("ZONE_CHANGED_INDOORS")
+	oribosFlyMasterEventFrame:RegisterEvent("ZONE_CHANGED_NEW_AREA")
+
+	C_Timer.After(0.1, checkIfIsInOribosSecondFloor)
+end
 ----------------------------------------------------------------------------------------------------------------------------------------------------------------
 --> faction bounty
 

@@ -1,4 +1,4 @@
-﻿## Interface: 80100
+﻿## Interface: 90100
 ## Title: Achievements|cff7fff7fReminder|r - shows achievements by location
 ## Notes: Shows list of achieves that are avaible in a zone and tactics for them
 ## Author: Shurshik
@@ -6,15 +6,8 @@
 ## SavedVariables: ralllocationnames,ralltactics,ralltacticsver,ralltacticsdif
 ## SavedVariablesPerCharacter: ralloptions,ralloptionsmanual,rallbosstooltip,rallbosschaton,ralloptionsmanual3,ralloptionTrackCharAchieves
 Localization\localization-enEN.lua
-Localization\localization-ruRU.lua
-Localization\localization-deDE.lua
-Localization\localization-frFR.lua
-Localization\localization-esES.lua
-Localization\localization-esMX.lua
 Localization\localization-zhTW.lua
 Localization\localization-zhCN.lua
-Localization\localization-koKR.lua
-Localization\localization-ptBR.lua
 AR_database.lua
 AchievementsReminder.lua
 AchievementsReminder.xml

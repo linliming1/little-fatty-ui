@@ -58,8 +58,8 @@
 		</Layers>
 	</Frame>
 
-	<!-- Compact Money Frame -->
-	<Frame name="AccountantMoneyFrameTemplate" virtual="true">
+	<!-- Compact Money Frame
+	<Frame name="AccountantMoneyFrameTemplate" virtual="true" inherits="BackdropTemplate">
 		<Frames>
 			<Frame name="$parentMoney"  inherits="SmallMoneyFrameTemplate">
 				<Size>
@@ -80,18 +80,11 @@
 				</Scripts>
 			</Frame>
 		</Frames>
-		<Backdrop bgFile="Interface\Tooltips\ChatBubble-Background" edgeFile="Interface\Tooltips\UI-Tooltip-Border" tile="true">
-			<EdgeSize>
-				<AbsValue val="16"/>
-			</EdgeSize>
-			<TileSize>
-				<AbsValue val="16"/>
-			</TileSize>
-			<BackgroundInsets>
-				<AbsInset left="5" right="5" top="5" bottom="5"/>
-			</BackgroundInsets>
-		</Backdrop>
+        <KeyValues>
+            <KeyValue key="backdropInfo" value="BACKDROP_CHAT_BUBBLE_16_16" type="global"/>
+        </KeyValues>
 	</Frame>
+	 -->
 
 	<!-- Main Window -->
 	<Frame name="AccountantFrame" toplevel="true" enableMouse="true" frameStrata="HIGH" movable="true" parent="UIParent" hidden="true">
@@ -449,7 +442,7 @@
 				</Anchors>
 				<Scripts>
 					<OnClick>
-						HideUIPanel(self:GetParent());
+						self:GetParent():Hide();
 					</OnClick>
 				</Scripts>
 			</Button>
@@ -539,7 +532,7 @@
 				Accountant_OnShow(self);
 			</OnShow>
 			<OnHide>
-				Accountant_OnHide(self);
+				--Accountant_OnHide(self);
 			</OnHide>
 			<OnEvent>
 				Accountant_OnEvent(self, event, ...);

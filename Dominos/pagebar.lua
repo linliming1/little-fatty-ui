@@ -12,13 +12,20 @@ function PageBar:New()
 	return f
 end
 
+function PageBar:GetDisplayName()
+    return L.PageBarDisplayName
+end
+
 function PageBar:GetDefaults()
 	return {
-		point = 'CENTER',
+		point = 'BOTTOMLEFT',
+        anchor = '1LC',
 		x = 0,
 		spacing = 0,
 		y = 0,
 		columns = 1,
+        scale=0.9,
+        fadeAlpha=0.35,
 	}
 end
 

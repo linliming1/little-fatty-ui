@@ -1,6 +1,6 @@
-## Interface: 80100
-## Version: 800b121
-## Title: |cff00c0ffDejaCharacterStats|r
+## Interface: 90100
+## Version: 901r3
+## Title: |TInterface\Addons\DejaCharacterStats\DCSArt\DejoLogo:26:26|t|cff00c0ffDejaCharacterStats|r
 ## Author: Dejablue, Kakjens, loudsoul
 ## Notes: Dejablue's improved character stats panel view.
 ## SavedVariables: DejaCharacterStatsDB
@@ -8,8 +8,8 @@
 ## SavedVariablesPerCharacter: DejaCharacterStatsDBPC
 
 ## X-Category: Class
-## X-License: MIT License: Use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so on condition this MIT notice and attribution is included with distribution.
-## X-Website: https://github.com/dejoblue/DejaCharacterStats
+## X-License: All Rights Reserved 2016-2020
+## X-Website: https://dejoblue.com
 ## X-Curse-Project-ID: 99861
 ## X-WoWI-ID: 24060
 

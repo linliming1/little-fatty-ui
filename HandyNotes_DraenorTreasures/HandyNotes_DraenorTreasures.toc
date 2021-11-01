@@ -1,4 +1,4 @@
-## Interface: 80100
+## Interface: 90100
 ## Title: HandyNotes_DraenorTreasures
 ## Version: 1.21
 ## Notes: Shows location of treasures and rares in Draenor
@@ -13,7 +13,7 @@
 
 HandyNotes_DraenorTreasures.lua
 
-## Title-zhCN: |cff880303[爱不易]|r HandyNotes 德拉诺宝箱
+## Title-zhCN: |cff880303[爱不易]|r HandyNotes 德拉诺
 ## X-Vendor: AbyUI
 
 

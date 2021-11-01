@@ -1,10 +1,9 @@
 local mod	= DBM:NewMod(1878, "DBM-Party-Legion", 12, 900)
 local L		= mod:GetLocalizedStrings()
 
-mod:SetRevision(("$Revision: 2 $"):sub(12, -3))
+mod:SetRevision("20210905144759")
 mod:SetCreatureID(120793)
 mod:SetEncounterID(2039)
-mod:SetZone()
 
 mod:RegisterCombat("combat")
 
@@ -33,7 +32,7 @@ local specWarnDemonicUpheaval		= mod:NewSpecialWarningMoveAway(233963, nil, nil,
 local yellDemonicUpheaval			= mod:NewYell(233963)
 
 local timerDarkSolitudeCD			= mod:NewCDTimer(8.5, 234817, nil, nil, nil, 3)
-local timerCarrionSwarmCD			= mod:NewCDTimer(18, 233155, nil, "Tank", nil, 5, nil, DBM_CORE_TANK_ICON)
+local timerCarrionSwarmCD			= mod:NewCDTimer(18, 233155, nil, "Tank", nil, 5, nil, DBM_CORE_L.TANK_ICON)
 local timerDemonicUpheavalCD		= mod:NewCDTimer(32, 233963, nil, nil, nil, 3)--32-35
 local timerShadowFadeCD				= mod:NewCDTimer(40, 233206, nil, nil, nil, 6)
 
@@ -124,8 +123,7 @@ function mod:UNIT_AURA_UNFILTERED(uId)
 end
 
 --TODO, syncing maybe do to size and spread in room, not all nameplates will be caught by one person
-function mod:UNIT_SPELLCAST_SUCCEEDED(uId, _, bfaSpellId, _, legacySpellId)
-	local spellId = legacySpellId or bfaSpellId
+function mod:UNIT_SPELLCAST_SUCCEEDED(uId, _, spellId)
 	--"<51.81 19:21:30> [UNIT_SPELLCAST_SUCCEEDED] Unknown(??) [[nameplate1:Shadow of Mephistroth Cosmetic::3-3020-1677-21626-234034-00025D92FA:234034]]", -- [308]
 	if spellId == 234034 then--Only will trigger if nameplate is in range
 		local guid = UnitGUID(uId)

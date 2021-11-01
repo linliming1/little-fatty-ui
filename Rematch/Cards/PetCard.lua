@@ -5,6 +5,19 @@ local settings, roster, idType
 
 card.statButtons = {} -- frame pool of RematchPetCardStatTemplate buttons
 
+-- texCoords into Interface\GLUES\AccountUpgrade\AccountUpgradeBanners for each expansionID
+local expansionCoords = {
+    [0] = {0,0.1953125,0.5546875,0.9453125}, -- classic
+    [1] = {0.1953125,0.390625,0.5546875,0.9453125}, -- burning crusade
+    [2] = {0.1982421875,0.3935546875,0,0.390625}, -- wrath of the lich king
+    [3] = {0,0.1953125,0,0.390625}, -- cataclysm
+    [4] = {0.59375,0.7890625,0.53125,0.921875}, -- mists of pandaria
+    [5] = {0.791015625,0.986328125,0,0.390625}, -- warlords of draenor
+    [6] = {0.3955078125,0.5908203125,0.53125,0.921875}, -- legion
+    [7] = {0.3955078125,0.5908203125,0,0.390625}, -- battle for azeroth
+    [8] = {0.5927734375,0.7880859375,0,0.390625}, -- shadowlands
+}
+
 rematch:InitModule(function()
 	rematch.PetCard = card
 	settings = RematchSettings
@@ -36,7 +49,7 @@ rematch:InitModule(function()
    -- UnwrapPet will only attempt to unwrap wrapped pets
    if not settings.DebugNoModels then
 
-		card.Front.Middle.ModelScene = CreateFrame("ModelScene",nil,card.Front.Middle,"ModelSceneMixinTemplate")
+		card.Front.Middle.ModelScene = CreateFrame("ModelScene",nil,card.Front.Middle,"WrappedAndUnwrappedModelScene")
 		local model = card.Front.Middle.ModelScene
 		model.normalIntensity = 0.75
 		model.highlightIntensity = 1.2
@@ -140,24 +153,24 @@ function rematch:ShowPetCard(parent,petID,force)
 	if isSpecial then
       if isSpecial=="leveling" then
          card.Title.Icon.Texture:SetTexture("Interface\\AddOns\\Rematch\\Textures\\levelingicon-round")
-         card.Title.Type.Texture:SetTexCoord(0,1,0,1)
-         SetPortraitToTexture(card.Title.Type.Texture,"Interface\\Icons\\INV_Pet_Achievement_CatchPetFamily25")
+		 card.Title.Type.Texture:SetTexCoord(0,1,0,1)
+		 card.Title.Type.Texture:SetTexture("Interface\\Icons\\INV_Pet_Achievement_CatchPetFamily25")
       elseif isSpecial=="ignored" then
          card.Title.Icon.Texture:SetTexture("Interface\\AddOns\\Rematch\\Textures\\ignoredicon-round")
-         card.Title.Type.Texture:SetTexCoord(0,1,0,1)
-         SetPortraitToTexture(card.Title.Type.Texture,"Interface\\Icons\\Ability_Hunter_Pet_GoTo")
-      elseif isSpecial=="random" then
-         SetPortraitToTexture(card.Title.Icon.Texture,"Interface\\Icons\\INV_Misc_Dice_02")
+		 card.Title.Type.Texture:SetTexCoord(0,1,0,1)
+		 card.Title.Type.Texture:SetTexture("Interface\\Icons\\Ability_Hunter_Pet_GoTo")
+	  elseif isSpecial=="random" then
+		card.Title.Icon.Texture:SetTexture("Interface\\Icons\\INV_Misc_Dice_02")
          if petInfo.petType==0 then
-            card.Title.Type.Texture:SetTexCoord(0,1,0,1)
-            SetPortraitToTexture(card.Title.Type.Texture,"Interface\\Icons\\INV_Misc_Dice_01")
+			card.Title.Type.Texture:SetTexCoord(0,1,0,1)
+			card.Title.Type.Texture:SetTexture("Interface\\Icons\\INV_Misc_Dice_01")
          else
       		card.Title.Type.Texture:SetTexCoord(0.4921875,0.796875,0.50390625,0.65625)
             rematch:FillPetTypeIcon(card.Title.Type.Texture,petInfo.petType,"Interface\\PetBattles\\PetIcon-")
          end
       end
 	else
-		SetPortraitToTexture(card.Title.Icon.Texture,petInfo.icon)
+		card.Title.Icon.Texture:SetTexture(petInfo.icon)
 		card.Title.Type.Texture:SetTexCoord(0.4921875,0.796875,0.50390625,0.65625)
 		rematch:FillPetTypeIcon(card.Title.Type.Texture,petInfo.petType,"Interface\\PetBattles\\PetIcon-")
 	end
@@ -172,6 +185,14 @@ function rematch:ShowPetCard(parent,petID,force)
 	info.LevelBG:SetShown(showLevel)
 	info.LevelLabel:SetShown(showLevel)
 	info.Level:SetShown(showLevel)
+
+    -- update background if pet has an expansion
+    if petInfo.isObtainable and petInfo.expansionID and expansionCoords[petInfo.expansionID] then
+        info.ExpansionBackground:SetTexCoord(unpack(expansionCoords[petInfo.expansionID]))
+        info.ExpansionBackground:Show()
+    else
+        info.ExpansionBackground:Hide()
+    end
 
 	-- bottom of middle card info
 	local ybottom = 6
@@ -196,7 +217,8 @@ function rematch:ShowPetCard(parent,petID,force)
 	-- possible breeds
 	info.PossibleBreeds:Hide()
 	if petInfo.possibleBreedNames then
-		local possibleBreeds = table.concat(petInfo.possibleBreedNames,rematch:GetBreedSource()=="PetTracker_Breeds" and " " or ", ")
+		local breedSource = rematch:GetBreedSource()
+		local possibleBreeds = table.concat(petInfo.possibleBreedNames,rematch:GetBreedFormat()=="icon" and " " or ", ")
 		info.PossibleBreeds:SetText(format("%s: \124cffffffff%s",L["Possible Breeds"],possibleBreeds))
 		info.PossibleBreeds:ClearAllPoints()
 		info.PossibleBreeds:SetPoint("BOTTOMLEFT",8,ybottom)
@@ -220,7 +242,7 @@ function rematch:ShowPetCard(parent,petID,force)
 				end
 			end
 		end
-		info.Collected:SetText(format("%s: %s",collected,table.concat(collectedPets,rematch:GetBreedSource()=="PetTracker_Breeds" and " " or ", ")))
+		info.Collected:SetText(format("%s: %s",collected,table.concat(collectedPets,rematch:GetBreedFormat()=="icon" and " " or ", ")))
 		info.Collected:ClearAllPoints()
 		info.Collected:SetPoint("BOTTOMLEFT",info,"BOTTOMLEFT",8,ybottom)
 		ybottom = ybottom + info.Collected:GetStringHeight()+4
@@ -252,8 +274,13 @@ function rematch:ShowPetCard(parent,petID,force)
 			end
 			card.forceSceneChange = nil
 			-- only PrepareForFanfare if fanfare ever observed to avoid loading Blizzard_Collections
-			if rematch:WasFanfareObserved(petInfo.needsFanfare) then
+			if petInfo.needsFanfare then
 				middle.ModelScene:PrepareForFanfare(petInfo.needsFanfare)
+			else -- if pet was previous wrapped and no longer needs fanfare, hide wrapped actor
+				local wrappedActor = middle.ModelScene:GetActorByTag("wrapped")
+				if wrappedActor then
+					wrappedActor:Hide()
+				end
 			end
 		end
 	end
@@ -288,9 +315,6 @@ function rematch:ShowPetCard(parent,petID,force)
 		if petInfo.isFavorite then
 			card:AddStat(L["Favorite"],"Interface\\Common\\FavoritesIcon",0.125,0.71875,0.09375,0.6875,L["Favorite"],L["This pet is marked as a Favorite from its right-click menu."])
 		end
-		if rematch:IsPetLeveling(petID) then
-			card:AddStat(L["Leveling"],"Interface\\AddOns\\Rematch\\Textures\\footnotes",0.125,0.25,0,0.25,L["Leveling"],L["This pet is in Rematch's leveling queue."])
-		end
 	end
 	if petInfo.canBattle and petInfo.power and petInfo.power>0 then
 		local healthText = petInfo.health==0 and format("%s0/%d (%s)",rematch.hexRed,petInfo.maxHealth,DEAD) or petInfo.health<petInfo.maxHealth and format("%s%d/%d (%d%%)",rematch.hexRed,petInfo.health,petInfo.maxHealth,petInfo.health/petInfo.maxHealth*100) or petInfo.maxHealth
@@ -310,8 +334,12 @@ function rematch:ShowPetCard(parent,petID,force)
 		card:AddStat(petInfo.speciesID,"Interface\\WorldMap\\Gear_64Grey",0.1,0.9,0.1,0.9,L["Species ID"],L["All versions of this pet share this unique \"species\" number."])
 	end
 
-   if petInfo.inTeams then
-   	card:AddStat(format(L["%d Teams"],petInfo.numTeams),"Interface\\FriendsFrame\\UI-Toast-ChatInviteIcon",0.125,0.875,0.09375,0.84375,L["Teams"],format(L["%s Click to search for all teams that include this pet."],rematch.LMB),card.TeamsStatOnClick)
+	if petInfo.isLeveling then
+		card:AddStat(L["Leveling"],"Interface\\AddOns\\Rematch\\Textures\\footnotes",0.125,0.25,0,0.25,L["Leveling"],L["This pet is in Rematch's leveling queue."])
+	end
+
+	if petInfo.inTeams then
+	   	card:AddStat(format(L["%d Teams"],petInfo.numTeams),"Interface\\AddOns\\Rematch\\Textures\\footnotes",0.5,0.625,0.5,0.75,L["Teams"],format(L["%s Click to search for all teams that include this pet."],rematch.LMB),card.TeamsStatOnClick)
 	end
 
 	if petInfo.isObtainable then
@@ -410,6 +438,9 @@ function rematch:ShowPetCard(parent,petID,force)
 	local backHeight = 0 -- measuring height of back of card too in case lore needs more room
 	if not isSpecial then -- leveling pets have no back of card
 		local sourceText = petInfo.sourceText
+		if petInfo.expansionID then
+			sourceText = sourceText .. "\n\124cffffd200" .. EXPANSION_FILTER_TEXT .. ":\124r " .. petInfo.expansionName
+		end
 		-- shrink font if source text is very long (some pets like spiders list nearly every zone in the game!)
 		local sourceLength = (sourceText or ""):len()
 		if sourceLength>300 then
@@ -756,14 +787,17 @@ function card:FillBreedTable(speciesID,breeds)
 				tinsert(breeds,{rematch:GetBreedNameByID(breed),lib:GetPetPredictedStats(speciesID,breed,4,25)})
 			end
 		end
-	elseif breedSource=="PetTracker_Breeds" then
-		if PetTracker.Breeds[speciesID] then
-			for _,breed in pairs(PetTracker.Breeds[speciesID]) do
-				local health, power, speed = unpack(PetTracker.BreedStats[breed])
+	elseif breedSource=="PetTracker_Breeds" or breedSource=="PetTracker" then
+		local breedsTable = breedSource=="PetTracker_Breeds" and PetTracker.Breeds or PetTracker.SpecieBreeds
+		local statsTable = breedSource=="PetTracker_Breeds" and PetTracker.BreedStats or PetTracker.Predict.BreedStats
+		if breedsTable[speciesID] then
+			for _,breed in pairs(breedsTable[speciesID]) do
+				local health, power, speed = unpack(statsTable[breed])
 				health = health*50
 				power = power*50
 				speed = speed*50
-				tinsert(breeds,{(PetTracker:GetBreedIcon(breed,.95)),health>0 and format("%d%%",health) or "-    ",power>0 and format("%d%%",power) or "-    ",speed>0 and format("%d%%",speed) or "-    "})
+				--tinsert(breeds,{(breedSource=="PetTracker_Breeds" and PetTracker:GetBreedIcon(breed,.95) or PetTracker.Breeds:Icon(breed,.95)),health>0 and format("%d%%",health) or "-    ",power>0 and format("%d%%",power) or "-    ",speed>0 and format("%d%%",speed) or "-    "})
+				tinsert(breeds,{rematch:GetBreedNameByID(breed),health>0 and format("%d%%",health) or "-    ",power>0 and format("%d%%",power) or "-    ",speed>0 and format("%d%%",speed) or "-    "})
 			end
 		end
 	end
@@ -848,17 +882,17 @@ end
 -- fanfare model stuff requires mixins from the load-on-demand journal
 -- returns true if there was ever a need for fanfare stuff (and handles
 -- necessary loading and mixin on that first attempt)
-local fanfareObserved = nil
-function rematch:WasFanfareObserved(needsFanfare)
-	if needsFanfare and not fanfareObserved then
-		LoadAddOn("Blizzard_Collections")
-		if card.Front.Middle.ModelScene then
-			Mixin(card.Front.Middle.ModelScene,CollectionsWrappedModelSceneMixin)
-		end
-		fanfareObserved = true
-	end
-	return fanfareObserved
-end
+-- local fanfareObserved = nil
+-- function rematch:WasFanfareObserved(needsFanfare)
+-- 	if needsFanfare and not fanfareObserved then
+-- 		--LoadAddOn("Blizzard_Collections")
+-- 		if card.Front.Middle.ModelScene then
+-- 			--Mixin(card.Front.Middle.ModelScene,CollectionsWrappedModelSceneMixin)
+-- 		end
+-- 		fanfareObserved = true
+-- 	end
+-- 	return fanfareObserved
+-- end
 
 -- call to unwrap a pet (the locked pet card must be up when this is called!)
 function card:UnwrapPet()
@@ -867,14 +901,12 @@ function card:UnwrapPet()
 	if petInfo.needsFanfare then
 		local modelScene = card.Front.Middle.ModelScene
 		if modelScene then
-			if rematch:WasFanfareObserved(true) then -- just in case; load Blizzard_Collections and mixins
-				if not modelScene:IsUnwrapAnimating() then -- only run if animation not happening
-					local function OnFinishedCallback()
-						C_PetJournal.ClearFanfare(petID)
-						rematch:UpdateUI()
-					end
-					modelScene:StartUnwrapAnimation(OnFinishedCallback)
+			if not modelScene:IsUnwrapAnimating() then -- only run if animation not happening
+				local function OnFinishedCallback()
+					C_PetJournal.ClearFanfare(petID)
+					rematch:UpdateUI()
 				end
+				modelScene:StartUnwrapAnimation(OnFinishedCallback)
 			end
 		else
 			C_PetJournal.ClearFanfare(petID)

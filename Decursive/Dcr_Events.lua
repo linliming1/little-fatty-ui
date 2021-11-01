@@ -1,14 +1,21 @@
 --[[
     This file is part of Decursive.
 
-    Decursive (v 2.7.6.2) add-on for World of Warcraft UI
-    Copyright (C) 2006-2018 John Wellesz (Decursive AT 2072productions.com) ( http://www.2072productions.com/to/decursive.php )
+    Decursive (v 2.7.8.3) add-on for World of Warcraft UI
+    Copyright (C) 2006-2019 John Wellesz (Decursive AT 2072productions.com) ( http://www.2072productions.com/to/decursive.php )
 
-    Starting from 2009-10-31 and until said otherwise by its author, Decursive
-    is no longer free software, all rights are reserved to its author (John Wellesz).
+    Decursive is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
 
-    The only official and allowed distribution means are www.2072productions.com, www.wowace.com and curse.com.
-    To distribute Decursive through other means a special authorization is required.
+    Decursive is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Decursive.  If not, see <https://www.gnu.org/licenses/>.
 
 
     Decursive is inspired from the original "Decursive v1.9.4" by Patrick Bohnet (Quu).
@@ -17,7 +24,7 @@
     Decursive is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY.
 
-    This file was last updated on 2018-07-20T1:08:26Z
+    This file was last updated on 2020-12-09T00:26:42Z
 --]]
 -------------------------------------------------------------------------------
 
@@ -57,9 +64,9 @@ local DC = T._C;
 
 D.DebuffUpdateRequest = 0;
 
---[===[@alpha@  
+--[=[@alpha@
 D.DetectHistory = {};
---@end-alpha@]===]
+--@end-alpha@]=]
 
 local pairs     = _G.pairs;
 local next      = _G.next;
@@ -103,7 +110,7 @@ do
     end
 
     local Grouped = false;
-    function D:GroupChanged (reason) 
+    function D:GroupChanged (reason)
 
         if not D.DcrFullyInitialized then
             D:Debug("|cFFFF0000D:GroupChanged aborted, init uncomplete!|r");
@@ -222,7 +229,7 @@ function D:PLAYER_FOCUS_CHANGED () -- {{{
     end
 
     -- we need to rescan if the focus is not in our group and it's nice or if we already have a focus unit registered
- 
+
     local FocusCurrent_ElligStatus = (
         not self.Status.Unit_Array_GUIDToUnit[UnitGUID("focus")]    -- it's not already in the unit array
         ) and ( UnitExists("focus") and (not UnitCanAttack("focus", "player") or UnitIsFriend("focus", "player"))) -- and it is (or used to) be nice
@@ -284,9 +291,9 @@ function D:ScheduledTasks() -- {{{
     if (not InCombatLockdown() and status.DelayedFunctionCallsCount > 0) then
         for Id, FuncAndArgs in pairs (status.DelayedFunctionCalls) do
             self:Debug("Running post combat command", Id);
-            local DidSmth = FuncAndArgs.func(unpack(FuncAndArgs.args));
             status.DelayedFunctionCalls[Id] = nil; -- remove it from the list
             status.DelayedFunctionCallsCount = status.DelayedFunctionCallsCount - 1;
+            local DidSmth = FuncAndArgs.func(unpack(FuncAndArgs.args));
             if DidSmth ~= false then
                 break;
             end
@@ -353,8 +360,8 @@ end--}}}
     -- the called function must return a non false value when it does something to prevent UI lagging
 function D:AddDelayedFunctionCall(CallID,functionLink, ...)
 
-    
-    if (not self.Status.DelayedFunctionCalls[CallID]) then 
+
+    if (not self.Status.DelayedFunctionCalls[CallID]) then
         self.Status.DelayedFunctionCalls[CallID] =  {["func"] = functionLink, ["args"] =  {...}};
         self.Status.DelayedFunctionCallsCount = self.Status.DelayedFunctionCallsCount + 1;
     elseif select("#",...) > 1 then -- if we had more than the function reference and its object
@@ -398,7 +405,7 @@ function D:PLAYER_TARGET_CHANGED()
         D.Status.TargetExists = true;
 
         self.LiveList:DelayedGetDebuff("target");
-        
+
 
         if self:CheckUnitStealth("target") then
             self.Stealthed_Units["target"] = true;
@@ -504,12 +511,12 @@ do
 
         local unitguid = UnitGUID(UnitID);
 
-        --[===[@debug@
-        
+        --[==[@debug@
+
 
         --D:Debug("UNIT_AURA", ..., UnitID, GetTime() + (GetTime() % 1));
 
-        --@end-debug@]===]
+        --@end-debug@]==]
 
 
         -- Here we test if the GUID->Unit array is ok if it isn't we need to scan the unit for debuffs
@@ -540,9 +547,9 @@ do
                 --]=]
             end
 
-            --[===[@debug@
+            --[==[@debug@
             self:Debug("|cFF552255UNIT_AURA triggers a rescan|r because of", UnitID);
-            --@end-debug@]===]
+            --@end-debug@]==]
 
             if unitguid then
                 self.Status.Unit_Array_UnitToGUID[UnitID] = unitguid;
@@ -635,7 +642,6 @@ do -- Combat log event handling {{{1
         ["SPELL_AURA_APPLIED"]      = 1,
         ["SPELL_AURA_APPLIED_DOSE"] = 1,
         ["SPELL_AURA_REMOVED"]      = 0,
-        ["SPELL_AURA_APPLIED_DOSE"] = 1,
         ["SPELL_AURA_REMOVED_DOSE"] = 0,
         ["UNIT_DIED"] = 0, -- Special! Base parameters are not compatible
         --["SPELL_DISPEL"] = 0, -- we don't use it because it just means that someone is dispelling something, the aura is not removed yet
@@ -654,7 +660,7 @@ do -- Combat log event handling {{{1
 
     function D:DummyDebuff (UnitID)
         local PLAYER = bit.bor (COMBATLOG_OBJECT_CONTROL_PLAYER   , COMBATLOG_OBJECT_TYPE_PLAYER  , COMBATLOG_OBJECT_REACTION_FRIENDLY  ); -- still used
-        
+
         D:COMBAT_LOG_EVENT_UNFILTERED("COMBAT_LOG_EVENT_UNFILTERED", 0, "SPELL_AURA_APPLIED", false, nil, nil, COMBATLOG_OBJECT_NONE, 0, UnitGUID(UnitID), (UnitName(UnitID)), PLAYER, 0, 0, "Test item", 0x32, "DEBUFF");
     end
 
@@ -663,7 +669,7 @@ do -- Combat log event handling {{{1
         [59868] = "SPELL_DAMAGE", -- Dark Matter ( http://www.wowhead.com/spell=59868 )
     };
 
-    
+
     function D:COMBAT_LOG_EVENT_UNFILTERED(selfevent, timestamp, event, hideCaster, sourceGUID, sourceName, sourceFlags, sourceRaidFlags, destGUID, destName, destFlags, destRaidFlags, spellID, spellNAME, _spellSCHOOL, auraTYPE_failTYPE)
 
         if event == nil then
@@ -700,9 +706,9 @@ do -- Combat log event handling {{{1
                     end
                 else
 
-                    --[===[@debug@
+                    --[==[@debug@
                     if self.debug then self:Debug("Debuff, UnitId: ", UnitID, spellNAME, event, time() + (GetTime() % 1), timestamp, "destName:", destName, destFlags, band (destFlags, FRIENDLY_TARGET) == FRIENDLY_TARGET); end
-                    --@end-debug@]===]
+                    --@end-debug@]==]
 
                     if self.profile.ShowDebuffsFrame then
                         self.MicroUnitF:UpdateMUFUnit(UnitID);
@@ -748,7 +754,7 @@ do -- Combat log event handling {{{1
 
             if event == "SPELL_CAST_SUCCESS" then
 
-                if self.debug then self:Debug(L["SUCCESSCAST"], spellNAME, (select(2, GetSpellInfo(spellID))) or "[WoW8.0-unknown]", self:MakePlayerName(destName)); end
+                if self.debug then self:Debug(L["SUCCESSCAST"], spellNAME, (select(2, GetSpellInfo(spellID))) or "", self:MakePlayerName(destName)); end
 
                 --self:Debug("|cFFFF0000XXXXX|r |cFF11FF11Updating color of clicked frame|r");
                 self:ScheduleDelayedCall("Dcr_UpdatePC"..self.Status.ClickedMF.CurrUnit, self.Status.ClickedMF.Update, 1, self.Status.ClickedMF);
@@ -768,7 +774,7 @@ do -- Combat log event handling {{{1
             if event == "SPELL_CAST_FAILED" and not self.Status.ClickedMF.SPELL_CAST_SUCCESS then
                 destName = self:PetUnitName( self.Status.ClickedMF.CurrUnit, true);
 
-                self:Println(L["FAILEDCAST"], spellNAME, (select(2, GetSpellInfo(spellID))) or "[WoW8.0-unknown]", self:MakePlayerName(destName), auraTYPE_failTYPE);
+                self:Println(L["FAILEDCAST"], spellNAME, (select(2, GetSpellInfo(spellID))) or "", self:MakePlayerName(destName), auraTYPE_failTYPE);
 
                 if (auraTYPE_failTYPE == SPELL_FAILED_LINE_OF_SIGHT or auraTYPE_failTYPE == SPELL_FAILED_BAD_TARGETS) then
 
@@ -789,21 +795,21 @@ do -- Combat log event handling {{{1
             elseif event == "SPELL_MISSED" or event == "SPELL_DISPEL_FAILED" then
                 destName = self:PetUnitName( self.Status.ClickedMF.CurrUnit, true);
 
-                self:Println(L["FAILEDCAST"], spellNAME, (select(2, GetSpellInfo(spellID))) or "[WoW8.0-unknown]", self:MakePlayerName(destName), auraTYPE_failTYPE);
+                self:Println(L["FAILEDCAST"], spellNAME, (select(2, GetSpellInfo(spellID))) or "", self:MakePlayerName(destName), auraTYPE_failTYPE);
                 self:SafePlaySoundFile(DC.FailedSound);
                 self.Status.ClickedMF = false;
-                --[===[@alpha@
+                --[=[@alpha@
                 -- self:AddDebugText("sanitycheck ", event, spellNAME); -- It works!
-                --@end-alpha@]===]
+                --@end-alpha@]=]
             end
             --  }}}
-            --[===[@debug@
+            --[==[@debug@
         elseif self.debug and event then
 
             --self:Debug("event:", event, "self.Status.ClickedMF.CastingSpell", self.Status.ClickedMF and self.Status.ClickedMF.CastingSpell, "band(sourceFlags, ME) ~= 0", band(sourceFlags, ME) ~= 0, "self.Status.ClickCastingWIP", self.Status.ClickCastingWIP);
 
 
-            --@end-debug@]===]
+            --@end-debug@]==]
 
         end
 
@@ -816,13 +822,13 @@ end --}}}
 
 do -- Communication event handling and broadcasting {{{1
     local alpha = false;
-    --[===[@alpha@
+    --[=[@alpha@
     alpha = true;
-    --@end-alpha@]===]
+    --@end-alpha@]=]
 
 
     local function GetDistributionChanel()
-       
+
         -- if we are in a battle ground or a LFG/R instance
         if GetNumGroupMembers(LE_PARTY_CATEGORY_INSTANCE) > 0 then
             return "INSTANCE_CHAT";
@@ -875,9 +881,9 @@ do -- Communication event handling and broadcasting {{{1
     function D:OnCommReceived(message, distribution, from)
 
 
-        --[===[@alpha@
+        --[=[@alpha@
         D:Debug("OnCommReceived:", message, distribution, from);
-        --@end-alpha@]===]
+        --@end-alpha@]=]
 
         local gettime = GetTime();
 
@@ -894,9 +900,9 @@ do -- Communication event handling and broadcasting {{{1
             versionIsAlpha      = tonumber(versionIsAlpha);
             versionEnabled      = tonumber(versionEnabled);
 
-            --[===[@alpha@
+            --[=[@alpha@
             if self.debug then D:Debug("Version info received from, ", from, "by", distribution, "version:", versionName, "date:", versionTimeStamp, "islpha:", versionIsAlpha, "enabled:", versionEnabled); end
-            --@end-alpha@]===]
+            --@end-alpha@]=]
 
             if versionName then
                 if not D.versions then
@@ -968,9 +974,9 @@ do -- Communication event handling and broadcasting {{{1
             end
             LastVersionAnnouceByDist[distribution]  = gettime;
 
-            --[===[@alpha@
+            --[=[@alpha@
             if self.debug then D:Debug("Version info sent to, ", from, "by", distribution, ("Version: %s,%u,%d,%d"):format(D.version, D.VersionTimeStamp, alpha and 1 or 0, D:IsEnabled() and 1 or 0 )); end
-            --@end-alpha@]===]
+            --@end-alpha@]=]
 
         end
     end
@@ -1110,23 +1116,24 @@ do
 
         local playerLevel = UnitLevel("player");
 
-        -- no talents before level 15, so if we know the level (>0) and it's
-        -- <15, we know there is no talent.
-        if playerLevel > 0 and playerLevel < 15 then
+        -- no talents before level 10
+        if playerLevel > 0 and playerLevel < 10 then
             return true;
         end
 
         -- if we know that there are unspet talents, it means we can check for
         -- them
-        if GetNumUnspentTalents() then
+        if _G.GetNumUnspentTalents and GetNumUnspentTalents() then
             return true;
         end
 
-        -- else, let's check for the first 3 talents, one of them ought to be
-        -- 'available' (6th returned value of GetTalentInfo) if not selected.
-        for talent=1,3 do
-            if (select(6, GetTalentInfo(talent))) then
-                return true;
+        if (DC.WOWC) then
+            -- local name, iconTexture, tier, column, rank, maxRank, isExceptional, available = GetTalentInfo
+            -- On loading the 8th value (available) is nil
+            for talent=1, (GetNumTalentTabs and GetNumTalentTabs() or 3) do
+                if (select(8, GetTalentInfo(talent, 1))) then
+                    return true;
+                end
             end
         end
 
@@ -1136,10 +1143,10 @@ do
 
     end -- }}}
 
-    --[===[@alpha@
+    --[=[@alpha@
     local player_is_almost_alive = false; -- I'm trying to figure out why sometimes talents are not detected while PLAYER_ALIVE event fired
-    --@end-alpha@]===]
- 
+    --@end-alpha@]=]
+
     local function PollTalentsAvaibility() -- {{{
 
         D:Debug("Polling talents...");
@@ -1152,7 +1159,7 @@ do
             -- dispatch event
             D:SendMessage("DECURSIVE_TALENTS_AVAILABLE");
 
-            --[===[@alpha@
+            --[=[@alpha@
             if player_is_almost_alive then
                 D:AddDebugText("StartTalentAvaibilityPolling(): Talents were not available after PLAYER_ALIVE was fired, test was made", player_is_almost_alive, "seconds after PLAYER_ALIVE fired. Sucess happened", GetTime() - T.PLAYER_IS_ALIVE, "secondes after PLAYER_ALIVE fired");
             end
@@ -1160,7 +1167,7 @@ do
             if T.PLAYER_IS_ALIVE and not player_is_almost_alive then
                 player_is_almost_alive = GetTime() - T.PLAYER_IS_ALIVE;
             end
-            --@end-alpha@]===]
+            --@end-alpha@]=]
         end
     end -- }}}
 
@@ -1175,6 +1182,6 @@ do
     end
 end
 
-T._LoadedFiles["Dcr_Events.lua"] = "2.7.6.2";
+T._LoadedFiles["Dcr_Events.lua"] = "2.7.8.3";
 
 -- The Great Below

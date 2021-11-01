@@ -1,4 +1,4 @@
-## Interface: 80100
+## Interface: 90100
 ## Title: Comergy Redux Options
 ## Notes: Options module for Comergy Redux
 ## Version: r32
@@ -12,7 +12,7 @@
 
 locales\localization.enUS.lua
 locales\localization.zhCN.lua
-locales\localization.zhTW.lua
+#locales\localization.zhTW.lua
 
 comergyopt.xml
 

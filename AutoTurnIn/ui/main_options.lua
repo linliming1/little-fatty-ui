@@ -29,8 +29,13 @@ end)
 local function newCheckbox(name, caption, config)
     local cb = CreateFrame("CheckButton", "$parent"..name, OptionsPanel, "OptionsCheckButtonTemplate")
     _G[cb:GetName().."Text"]:SetText(caption and caption or name)
+	
     cb:SetScript("OnClick", function(self)
 		ptable.TempConfig[config] = self:GetChecked()
+		--open rewards preferences table if "equip reward" was chosen
+		if (name == "Equip" and self:GetChecked()) then
+			InterfaceOptionsFrame_OpenToCategory(AutoTurnIn.RewardPanel)
+		end
     end)
     return cb
 end
@@ -39,20 +44,24 @@ local function newDropDown(caption, name, values, config)
     local label = OptionsPanel:CreateFontString(nil, "ARTWORK", "GameFontNormal")
     label:SetText(caption)
 
-    local dropDown = CreateFrame("Frame", O..name, OptionsPanel, "Lib_UIDropDownMenuTemplate")
-    Lib_UIDropDownMenu_Initialize(dropDown, function (self, level)
+    local dropDown = CreateFrame("Frame", O..name, OptionsPanel, "UIDropDownMenuTemplate")
+    UIDropDownMenu_Initialize(dropDown, function (self, level)
         for k, v in ipairs(values) do
-            local info = Lib_UIDropDownMenu_CreateInfo()
+            local info = UIDropDownMenu_CreateInfo()
             info.text, info.value = v, k
             info.func = function(self)
-                Lib_UIDropDownMenu_SetSelectedID(dropDown, self:GetID())
+                UIDropDownMenu_SetSelectedID(dropDown, self:GetID())
                 ptable.TempConfig[config] = self:GetID()
+				--open rewards preferences table if "loop by params" was chosen
+				if (name == "LootDropDown" and k == 3) then
+					InterfaceOptionsFrame_OpenToCategory(AutoTurnIn.RewardPanel)
+				end
             end
-            Lib_UIDropDownMenu_AddButton(info, level)
+            UIDropDownMenu_AddButton(info, level)
         end
     end)
-    Lib_UIDropDownMenu_SetWidth(dropDown, 200);
-    Lib_UIDropDownMenu_JustifyText(dropDown, "LEFT")
+    UIDropDownMenu_SetWidth(dropDown, 200);
+    UIDropDownMenu_JustifyText(dropDown, "LEFT")
     label:SetPoint("BOTTOMLEFT", dropDown, "TOPLEFT", 18, 0)
     return dropDown
 end
@@ -77,6 +86,8 @@ local EquipReward = newCheckbox("Equip", L["autoequip"], "autoequip")
 local Debug = newCheckbox("Debug", L["debug"], "debug")
 -- share quest (!!! alpha)
 local ShareQuests = newCheckbox("ShareQuests", L["ShareQuestsLabel"], "questshare")
+-- accept share quest --abyui
+local AcceptShared = newCheckbox("AcceptShared", L["AcceptSharedQuestsLabel"], "acceptshare")
 -- 'Show QuestLevel' CheckBox
 local ShowQuestLevel = newCheckbox("QuestLevel", L["questlevel"], "questlevel")
 -- 'Show Watch Quest Level' CheckBox
@@ -85,6 +96,8 @@ local ShowWatchLevel = newCheckbox("WatchLevel", L["watchlevel"], "watchlevel")
 local RelicToggle = newCheckbox("RelicToggle",  L["relictoggle"], "relictoggle")
 -- 'Stop Auto Select Reward if ArtifcatPower' CheckBox
 local ArtifactPowerToggle = newCheckbox("ArtifactPowerToggle",  L["artifactpowertoggle"], "artifactpowertoggle")
+-- RevivePets
+local ReviveBattlePet = newCheckbox("ReviveBattlePet", L["ReviveBattlePetLabel"], "reviveBattlePet")
 
 -- Auto toggle key
 local ToggleKeyConst = {NONE_KEY, ALT_KEY, CTRL_KEY, SHIFT_KEY}
@@ -116,6 +129,7 @@ ShowRewardText:SetPoint("TOPLEFT", EquipReward, "BOTTOMLEFT", 0, -10)
 ToDarkMoon:SetPoint("TOPLEFT", ShowRewardText, "BOTTOMLEFT", 0, -10)
 DarkMoonCannon:SetPoint("TOPLEFT", ToDarkMoon, "BOTTOMLEFT", 0, -10)
 DarkMoonAutoStart:SetPoint("TOPLEFT", DarkMoonCannon, "BOTTOMLEFT", 0, -10)
+ReviveBattlePet:SetPoint("TOPLEFT", CompleteOnly, "BOTTOMLEFT", 0, -30)
 Debug:SetPoint("TOPLEFT", ResetButton, "BOTTOMLEFT", 0, -10)
 ToggleKeyDropDown:SetPoint("TOPLEFT", DarkMoonAutoStart, "BOTTOMLEFT", -15, -22)
 ShowQuestLevel:SetPoint("TOPLEFT", ToggleKeyDropDown, "BOTTOMLEFT", 16, -10)
@@ -123,7 +137,7 @@ ShowWatchLevel:SetPoint("TOPLEFT", ShowQuestLevel, "BOTTOMLEFT", 0, -10)
 ShareQuests:SetPoint("TOPLEFT", ShowWatchLevel, "BOTTOMLEFT", 0, -10)
 RelicToggle:SetPoint("TOPLEFT", TournamentDropDown, "BOTTOMLEFT", 17, -10)
 ArtifactPowerToggle:SetPoint("TOPLEFT", RelicToggle, "BOTTOMLEFT", 0, -10)
-
+AcceptShared:SetPoint("TOPLEFT", ArtifactPowerToggle, "BOTTOMLEFT", 0, -10)
 
 OptionsPanel.refresh = function()
 	if ( MakeACopy ) then 
@@ -131,14 +145,14 @@ OptionsPanel.refresh = function()
 	end
 	Enable:SetChecked(ptable.TempConfig.enabled)
 
-	Lib_UIDropDownMenu_SetSelectedID(QuestDropDown, ptable.TempConfig.all)
-	Lib_UIDropDownMenu_SetText(QuestDropDown, QuestConst[ptable.TempConfig.all])
+	UIDropDownMenu_SetSelectedID(QuestDropDown, ptable.TempConfig.all)
+	UIDropDownMenu_SetText(QuestDropDown, QuestConst[ptable.TempConfig.all])
 
-	Lib_UIDropDownMenu_SetSelectedID(LootDropDown, ptable.TempConfig.lootreward)
-	Lib_UIDropDownMenu_SetText(LootDropDown, LootConst[ptable.TempConfig.lootreward])
+	UIDropDownMenu_SetSelectedID(LootDropDown, ptable.TempConfig.lootreward)
+	UIDropDownMenu_SetText(LootDropDown, LootConst[ptable.TempConfig.lootreward])
 	
-	Lib_UIDropDownMenu_SetSelectedID(TournamentDropDown, ptable.TempConfig.tournament)
-	Lib_UIDropDownMenu_SetText(TournamentDropDown, TournamentConst[ptable.TempConfig.tournament])
+	UIDropDownMenu_SetSelectedID(TournamentDropDown, ptable.TempConfig.tournament)
+	UIDropDownMenu_SetText(TournamentDropDown, TournamentConst[ptable.TempConfig.tournament])
 	ToDarkMoon:SetChecked(ptable.TempConfig.todarkmoon)
 	DarkMoonCannon:SetChecked(ptable.TempConfig.darkmoonteleport)
 	DarkMoonAutoStart:SetChecked(ptable.TempConfig.darkmoonautostart)
@@ -150,11 +164,12 @@ OptionsPanel.refresh = function()
 	ShowQuestLevel:SetChecked(ptable.TempConfig.questlevel)
 	ShowWatchLevel:SetChecked(ptable.TempConfig.watchlevel)
 	ShareQuests:SetChecked(ptable.TempConfig.questshare)
+    AcceptShared:SetChecked(ptable.TempConfig.acceptshare)
 	RelicToggle:SetChecked(ptable.TempConfig.relictoggle)
 	ArtifactPowerToggle:SetChecked(ptable.TempConfig.artifactpowertoggle)	
 
-	Lib_UIDropDownMenu_SetSelectedID(ToggleKeyDropDown, ptable.TempConfig.togglekey)
-	Lib_UIDropDownMenu_SetText(ToggleKeyDropDown, ToggleKeyConst[ptable.TempConfig.togglekey])
+	UIDropDownMenu_SetSelectedID(ToggleKeyDropDown, ptable.TempConfig.togglekey)
+	UIDropDownMenu_SetText(ToggleKeyDropDown, ToggleKeyConst[ptable.TempConfig.togglekey])
 	MakeACopy = true
 end
 
@@ -178,21 +193,12 @@ OptionsPanel.okay = function()
 	end
 	]]--
 	-- and here goes the dirty hack!!! No direct update calls, hence, no global variable taints!!!
-	if GetNumQuestWatches() > 0 then
-		local inLog = GetQuestIndexForWatch(1);
-		if IsQuestWatched(inLog) then
-			RemoveQuestWatch (inLog);
-			AddQuestWatch(inLog);
-		else
-			AddQuestWatch(inLog);
-			RemoveQuestWatch (inLog);
-		end
-	else
-		if  (GetNumQuestLogEntries() > 0) then
-			AddQuestWatch(2);
-			RemoveQuestWatch (2);
-		end
+	if C_QuestLog.GetNumQuestWatches() > 0 then
+		local questId = C_QuestLog.GetQuestIDForQuestWatchIndex(1);
+		C_QuestLog.RemoveQuestWatch(questId);
+		C_QuestLog.AddQuestWatch(questId);
 	end
+	--no need to update watch frame if no quests are being watched
 end
 
 InterfaceOptions_AddCategory(OptionsPanel)

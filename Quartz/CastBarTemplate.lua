@@ -19,8 +19,11 @@
 local Quartz3 = LibStub("AceAddon-3.0"):GetAddon("Quartz3")
 local L = LibStub("AceLocale-3.0"):GetLocale("Quartz3")
 
+local LibWindow = LibStub("LibWindow-1.1")
 local media = LibStub("LibSharedMedia-3.0")
 local lsmlist = AceGUIWidgetLSMlists
+
+local WoWBC = (WOW_PROJECT_ID == WOW_PROJECT_BURNING_CRUSADE_CLASSIC)
 
 ----------------------------
 -- Upvalues
@@ -130,14 +133,13 @@ end
 ----------------------------
 -- Template Methods
 
-local function SetNameText(self, name)
+function CastBarTemplate:SetNameText(name)
 	if self.config.targetname and self.targetName and self.targetName ~= "" then
 		self.Text:SetFormattedText("%s -> %s", name, self.targetName)
 	else
 		self.Text:SetText(name)
 	end
 end
-CastBarTemplate.SetNameText = SetNameText
 
 local function ToggleCastNotInterruptible(self, notInterruptible, init)
 	if self.unit == "player" and not init then return end
@@ -157,7 +159,12 @@ local function ToggleCastNotInterruptible(self, notInterruptible, init)
 		r,g,b = unpack(Quartz3.db.profile.bordercolor)
 		a = Quartz3.db.profile.borderalpha
 	end
-	self:SetBackdrop(self.backdrop)
+
+	-- apply new backdrop
+	self.backdropInfo = self.backdrop
+	self:ApplyBackdrop()
+
+	-- setbackdrop colors
 	self:SetBackdropBorderColor(r, g, b, a)
 
 	r, g, b = unpack(Quartz3.db.profile.backgroundcolor)
@@ -214,6 +221,11 @@ function CastBarTemplate:UNIT_SPELLCAST_START(event, unit, guid, spellID)
 	-- in case this returned nothing
 	if not startTime or not endTime then return end
 
+	-- this property doesn't exist in BC, and aliases with the spellID
+	if WoWBC then
+		notInterruptible = false
+	end
+
 	startTime = startTime / 1000
 	endTime = endTime / 1000
 	self.startTime = startTime
@@ -227,12 +239,12 @@ function CastBarTemplate:UNIT_SPELLCAST_START(event, unit, guid, spellID)
 	self:Show()
 	self:SetAlpha(db.alpha)
 
-	SetNameText(self, displayName)
+	self:SetNameText(displayName)
 
 	self.Spark:Show()
 
-	if icon == "Interface\\Icons\\Temp" and Quartz3.db.profile.hidesamwise then
-		icon = nil
+	if (icon == "Interface\\Icons\\Temp" or icon == 136235) and Quartz3.db.profile.hidesamwise then
+		icon = 136243
 	end
 	self.Icon:SetTexture(icon)
 
@@ -362,6 +374,7 @@ end
 
 function CastBarTemplate:SetConfig(config)
 	self.config = config
+	LibWindow.RegisterConfig(self, self.config)
 end
 
 function CastBarTemplate:ApplySettings()
@@ -371,11 +384,12 @@ function CastBarTemplate:ApplySettings()
 	if not db.x then
 		db.x = (UIParent:GetWidth() / 2 - (db.w * db.scale) / 2) / db.scale
 	end
-	self:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", db.x, db.y)
+
 	self:SetWidth(db.w + 10)
 	self:SetHeight(db.h + 10)
 	self:SetAlpha(db.alpha)
-	self:SetScale(db.scale)
+
+	LibWindow.RestorePosition(self)
 
 	ToggleCastNotInterruptible(self, self.lastNotInterruptible, true)
 
@@ -484,6 +498,14 @@ function CastBarTemplate:ApplySettings()
 	self.Spark:SetBlendMode("ADD")
 	self.Spark:SetWidth(20)
 	self.Spark:SetHeight(db.h*2.2)
+
+	if self.Shield then
+		local scale = (db.h/25)
+		self.Shield:SetWidth(36 * scale)
+		self.Shield:SetHeight(64 * scale)
+		self.Shield:ClearAllPoints()
+		self.Shield:SetPoint("CENTER", self.Icon, "CENTER", -2 * scale, -1 * scale)
+	end
 end
 
 function CastBarTemplate:RegisterEvents()
@@ -498,7 +520,7 @@ function CastBarTemplate:RegisterEvents()
 	self:RegisterEvent("UNIT_SPELLCAST_CHANNEL_START")
 	self:RegisterEvent("UNIT_SPELLCAST_CHANNEL_UPDATE")
 	self:RegisterEvent("UNIT_SPELLCAST_CHANNEL_STOP")
-	if self.unit ~= "player" then
+	if self.unit ~= "player" and not WoWBC then
 		self:RegisterEvent("UNIT_SPELLCAST_INTERRUPTIBLE")
 		self:RegisterEvent("UNIT_SPELLCAST_NOT_INTERRUPTIBLE")
 	end
@@ -528,9 +550,8 @@ do
 	end
 
 	local function dragstop(self)
-		self.config.x = self:GetLeft()-UIParent:GetLeft()
-		self.config.y = self:GetBottom()-UIParent:GetBottom()
 		self:StopMovingOrSizing()
+		LibWindow.SavePosition(self)
 	end
 
 	local function nothing(self)
@@ -607,9 +628,13 @@ do
 		local bar = getBar(info)
 		local scale = bar.config.scale
 		if v == "horizontal" then
-			bar.config.x = (UIParent:GetWidth() / 2 - (bar.config.w * scale) / 2) / scale
+			bar.config.point = bar.config.point:gsub("LEFT", ""):gsub("RIGHT", "")
+			if bar.config.point == "" then bar.config.point = "CENTER" end
+			bar.config.x = 0
 		else -- L["Vertical"]
-			bar.config.y = (UIParent:GetHeight() / 2 - (bar.config.h * scale) / 2) / scale
+			bar.config.point = bar.config.point:gsub("TOP", ""):gsub("BOTTOM", "")
+			if bar.config.point == "" then bar.config.point = "CENTER" end
+			bar.config.y = 0
 		end
 		bar:ApplySettings()
 	end
@@ -680,20 +705,6 @@ do
 					min = 50, max = 1500, bigStep = 5,
 					order = 200,
 				},
-				x = {
-					type = "range",
-					name = L["X"],
-					desc = L["Set an exact X value for this bar's position."],
-					min = -2560, max = 2560, bigStep = 1,
-					order = 200,
-				},
-				y = {
-					type = "range",
-					name = L["Y"],
-					desc = L["Set an exact Y value for this bar's position."],
-					min = -1600, max = 1600, bigStep = 1,
-					order = 200,
-				},
 				scale = {
 					type = "range",
 					name = L["Scale"],
@@ -708,6 +719,36 @@ do
 					isPercent = true,
 					min = 0.1, max = 1, bigStep = 0.025,
 					order = 202,
+				},
+				x = {
+					type = "range",
+					name = L["X"],
+					desc = L["Set an exact X value for this bar's position."],
+					min = -2560, max = 2560, bigStep = 1,
+					order = 203,
+				},
+				y = {
+					type = "range",
+					name = L["Y"],
+					desc = L["Set an exact Y value for this bar's position."],
+					min = -1600, max = 1600, bigStep = 1,
+					order = 204,
+				},
+				point = {
+					type = "select",
+					name = L["Anchor point"],
+					values = {
+						["TOP"] = L["Top"],
+						["RIGHT"] = L["Right"],
+						["BOTTOM"] = L["Bottom"],
+						["LEFT"] = L["Left"],
+						["TOPRIGHT"] = L["Top Right"],
+						["TOPLEFT"] = L["Top Left"],
+						["BOTTOMLEFT"] = L["Bottom Left"],
+						["BOTTOMRIGHT"] = L["Bottom Right"],
+						["CENTER"] = L["Center"]
+					},
+					order = 205,
 				},
 				icon = {
 					type = "header",
@@ -967,6 +1008,7 @@ Quartz3.CastBarTemplate = {}
 Quartz3.CastBarTemplate.defaults = {
 	--x =  -- applied automatically in applySettings()
 	y = 180,
+	point = "BOTTOMLEFT",
 	h = 25,
 	w = 250,
 	scale = 1,
@@ -1003,13 +1045,14 @@ Quartz3.CastBarTemplate.template = CastBarTemplate
 Quartz3.CastBarTemplate.bars = {}
 function Quartz3.CastBarTemplate:new(parent, unit, name, localizedName, config)
 	local frameName = "Quartz3CastBar" .. name
-	local bar = setmetatable(CreateFrame("Frame", frameName, UIParent), CastBarTemplate_MT)
+	local bar = setmetatable(CreateFrame("Frame", frameName, UIParent, "BackdropTemplate"), CastBarTemplate_MT)
 	bar.unit = unit
 	bar.parent = parent
-	bar.config = config
 	bar.modName = name
 	bar.localizedName = localizedName
 	bar.locked = true
+
+	bar:SetConfig(config)
 
 	Quartz3.CastBarTemplate.bars[name] = bar
 

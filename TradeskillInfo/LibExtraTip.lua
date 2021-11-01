@@ -3,7 +3,7 @@ LibExtraTip
 
 LibExtraTip is a library of API functions for manipulating additional information into GameTooltips by either adding information to the bottom of existing tooltips (embedded mode) or by adding information to an extra "attached" tooltip construct which is placed to the bottom of the existing tooltip.
 
-Copyright (C) 2008, by the respective below authors.
+Copyright (C) 2008-2019, by the respective below authors.
 
 This library is free software; you can redistribute it and/or
 modify it under the terms of the GNU Lesser General Public
@@ -28,7 +28,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
 local LIBNAME = "LibExtraTip"
 local VERSION_MAJOR = 1
-local VERSION_MINOR = 344
+local VERSION_MINOR = 349
 -- Minor Version cannot be a SVN Revison in case this library is used in multiple repositories
 -- Should be updated manually with each (non-trivial) change
 
@@ -38,6 +38,14 @@ local lib = LibStub:NewLibrary(LIBNAME.."-"..VERSION_MAJOR, VERSION_MINOR)
 if not lib then return end
 
 LibStub("LibRevision"):Set("$URL$","$Rev$","5.15.DEV.", 'auctioneer', 'libs')
+
+-- need to know early if we're using Classic or Modern version
+local MINIMUM_CLASSIC = 11300
+local MAXIMUM_CLASSIC = 19999
+-- version, build, date, tocversion = GetBuildInfo()
+local _,_,_,tocVersion = GetBuildInfo()
+lib.Classic = (tocVersion > MINIMUM_CLASSIC and tocVersion < MAXIMUM_CLASSIC)
+
 
 -- Call function to deactivate any outdated version of the library.
 -- (calls the OLD version of this function, NOT the one defined in this
@@ -74,10 +82,13 @@ local defaultEnable = {
 	SetTradeTargetItem = true,
 	SetRecipeReagentItem = true,
 	SetRecipeResultItem = true,
+    SetTradeSkillItem = true,
+    SetCraftItem = true,
 	SetHyperlink = true,
 	SetHyperlinkAndCount = true, -- Creating a tooltip via lib:SetHyperlinkAndCount()
 	SetBattlePet = true,
 	SetBattlePetAndCount = true,
+	SetItemKey = true,
 }
 
 --[[ The following callback types are always enabled regardless of the event ]]
@@ -122,6 +133,7 @@ end
 -- Function that gets run when an item is set on a registered tooltip.
 local function OnTooltipSetItem(tooltip)
 	local self = lib
+    -- DebugPrintQuick("OnTooltipSetItem called" ) -- DEBUGGING
 	local reg = self.tooltipRegistry[tooltip]
 	if not reg then return end
 
@@ -129,6 +141,7 @@ local function OnTooltipSetItem(tooltip)
 		tooltip:Show()
 
 		local testname, item = tooltip:GetItem()
+        --DebugPrintQuick("OnTooltipSetItem GetItem", testname, item ) -- DEBUGGING -- enchanting window always returns nil
 		if not item then
 			item = reg.item or reg.additional.link
 		elseif testname == "" then
@@ -143,6 +156,7 @@ local function OnTooltipSetItem(tooltip)
 		end
 
 		if item and not reg.hasItem then
+            -- DebugPrintQuick("OnTooltipSetItem has item" ) -- DEBUGGING
 			local name,link,quality,ilvl,minlvl,itype,isubtype,stack,equiploc,texture = GetItemInfo(item)
 			if link then
 				name = name or "unknown" -- WotLK bug
@@ -168,11 +182,12 @@ local function OnTooltipSetItem(tooltip)
 				reg.additional.equipLocation = equiploc
 				reg.additional.texture = texture
 
+                --DebugPrintQuick("OnTooltipSetItem callback called" ) -- DEBUGGING
 				ProcessCallbacks(reg, "item", tooltip, item,quantity,name,link,quality,ilvl,minlvl,itype,isubtype,stack,equiploc,texture)
 				tooltip:Show()
 				if reg.extraTipUsed then
-					reg.extraTip:Show()
-					ProcessCallbacks(reg, "extrashow", tooltip, reg.extraTip)
+					extraTip:Show()
+					ProcessCallbacks(reg, "extrashow", tooltip, extraTip)
 				end
 			end
 		end
@@ -181,6 +196,7 @@ end
 
 -- Function that gets run when a spell is set on a registered tooltip.
 local function OnTooltipSetSpell(tooltip)
+    --DebugPrintQuick("OnTooltipSetSpell called" ) -- DEBUGGING
 	local self = lib
 	local reg = self.tooltipRegistry[tooltip]
 	if not reg then return end
@@ -204,8 +220,8 @@ local function OnTooltipSetSpell(tooltip)
 			ProcessCallbacks(reg, "spell", tooltip, link, name, category, spellID)
 			tooltip:Show()
 			if reg.extraTipUsed then
-				reg.extraTip:Show()
-				ProcessCallbacks(reg, "extrashow", tooltip, reg.extraTip)
+				extraTip:Show()
+				ProcessCallbacks(reg, "extrashow", tooltip, extraTip)
 			end
 		end
 	end
@@ -231,8 +247,8 @@ local function OnTooltipSetUnit(tooltip)
 			ProcessCallbacks(reg, "unit", tooltip, name, unitId)
 			tooltip:Show()
 			if reg.extraTipUsed then
-				reg.extraTip:Show()
-				ProcessCallbacks(reg, "extrashow", tooltip, reg.extraTip)
+				extraTip:Show()
+				ProcessCallbacks(reg, "extrashow", tooltip, extraTip)
 			end
 		end
 	end
@@ -240,8 +256,8 @@ end
 
 -- Function that gets run when a registered tooltip's item is cleared.
 local function OnTooltipCleared(tooltip)
-	local self = lib
-	local reg = self.tooltipRegistry[tooltip]
+    --DebugPrintQuick("OnTooltipCleared called ")   -- DEBUGGING
+	local reg = lib.tooltipRegistry[tooltip]
 	if not reg then return end
 
 	if reg.ignoreOnCleared then return end
@@ -252,15 +268,16 @@ local function OnTooltipCleared(tooltip)
 	reg.hasItem = nil
 	reg.item = nil
 	wipe(reg.additional)
-	if reg.extraTip then
-		tinsert(self.extraTippool, reg.extraTip)
-		reg.extraTip:Hide()
-		reg.extraTip:Release()
-		reg.extraTip:ClearLines()
-		reg.extraTip:SetHeight(0)
-		reg.extraTip:SetWidth(0)
-		ProcessCallbacks(reg, "extrahide", tooltip, reg.extraTip)
+	local extraTip = reg.extraTip
+	if extraTip then
 		reg.extraTip = nil
+		extraTip:Release()
+		extraTip:ClearLines()
+		extraTip:SetHeight(0)
+		extraTip:SetWidth(0)
+		extraTip:Hide()
+		ProcessCallbacks(reg, "extrahide", tooltip, extraTip)
+		tinsert(lib.extraTippool, extraTip)
 	end
 end
 
@@ -765,21 +782,35 @@ function lib:GetMoneyText(money, concise)
 	local s = floor(money % 10000 / 100)
 	local c = floor(money % 100)
 
+    local colorBlindEnabled = GetCVar("colorblindMode") == "1"
+
 	local moneyText = ""
 
 	local sep, fmt = "", "%d"
 	if g > 0 then
-		moneyText = goldicon:format(g)
+        if colorBlindEnabled then
+		    moneyText = format("%.0f",g) .. GOLD_AMOUNT_SYMBOL
+        else
+		    moneyText = goldicon:format(g)
+        end
 		sep, fmt = " ", "%02d"
 	end
 
 	if s > 0 or (money >= 10000 and (concise and c > 0) or not concise) then
-		moneyText = moneyText..sep..silvericon:format(fmt):format(s)
+        if colorBlindEnabled then
+		    moneyText = moneyText .. sep .. format(fmt,s) .. SILVER_AMOUNT_SYMBOL
+        else
+		    moneyText = moneyText..sep..silvericon:format(fmt):format(s)
+        end
 		sep, fmt = " ", "%02d"
 	end
 
 	if not concise or c > 0 or money < 100 then
-		moneyText = moneyText..sep..coppericon:format(fmt):format(c)
+        if colorBlindEnabled then
+		    moneyText = moneyText .. sep .. format(fmt,c) .. COPPER_AMOUNT_SYMBOL
+        else
+            moneyText = moneyText..sep..coppericon:format(fmt):format(c)
+        end
 	end
 
 	return moneyText
@@ -830,6 +861,7 @@ end
 	@since 1.0
 ]]
 function lib:SetHyperlinkAndCount(tooltip, link, quantity, detail)
+    --DebugPrintQuick("SetHyperlinkAndCount", link, quantity, detail ) -- DEBUGGING
 	local reg = self.tooltipRegistry[tooltip]
 	if not reg or reg.NoColumns then return end -- NoColumns tooltips can't handle :SetHyperlink
 
@@ -1015,7 +1047,8 @@ end
 
 -- Sets all the complex spell details
 local function SetSpellDetail(reg, link)
-	local name, subname, icon, ctime, minRange, maxRange, spellID = GetSpellInfo(link)
+	local name, _, icon, ctime, minRange, maxRange, spellID = GetSpellInfo(link)
+	local subname = GetSpellSubtext(spellID)
 	reg.additional.name = name
 	reg.additional.link = link
 	reg.additional.rank = subname
@@ -1044,6 +1077,7 @@ function lib:GenerateTooltipMethodTable() -- Sets up hooks to give the quantity 
 		SetAuctionItem = function(self,type,index)
 			OnTooltipCleared(self)
 			local reg = tooltipRegistry[self]
+			if not reg then return end
 			reg.ignoreOnCleared = true
 			local _,_,q,_,cu,_,_,minb,inc,bo,ba,hb,_,own,ownf = GetAuctionItemInfo(type,index)
 			reg.quantity = q
@@ -1064,6 +1098,7 @@ function lib:GenerateTooltipMethodTable() -- Sets up hooks to give the quantity 
 		SetAuctionSellItem = function(self)
 			OnTooltipCleared(self)
 			local reg = tooltipRegistry[self]
+			if not reg then return end
 			reg.ignoreOnCleared = true
 			local name,texture,quantity,quality,canUse,price = GetAuctionSellItemInfo()
 			reg.quantity = quantity
@@ -1076,6 +1111,7 @@ function lib:GenerateTooltipMethodTable() -- Sets up hooks to give the quantity 
 			local tex,q,l,_,r,loot = GetContainerItemInfo(bag,slot)
 			if tex then -- only process occupied slots
 				local reg = tooltipRegistry[self]
+				if not reg then return end
 				reg.ignoreOnCleared = true
 				reg.quantity = q
 				reg.additional.event = "SetBagItem"
@@ -1090,6 +1126,7 @@ function lib:GenerateTooltipMethodTable() -- Sets up hooks to give the quantity 
 		SetBuybackItem = function(self,index)
 			OnTooltipCleared(self)
 			local reg = tooltipRegistry[self]
+			if not reg then return end
 			reg.ignoreOnCleared = true
 			local name,texture,price,quantity = GetBuybackItemInfo(index)
 			reg.quantity = quantity
@@ -1102,6 +1139,7 @@ function lib:GenerateTooltipMethodTable() -- Sets up hooks to give the quantity 
 			local texture, quantity, locked = GetGuildBankItemInfo(tab, index)
 			if texture then -- only process occupied slots
 				local reg = tooltipRegistry[self]
+				if not reg then return end
 				reg.ignoreOnCleared = true
 				reg.quantity = quantity
 				reg.additional.event = "SetGuildBankItem"
@@ -1115,6 +1153,7 @@ function lib:GenerateTooltipMethodTable() -- Sets up hooks to give the quantity 
 		SetInboxItem = function(self, index, itemIndex)
 			OnTooltipCleared(self)
 			local reg = tooltipRegistry[self]
+			if not reg then return end
 			reg.ignoreOnCleared = true
 			reg.additional.event = "SetInboxItem"
 			reg.additional.eventIndex = index
@@ -1131,6 +1170,7 @@ function lib:GenerateTooltipMethodTable() -- Sets up hooks to give the quantity 
 			local link = GetInventoryItemLink(unit, index)
 			if link then -- only process occupied slots
 				local reg = tooltipRegistry[self]
+				if not reg then return end
 				reg.ignoreOnCleared = true
 				reg.quantity = GetInventoryItemCount(unit, index)
 				reg.additional.event = "SetInventoryItem"
@@ -1143,6 +1183,7 @@ function lib:GenerateTooltipMethodTable() -- Sets up hooks to give the quantity 
 		SetLootItem = function(self,index)
 			OnTooltipCleared(self)
 			local reg = tooltipRegistry[self]
+			if not reg then return end
 			reg.ignoreOnCleared = true
 			local _,_,q = GetLootSlotInfo(index)
 			reg.quantity = q
@@ -1153,6 +1194,7 @@ function lib:GenerateTooltipMethodTable() -- Sets up hooks to give the quantity 
 		SetLootRollItem = function(self,index)
 			OnTooltipCleared(self)
 			local reg = tooltipRegistry[self]
+			if not reg then return end
 			reg.ignoreOnCleared = true
 			local texture, name, count, quality = GetLootRollItemInfo(index)
 			reg.quantity = count
@@ -1163,6 +1205,7 @@ function lib:GenerateTooltipMethodTable() -- Sets up hooks to give the quantity 
 		SetMerchantItem = function(self,index)
 			OnTooltipCleared(self)
 			local reg = tooltipRegistry[self]
+			if not reg then return end
 			reg.ignoreOnCleared = true
 			local _,_,p,q,na,cu,ec = GetMerchantItemInfo(index)
 			reg.quantity = q
@@ -1178,6 +1221,7 @@ function lib:GenerateTooltipMethodTable() -- Sets up hooks to give the quantity 
 		SetQuestItem = function(self,type,index)
 			OnTooltipCleared(self)
 			local reg = tooltipRegistry[self]
+			if not reg then return end
 			reg.ignoreOnCleared = true
 			local _,_,q,_,cu = GetQuestItemInfo(type,index)
 			reg.quantity = q
@@ -1191,6 +1235,7 @@ function lib:GenerateTooltipMethodTable() -- Sets up hooks to give the quantity 
 		SetQuestLogItem = function(self,type,index)
 			OnTooltipCleared(self)
 			local reg = tooltipRegistry[self]
+			if not reg then return end
 			reg.ignoreOnCleared = true
 			local _,q,cu
 			if type == "choice" then
@@ -1209,6 +1254,7 @@ function lib:GenerateTooltipMethodTable() -- Sets up hooks to give the quantity 
 		SetSendMailItem = function(self, index)
 			OnTooltipCleared(self)
 			local reg = tooltipRegistry[self]
+			if not reg then return end
 			reg.ignoreOnCleared = true
 			local name, itemID, texture, quantity = GetSendMailItem(index)
 			reg.quantity = quantity
@@ -1219,6 +1265,7 @@ function lib:GenerateTooltipMethodTable() -- Sets up hooks to give the quantity 
 		SetTradePlayerItem = function(self,index)
 			OnTooltipCleared(self)
 			local reg = tooltipRegistry[self]
+			if not reg then return end
 			reg.ignoreOnCleared = true
 			local name, texture, quantity = GetTradePlayerItemInfo(index)
 			reg.quantity = quantity
@@ -1229,6 +1276,7 @@ function lib:GenerateTooltipMethodTable() -- Sets up hooks to give the quantity 
 		SetTradeTargetItem = function(self,index)
 			OnTooltipCleared(self)
 			local reg = tooltipRegistry[self]
+			if not reg then return end
 			reg.ignoreOnCleared = true
 			local name, texture, quantity = GetTradeTargetItemInfo(index)
 			reg.quantity = quantity
@@ -1237,41 +1285,146 @@ function lib:GenerateTooltipMethodTable() -- Sets up hooks to give the quantity 
 		end,
 
 		SetRecipeReagentItem = function(self, recipeID, reagentIndex)
+            -- used on Current WoW only
 			OnTooltipCleared(self)
 			local reg = tooltipRegistry[self]
+			if not reg then return end
 			reg.ignoreOnCleared = true
 			reg.additional.event = "SetRecipeReagentItem"
 			reg.additional.eventIndex = recipeID
 			reg.additional.eventSubIndex = reagentIndex
-			local _,_,q,rc = C_TradeSkillUI.GetRecipeReagentInfo(recipeID, reagentIndex)
-			reg.quantity = q
-			reg.additional.playerReagentCount = rc
-			reg.additional.link = C_TradeSkillUI.GetRecipeReagentItemLink(recipeID, reagentIndex) -- Workaround [LTT-56], Remove when fixed by Blizzard
+            local _,_,q,rc = C_TradeSkillUI.GetRecipeReagentInfo(recipeID, reagentIndex)
+            reg.quantity = q
+            reg.additional.playerReagentCount = rc
+            reg.additional.link = C_TradeSkillUI.GetRecipeReagentItemLink(recipeID, reagentIndex) -- Workaround [LTT-56], Remove when fixed by Blizzard
+		end,
+
+--[[
+Old Classic Crafting APIs (removed in 3.0)
+REMOVED - CloseCraft
+REMOVED - CollapseCraftSkillLine
+REMOVED - CraftIsEnchanting
+REMOVED - CraftIsPetTraining
+REMOVED - CraftOnlyShowMakeable
+REMOVED - DoCraft
+REMOVED - ExpandCraftSkillLine
+REMOVED - GetNumCrafts
+REMOVED - GetCraftButtonToken
+REMOVED - GetCraftCooldown
+REMOVED - GetCraftDescription
+REMOVED - GetCraftDisplaySkillLine
+REMOVED - GetCraftFilter
+REMOVED - GetCraftIcon
+REMOVED - GetCraftInfo
+REMOVED - GetCraftItemLink
+REMOVED - GetCraftItemNameFilter
+REMOVED - GetCraftName
+REMOVED - GetCraftNumMade
+REMOVED - GetCraftNumReagents
+REMOVED - GetCraftReagentInfo
+REMOVED - GetCraftReagentItemLink
+REMOVED - GetCraftRecipeLink
+REMOVED - GetCraftSelectionIndex
+REMOVED - GetCraftSkillLine
+REMOVED - GetCraftSlots
+REMOVED - GetCraftSpellFocus
+REMOVED - SelectCraft
+REMOVED - SetCraftFilter
+REMOVED - SetCraftItemNameFilter
+]]
+		SetCraftItem = function(self, recipeID, reagentIndex)
+            -- used on Classic only
+            --DebugPrintQuick("SetCraftItem called", recipeID, reagentIndex ) -- DEBUGGING
+			OnTooltipCleared(self)
+			local reg = tooltipRegistry[self]
+			if not reg then return end
+			reg.ignoreOnCleared = true
+			reg.additional.event = "SetCraftItem"
+			reg.additional.eventIndex = recipeID
+			reg.additional.eventSubIndex = reagentIndex
+            if reagentIndex then
+                local _,_,q,rc = GetCraftReagentInfo(recipeID, reagentIndex)
+                reg.quantity = q
+                reg.additional.playerReagentCount = rc
+                reg.additional.link = GetCraftReagentItemLink(recipeID, reagentIndex)
+                --DebugPrintQuick("SetCraftItem reagents1", q, rc, reg.additional.link ) -- DEBUGGING
+            else
+				local link = GetCraftItemLink(recipeID)
+				reg.additional.link = link
+                --DebugPrintQuick("SetCraftItem reagents2", link ) -- DEBUGGING
+				reg.quantity = GetCraftNumMade(recipeID)
+				if link and link:match("spell:%d") then
+					SetSpellDetail(reg, link)
+				end
+            end
+		end,
+
+		SetTradeSkillItem = function(self, recipeID, reagentIndex)
+            -- used on Classic only
+			OnTooltipCleared(self)
+			local reg = tooltipRegistry[self]
+			if not reg then return end
+			reg.ignoreOnCleared = true
+			reg.additional.event = "SetTradeSkillItem"
+			reg.additional.eventIndex = recipeID
+			reg.additional.eventSubIndex = reagentIndex
+            if reagentIndex then
+                local _,_,q,rc = GetTradeSkillReagentInfo(recipeID, reagentIndex)
+                reg.quantity = q
+                reg.additional.playerReagentCount = rc
+                reg.additional.link = GetTradeSkillReagentItemLink(recipeID, reagentIndex)
+            else
+				local link = GetTradeSkillItemLink(recipeID)
+				reg.additional.link = link
+				reg.quantity = GetTradeSkillNumMade(recipeID)
+				if link and link:match("spell:%d") then
+					SetSpellDetail(reg, link)
+				end
+            end
 		end,
 
 		SetRecipeResultItem = function(self, recipeID)
 			OnTooltipCleared(self)
 			local reg = tooltipRegistry[self]
+			if not reg then return end
 			reg.ignoreOnCleared = true
 			reg.additional.event = "SetRecipeResultItem"
 			reg.additional.eventIndex = recipeID
-			local recipeInfo = C_TradeSkillUI.GetRecipeInfo(recipeID) -- returns a table with a ton of info
-			reg.additional.recipeInfo = recipeInfo -- for now just attach whole table to reg.additional
-			local minMade, maxMade = C_TradeSkillUI.GetRecipeNumItemsProduced(recipeID)
-			reg.additional.minMade = minMade
-			reg.additional.maxMade = maxMade
-			if minMade and maxMade then -- protect against nil values
-				reg.quantity = (minMade + maxMade) / 2 -- ### todo: may not be an integer, if this causes problems may need to math.floor it
-			elseif maxMade then
-				reg.quantity = maxMade
-			else
-				reg.quantity = minMade -- note: may still be nil
-			end
-			reg.additional.link = C_TradeSkillUI.GetRecipeItemLink(recipeID) -- Workaround [LTT-56], Remove when fixed by Blizzard
+
+            if (lib.Classic) then
+                reg.additional.recipeInfo = nil     -- don't have a match for GetRecipeInfo in classic
+                local minMade, maxMade = GetTradeSkillNumMade(recipeID)
+                reg.additional.minMade = minMade
+                reg.additional.maxMade = maxMade
+                if minMade and maxMade then -- protect against nil values
+                    reg.quantity = (minMade + maxMade) / 2 -- ### todo: may not be an integer, if this causes problems may need to math.floor it
+                elseif maxMade then
+                    reg.quantity = maxMade
+                else
+                    reg.quantity = minMade -- note: may still be nil
+                end
+                reg.additional.link = GetTradeSkillRecipeLink(recipeID) -- Workaround [LTT-56], Remove when fixed by Blizzard
+            else
+                local recipeInfo = C_TradeSkillUI.GetRecipeInfo(recipeID) -- returns a table with a ton of info
+                reg.additional.recipeInfo = recipeInfo -- for now just attach whole table to reg.additional
+                local minMade, maxMade = C_TradeSkillUI.GetRecipeNumItemsProduced(recipeID)
+                reg.additional.minMade = minMade
+                reg.additional.maxMade = maxMade
+                if minMade and maxMade then -- protect against nil values
+                    reg.quantity = (minMade + maxMade) / 2 -- ### todo: may not be an integer, if this causes problems may need to math.floor it
+                elseif maxMade then
+                    reg.quantity = maxMade
+                else
+                    reg.quantity = minMade -- note: may still be nil
+                end
+                reg.additional.link = C_TradeSkillUI.GetRecipeItemLink(recipeID) -- Workaround [LTT-56], Remove when fixed by Blizzard
+            end
 		end,
 
 		SetHyperlink = function(self,link)
+            -- DebugPrintQuick("SetHyperlink called ", link )   -- DEBUGGING
 			local reg = tooltipRegistry[self]
+			if not reg then return end
 			if reg.ignoreSetHyperlink then return end
 			OnTooltipCleared(self)
 			reg.ignoreOnCleared = true
@@ -1286,6 +1439,7 @@ function lib:GenerateTooltipMethodTable() -- Sets up hooks to give the quantity 
 		SetAction = function(self,actionid)
 			OnTooltipCleared(self)
 			local reg = tooltipRegistry[self]
+			if not reg then return end
 			reg.ignoreOnCleared = true
 			local t,id,sub = GetActionInfo(actionid)
 			reg.additional.event = "SetAction"
@@ -1307,6 +1461,7 @@ function lib:GenerateTooltipMethodTable() -- Sets up hooks to give the quantity 
 		SetCurrencyToken = function(self, index)
 			OnTooltipCleared(self)
 			local reg = tooltipRegistry[self]
+			if not reg then return end
 			reg.ignoreOnCleared = true
 			reg.additional.event = "SetCurrencyToken"
 			reg.additional.eventIndex = index
@@ -1315,6 +1470,7 @@ function lib:GenerateTooltipMethodTable() -- Sets up hooks to give the quantity 
 		SetPetAction = function(self, index)
 			OnTooltipCleared(self)
 			local reg = tooltipRegistry[self]
+			if not reg then return end
 			reg.ignoreOnCleared = true
 			reg.additional.event = "SetPetAction"
 			reg.additional.eventIndex = index
@@ -1323,6 +1479,7 @@ function lib:GenerateTooltipMethodTable() -- Sets up hooks to give the quantity 
 		SetQuestLogRewardSpell = function(self)
 			OnTooltipCleared(self)
 			local reg = tooltipRegistry[self]
+			if not reg then return end
 			reg.ignoreOnCleared = true
 			reg.additional.event = "SetQuestLogRewardSpell"
 		end,
@@ -1330,6 +1487,7 @@ function lib:GenerateTooltipMethodTable() -- Sets up hooks to give the quantity 
 		SetQuestRewardSpell = function(self)
 			OnTooltipCleared(self)
 			local reg = tooltipRegistry[self]
+			if not reg then return end
 			reg.ignoreOnCleared = true
 			reg.additional.event = "SetQuestRewardSpell"
 		end,
@@ -1337,6 +1495,7 @@ function lib:GenerateTooltipMethodTable() -- Sets up hooks to give the quantity 
 		SetShapeshift = function(self, index)
 			OnTooltipCleared(self)
 			local reg = tooltipRegistry[self]
+			if not reg then return end
 			reg.ignoreOnCleared = true
 			reg.additional.event = "SetShapeshift"
 			reg.additional.eventIndex = index
@@ -1346,6 +1505,7 @@ function lib:GenerateTooltipMethodTable() -- Sets up hooks to give the quantity 
 		SetSpellBookItem = function(self,index,booktype)
 			OnTooltipCleared(self)
 			local reg = tooltipRegistry[self]
+			if not reg then return end
 			reg.ignoreOnCleared = true
 			local link = GetSpellLink(index, booktype)
 			if link then
@@ -1360,6 +1520,7 @@ function lib:GenerateTooltipMethodTable() -- Sets up hooks to give the quantity 
 		SetTalent = function(self, index, isInspect, talentGroup, inspectedUnit, classID)
 			OnTooltipCleared(self)
 			local reg = tooltipRegistry[self]
+			if not reg then return end
 			reg.ignoreOnCleared = true
 			reg.additional.event = "SetTalent"
 			reg.additional.eventIndex = index
@@ -1368,6 +1529,7 @@ function lib:GenerateTooltipMethodTable() -- Sets up hooks to give the quantity 
 		SetTrainerService = function(self, index)
 			OnTooltipCleared(self)
 			local reg = tooltipRegistry[self]
+			if not reg then return end
 			reg.ignoreOnCleared = true
 			reg.additional.event = "SetTrainerService"
 			reg.additional.eventIndex = index
@@ -1377,6 +1539,7 @@ function lib:GenerateTooltipMethodTable() -- Sets up hooks to give the quantity 
 		SetUnit = function(self, unit)
 			OnTooltipCleared(self)
 			local reg = tooltipRegistry[self]
+			if not reg then return end
 			reg.ignoreOnCleared = true
 			reg.additional.event = "SetUnit"
 			reg.additional.eventUnit= unit
@@ -1387,6 +1550,7 @@ function lib:GenerateTooltipMethodTable() -- Sets up hooks to give the quantity 
 		SetUnitAura = function(self, unit, index, filter)
 			OnTooltipCleared(self)
 			local reg = tooltipRegistry[self]
+			if not reg then return end
 			reg.ignoreOnCleared = true
 			reg.additional.event = "SetUnitAura"
 			reg.additional.eventUnit = unit
@@ -1399,6 +1563,7 @@ function lib:GenerateTooltipMethodTable() -- Sets up hooks to give the quantity 
 		SetUnitBuff = function(self, unit, index, filter)
 			OnTooltipCleared(self)
 			local reg = tooltipRegistry[self]
+			if not reg then return end
 			reg.ignoreOnCleared = true
 			reg.additional.event = "SetUnitBuff"
 			reg.additional.eventUnit = unit
@@ -1409,6 +1574,7 @@ function lib:GenerateTooltipMethodTable() -- Sets up hooks to give the quantity 
 		SetUnitDebuff = function(self, unit, index, filter)
 			OnTooltipCleared(self)
 			local reg = tooltipRegistry[self]
+			if not reg then return end
 			reg.ignoreOnCleared = true
 			reg.additional.event = "SetUnitDebuff"
 			reg.additional.eventUnit = unit
@@ -1416,10 +1582,24 @@ function lib:GenerateTooltipMethodTable() -- Sets up hooks to give the quantity 
 			reg.additional.eventFilter = filter
 		end,
 		--]]
+
+		SetItemKey = function(self, itemID, itemLevel, itemSuffix)
+			OnTooltipCleared(self)
+			local reg = tooltipRegistry[self]
+			if not reg then return end
+			reg.ignoreOnCleared = true
+			reg.additional.event = "SetItemKey"
+			reg.additional.eventItemID = itemID
+			reg.additional.eventItemLevel = itemLevel
+			reg.additional.EventItemSuffix = itemSuffix
+		end,
 	}
 
 	local function posthookClearIgnore(self)
-		tooltipRegistry[self].ignoreOnCleared = nil
+		local reg = tooltipRegistry[self]
+		if reg then
+			reg.ignoreOnCleared = nil
+		end
 	end
 	tooltipMethodPosthooks = {
 		SetAuctionItem = posthookClearIgnore,
@@ -1439,6 +1619,8 @@ function lib:GenerateTooltipMethodTable() -- Sets up hooks to give the quantity 
 		SetTradeTargetItem = posthookClearIgnore,
 		SetRecipeReagentItem = posthookClearIgnore,
 		SetRecipeResultItem = posthookClearIgnore,
+        SetTradeSkillItem = posthookClearIgnore,
+        SetCraftItem = posthookClearIgnore,
 
 		SetHyperlink = function(self)
 			local reg = tooltipRegistry[self]
@@ -1460,6 +1642,7 @@ function lib:GenerateTooltipMethodTable() -- Sets up hooks to give the quantity 
 		--SetUnitAura = posthookClearIgnore,
 		--SetUnitBuff = posthookClearIgnore,
 		--SetUnitDebuff = posthookClearIgnore,
+		SetItemKey = posthookClearIgnore,
 	}
 
 end

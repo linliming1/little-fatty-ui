@@ -1,17 +1,21 @@
 --[[
     This file is part of Decursive.
 
-    Decursive (v 2.7.6.2) add-on for World of Warcraft UI
-    Copyright (C) 2006-2018 John Wellesz (Decursive AT 2072productions.com) ( http://www.2072productions.com/to/decursive.php )
+    Decursive (v 2.7.8.3) add-on for World of Warcraft UI
+    Copyright (C) 2006-2019 John Wellesz (Decursive AT 2072productions.com) ( http://www.2072productions.com/to/decursive.php )
 
-    Starting from 2009-10-31 and until said otherwise by its author, Decursive
-    is no longer free software, all rights are reserved to its author (John
-    Wellesz).
+    Decursive is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
 
-    The only official and allowed distribution means are
-    www.2072productions.com, www.wowace.com and curse.com.
-    To distribute Decursive through other means a special authorization is
-    required.
+    Decursive is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Decursive.  If not, see <https://www.gnu.org/licenses/>.
 
 
     Decursive is inspired from the original "Decursive v1.9.4" by Patrick Bohnet (Quu).
@@ -20,7 +24,7 @@
     Decursive is distributed in the hope that it will be useful, but WITHOUT
     ANY WARRANTY.
 
-    This file was last updated on 2018-07-18T0:42:34Z
+    This file was last updated on 2019-11-18T13:42:00Z
 --]]
 -------------------------------------------------------------------------------
 
@@ -73,7 +77,7 @@ T._LoadedFiles["zhTW.lua"] = false;
 local L = LibStub("AceLocale-3.0"):NewLocale("Decursive", "zhTW");
 
 if not L then
-    T._LoadedFiles["zhTW.lua"] = "2.7.6.2";
+    T._LoadedFiles["zhTW.lua"] = "2.7.8.3";
     return;
 end;
 
@@ -165,6 +169,8 @@ L["HLP_LEFTCLICK"] = "左-鍵"
 L["HLP_LL_ONCLICK_TEXT"] = [=[實時列表不代表能被點擊。請先閱讀此文檔來學習如何使用此插件。在 WoWAce.com 網站搜索“Decursive”
 （從 Decursive 計時條移除此列表，/dcrshow 命令並左Alt+點擊移除）]=]
 L["HLP_MIDDLECLICK"] = "中-鍵"
+L["HLP_MOUSE4"] = "滑鼠按鈕 4"
+L["HLP_MOUSE5"] = "滑鼠按鈕 5"
 L["HLP_NOTHINGTOCURE"] = "沒有可處理的負面效果！"
 L["HLP_RIGHTCLICK"] = "右-鍵"
 L["HLP_USEXBUTTONTOCURE"] = "用 \"%s\" 來淨化這個負面效果！"
@@ -191,6 +197,7 @@ L["NEW_VERSION_ALERT"] = [=[已檢測到新版本的 Decursive：|cFFEE7722%q|r 
 --------]=]
 L["NORMAL"] = "一般"
 L["NOSPELL"] = "沒有可用法術"
+L["NOTICE_FRAME_TEMPLATE"] = "|cFFFF0000Decursive - 注意|r %s "
 L["OPT_ABOLISHCHECK_DESC"] = "檢查玩家身上是否有淨化法術在運作。"
 L["OPT_ABOUT"] = "關於"
 L["OPT_ADD_A_CUSTOM_SPELL"] = "添加一個自訂法術"
@@ -281,6 +288,11 @@ L["OPT_CUSTOM_SPELL_PRIORITY_DESC"] = [=[當有多個法術可以治療相同類
 
 因此如果你將自行設定之施法能力的優先程度設為負值，此能力只有在預設施法能力無法使用時才會被選用。]=]
 L["OPT_CUSTOM_SPELL_UNAVAILABLE"] = "不可用"
+L["OPT_CUSTOM_SPELL_UNIT_FILTER"] = "單位過濾方式"
+L["OPT_CUSTOM_SPELL_UNIT_FILTER_DESC"] = "選擇可由此法術受益的單位"
+L["OPT_CUSTOM_SPELL_UNIT_FILTER_NONE"] = "所有單位"
+L["OPT_CUSTOM_SPELL_UNIT_FILTER_NONPLAYER"] = "只有其他"
+L["OPT_CUSTOM_SPELL_UNIT_FILTER_PLAYER"] = "只有玩家"
 L["OPT_CUSTOMSPELLS"] = "自訂法術"
 L["OPT_CUSTOMSPELLS_DESC"] = [=[這裡添加法術以擴展Decursive的自動配置。
 您的自訂法術總是會有高優先權，並且將蓋過與替代預設的法術(只有在你的角色可以使用這些法術的時候)。
@@ -308,6 +320,7 @@ L["OPT_ENABLE_LIVELIST_DESC"] = [=[顯示信息列表受影響玩家。
 L["OPT_ENABLEDEBUG"] = "啟用除錯"
 L["OPT_ENABLEDEBUG_DESC"] = "啟用除錯輸出"
 L["OPT_ENABLEDECURSIVE"] = "啟用 Decursive"
+L["OPT_FILTERED_DEBUFF_RENAMED"] = "已過濾的減益 \"%s\" 自動重新命名為  \"%s\" (法術 ID %d)"
 L["OPT_FILTEROUTCLASSES_FOR_X"] = "在戰鬥中指定的職業%q將被忽略。"
 L["OPT_GENERAL"] = "一般選項"
 L["OPT_GROWDIRECTION"] = "反向顯示 MUFs"
@@ -326,6 +339,7 @@ L["OPT_INPUT_SPELL_BAD_INPUT_ALREADY_HERE"] = "法術已在列表中！"
 L["OPT_INPUT_SPELL_BAD_INPUT_DEFAULT_SPELL"] = "Decursive 已經包含此法術。Shift+點擊此法術或輸入它的 ID 添加一個特殊等級。"
 L["OPT_INPUT_SPELL_BAD_INPUT_ID"] = "法術 ID 不可用！"
 L["OPT_INPUT_SPELL_BAD_INPUT_NOT_SPELL"] = "不能在技能書中找到法術！"
+L["OPT_ISNOTVALID_SPELLID"] = "不是有效的法術 ID"
 L["OPT_LIVELIST"] = "即時清單"
 L["OPT_LIVELIST_DESC"] = [=[These are the settings concerning the list of afflicted units displayed beneath the "Decursive" bar.
 
@@ -410,6 +424,7 @@ L["OPT_RESTPROFILECONF"] = [=[你確定要重置
  為原始設定?]=]
 L["OPT_REVERSE_LIVELIST_DESC"] = "由下到上填滿即時清單。"
 L["OPT_SCANLENGTH_DESC"] = "設定掃描時間間隔。"
+L["OPT_SETAFFTYPECOLOR_DESC"] = "設定 \"%s\" 減益類型的顏色。(大部分會出現在迷你單位格子的滑鼠提示和即時清單中)"
 L["OPT_SHOW_STEALTH_STATUS"] = "顯示潛行狀態"
 L["OPT_SHOW_STEALTH_STATUS_DESC"] = "當玩家前行時，他的 MUF 將有一個特殊的顏色"
 L["OPT_SHOWBORDER"] = "顯示職業顏色邊框"
@@ -421,6 +436,9 @@ L["OPT_SHOWMFS_DESC"] = "如果你要在螢幕上按按鍵清除就必須點選�
 L["OPT_SHOWMINIMAPICON"] = "迷你地圖圖標"
 L["OPT_SHOWMINIMAPICON_DESC"] = "啟用迷你地圖小圖示。"
 L["OPT_SHOWTOOLTIP_DESC"] = "在即時清單跟 MUFs 上顯示負面效果的小提示。"
+L["OPT_SPELL_DESCRIPTION_LOADING"] = "說明仍在載入中... 請稍後再回來看看。"
+L["OPT_SPELL_DESCRIPTION_UNAVAILABLE"] = "無法取得說明"
+L["OPT_SPELLID_MISSING_READD"] = "你需要使用法術 ID 來重新加入這個減益，才能看到正確的說明，而不是這段訊息。"
 L["OPT_STICKTORIGHT"] = "將 MUF 視窗向右對齊"
 L["OPT_STICKTORIGHT_DESC"] = "設定這個選項將會使 MUF 視窗由右邊向左邊成長"
 L["OPT_TESTLAYOUT"] = "測試布局"
@@ -485,4 +503,4 @@ L["UNSTABLERELEASE"] = "不穩定釋出版"
 
 
 
-T._LoadedFiles["zhTW.lua"] = "2.7.6.2";
+T._LoadedFiles["zhTW.lua"] = "2.7.8.3";

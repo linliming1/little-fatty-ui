@@ -125,11 +125,11 @@ function GridFrame:OpenStatusOptions(status)
 end
 
 --[[------------------------------------------------------------
-把指示关联的选项分成两页, 光环/Hots这种很多的放到第二页
+把指示关联的选项分成多组：自定义光环，副本光环，普通光环，通用状态
 指示器选择状态时，未启用的状态标记[X]
 指示器列表的图标
 ---------------------------------------------------------------]]
-local indicator_icons = { barcolor=1, border=1, corner1=1, corner2=1, corner3=1, corner4=1, cornertextbottomleft=1, cornertextbottomright=1, cornertexttopleft=1, cornertexttopright=1, frameAlpha=1, healingBar=1, icon=1, iconbottom=1, iconleft=1, iconright=1, iconrole=1, icontop=1, manabar=1, text=1, text2=1, }
+local indicator_icons = { barcolor=1, border=1, borderglow=1, corner1=1, corner2=1, corner3=1, corner4=1, cornertextbottomleft=1, cornertextbottomright=1, cornertexttopleft=1, cornertexttopright=1, frameAlpha=1, healingBar=1, icon=1, iconbottom=1, iconleft=1, iconright=1, iconrole=1, icontop=1, manabar=1, text=1, text2=1, textstack=1 }
 local indicator_config_func = function(info, test)
     local id = info[#info-1] --print(id)
     if id == "healingBar" then id = "bar" end
@@ -152,7 +152,7 @@ hooksecurefunc(GridFrame, "UpdateOptionsForIndicator", function(self, indicator,
         return
     end
 
-    menu[indicator].childGroups = "tab"
+    menu[indicator].childGroups = "select" --"tab"
 
     --指示器图标
     if indicator_icons[indicator] then
@@ -163,11 +163,11 @@ hooksecurefunc(GridFrame, "UpdateOptionsForIndicator", function(self, indicator,
 
     if not indicatorMenu.general163 then
         indicatorMenu.general163 = { name = L["General"], type = "group", order = 1, args = {}, }
-        indicatorMenu.auras163 = { name = L["Auras"], type = "group", order = 2, args = {}, }
-        indicatorMenu.config = {
+        indicatorMenu.auras163 = { name = EMPTY, type = "group", order = 2, args = {}, }
+        indicatorMenu.config = indicatorMenu.config or {
             name = format(L["Options for Indicator %s"], menu[indicator].name),
             type = "execute",
-            width="full",
+            width = "full",
             order = 0,
             hidden = function(info) return indicator_config_func(info, true) end,
             func = function(info) indicator_config_func(info) end
@@ -176,6 +176,10 @@ hooksecurefunc(GridFrame, "UpdateOptionsForIndicator", function(self, indicator,
         wipe(indicatorMenu.general163.args)
         wipe(indicatorMenu.auras163.args)
     end
+    indicatorMenu.general163.args.header1 = { type = "header", width = "full", order = 10, name = "自定义光环", }
+    indicatorMenu.general163.args.header2 = { type = "header", width = "full", order = 20, name = "副本光环", }
+    indicatorMenu.general163.args.header3 = { type = "header", width = "full", order = 30, name = "其他光环", }
+    indicatorMenu.general163.args.header4 = { type = "header", width = "full", order = 40, name = "通用状态", }
 
     for status, module, descr in GridStatus:RegisteredStatusIterator() do
         local menu = indicatorMenu[status]
@@ -203,15 +207,26 @@ hooksecurefunc(GridFrame, "UpdateOptionsForIndicator", function(self, indicator,
             if not enable then
                 menu.name = menu.name.."|cffff0000[关}|r" --为保持顺序只能在后面加
             end
+            local settings = GridStatus:GetModule(module).db.profile[status]
             local args
-            if status:find("^buff_") or status:find("^debuff_") or status:find("^dispel_")
-                    or descr:find("^Hots: ") or descr:find("^HoT: ") then
-                args = indicatorMenu.auras163.args
+            if module == "GridStatusAuras" then --if status:find("^buff_") or status:find("^debuff_") or status:find("^dispel_") or descr:find("^Hots: ") or descr:find("^HoT: ") then
+                --args = indicatorMenu.auras163.args
+                local default = GridStatus:GetModule(module).defaultDB[status]
+                --区分自定义和默认的，自定义的defaultDB也会被赋值为statusDefaultDB，所以需要判断是否有desc
+                if default and (default.text or default.desc) then
+                    menu.order = settings.raid and 21 or 31
+                else
+                    menu.order = 11
+                end
             else
-                args = indicatorMenu.general163.args
+                --args = indicatorMenu.general163.args
+                menu.order = 41
             end
+            local spellId = settings.debuffID or settings.buffID
+            if spellId then menu.desc = menu.desc .. "\nID: " .. spellId end
             menu.width = "normal"
-            args[status] = menu
+
+            indicatorMenu.general163.args[status] = menu
             indicatorMenu[status] = nil
         end
     end
@@ -289,7 +304,7 @@ Mixin(GridFrame.defaultDB, {
             alert_ghost = true,
             alert_RaidDebuff = true,
             alert_res = true,
-            alert_bigdebuffs = true,
+            --alert_bigdebuffs = true,
             alert_summon = true,
         },
         iconright = {
@@ -336,7 +351,9 @@ Mixin(GridFrame.defaultDB, {
             debuff_209858              = true,
             debuff_240559              = true,
             debuff_240443              = true,
-        }
+        },
+        textstack = {},
+        borderglow = {},
     }
 })
 --GridStatus:GetModule("GridStatusVoiceComm").defaultDB.alert_voice.enable = true
@@ -345,7 +362,8 @@ GridStatus:GetModule("GridStatusMana").defaultDB.alert_lowMana.enable = false
 GridStatus:GetModule("GridStatusMouseover").defaultDB.mouseover.enable = false
 GridStatus:GetModule("GridStatusStagger").defaultDB.alert_stagger.enable = false
 GridStatus:GetModule("GridStatusHealth").defaultDB.alert_ghost.priority = 97 --dead is 95
---后添加的BUFF默认关闭
+
+--AuraClass里后添加的BUFF(_extra=true)默认是关闭的，如果在默认方案里配置了这些BUFF，则强制打开
 local mapped_status = {}
 for k,v in pairs(GridFrame.defaultDB.statusmap) do
     for status, _ in pairs(v) do
@@ -482,11 +500,13 @@ do
     option.reset_header = {
         type = "header", name = "重置单个模块的当前配置文件", order = 100,
     }
+    option.GridClickSets = { type = "execute", name = "重置点击施法", order = 101, confirm = true, func = function() GridClickSetsForTalents = {} end }
     for k, name in pairs(modules) do
         option[k] = {
             type = "execute",
             name = name,
             order = 102,
+            desc = "重置"..k.."模块的所有设置",
             func = function(info)
                 --info.option.disabled = true
                 Grid.db:GetNamespace(info[#info]):ResetProfile()
@@ -495,7 +515,17 @@ do
             end
         }
     end
-    option.GridClickSets = { type = "execute", name = "重置点击施法", order = 101, confirm = true, func = function() GridClickSetsForTalents = {} end }
+    option.reset_more_aura = {
+        type = "execute", name = "爱不易副本光环", order = 103, desc = "重置爱不易添加的团队副本（主要是史诗难度）特别需要注意的状态属性",
+        func = function(info)
+            local mod = Grid:GetModule("GridStatus"):GetModule("GridStatusAuras")
+            for k, v in pairs(mod.db.profile) do
+                if type(v) == "table" and mod.defaultDB[k] and mod.defaultDB[k].raid == true then
+                    mod.db.profile[k] = CopyTable(mod.defaultDB[k])
+                end
+            end
+        end
+    }
     option.reset_all_header = {
         type = "header", name = "整体重置", order = 200,
     }
@@ -621,7 +651,7 @@ if not DependCall then
     end
 end
 
-DependCall("GridStatusRaidDebuff", function()
+DependCall("PlexusStatusRaidDebuff", function()
     paths["alert_RaidDebuff"] = "GridStatusRaidDebuff"
     local options = GridStatusRaidDebuff.options
     options.order = 90
@@ -756,6 +786,7 @@ do
         if status == "alert_phase" then
             self:RegisterEvent("UNIT_PHASE", "UpdateUnit")
             self:RegisterEvent("UNIT_FLAGS", "UpdateUnit")
+            self:RegisterEvent("UNIT_CTR_OPTIONS", "UpdateUnit")
             self:RegisterEvent("UNIT_CONNECTION", "UpdateUnit")
             self:RegisterEvent("GROUP_ROSTER_UPDATE", "UpdateAllUnits")
             self:UpdateAllUnits()
@@ -778,15 +809,15 @@ do
         end
     end
 
-    local UnitGUID, UnitInPhase, UnitIsWarModePhased, UnitIsConnected
-        = UnitGUID, UnitInPhase, UnitIsWarModePhased, UnitIsConnected
+    local UnitGUID, UnitPhaseReason, UnitIsConnected
+        = UnitGUID, UnitPhaseReason, UnitIsConnected
 
     local TEX_COORD = { left = 0.15625, right = 0.84375, top = 0.15625, bottom = 0.84375 }
     function GridStatusPhase:UpdateUnit(event, unit)
         if not unit then return end
         local guid = UnitGUID(unit)
         if not GridRoster:IsGUIDInGroup(guid) then return end
-        if (UnitIsWarModePhased(unit) or not UnitInPhase(unit)) and UnitIsConnected(unit) then
+        if UnitPhaseReason(unit) and UnitIsConnected(unit) then
             local settings = self.db.profile.alert_phase
             self.core:SendStatusGained(guid, "alert_phase",
                 settings.priority,
@@ -892,4 +923,101 @@ do
             self.core:SendStatusLost(guid, "alert_summon")
         end
     end
+end
+
+--[[------------------------------------------------------------
+边框闪光 borderglow
+---------------------------------------------------------------]]
+local LCG = LibStub("LibCustomGlow-1.0", true)
+
+if LCG then
+    GridFrame:RegisterIndicator("borderglow", "边框闪光",
+        -- New
+        function(frame)
+            return {}
+        end,
+
+        -- Reset
+        function(self)
+            local profile = GridFrame.db.profile
+            local size = profile.borderSize
+
+            local frame = self.__owner
+            LCG.PixelGlow_Stop(frame, "AbyGrid")
+        end,
+
+        -- SetStatus
+        function(self, color, text, value, maxValue, texture, texCoords, count, start, duration)
+            if not color then return end
+
+            local frame = self.__owner
+
+            frame.abyGlowColor = frame.abyGlowColor or {}
+            if type(color) == "table" then
+                frame.abyGlowColor[1] = color.r
+                frame.abyGlowColor[2] = color.g
+                frame.abyGlowColor[3] = color.b
+                frame.abyGlowColor[4] = color.a
+            else
+                frame.abyGlowColor[1] = 1
+                frame.abyGlowColor[2] = 1
+                frame.abyGlowColor[3] = 0
+                frame.abyGlowColor[4] = 1
+            end
+            --function lib.PixelGlow_Start(r,color,N,frequency,length,th,xOffset,yOffset,border,key,frameLevel)
+            LCG.PixelGlow_Start(frame, frame.abyGlowColor, 16, 0.25, nil, 3, nil, nil, false, "AbyGrid", nil)
+            --/run LibStub("LibCustomGlow-1.0").PixelGlow_Start(GridLayoutHeader1UnitButton1, {1,1,0}, 16, 0.25, nil, 3, nil, nil, false, "AbyGrid", nil)
+        end,
+
+        -- Clear
+        function(self)
+            local frame = self.__owner
+            LCG.PixelGlow_Stop(frame, "AbyGrid")
+        end
+    )
+end
+
+--[[------------------------------------------------------------
+使用 warbaby_aura 里的副本特殊配置
+---------------------------------------------------------------]]
+if GridWarbabyMoreAuras then
+    local def = GridFrame.defaultDB.statusmap --GridFrame的默认关联
+    local more = {}
+    for id, v in pairs(GridWarbabyMoreAuras) do
+        local spell = GetSpellInfo(id)
+        if spell then
+            local set = {
+                text = spell,
+                color = { r = 1, g = 1, b = 1, a = 1 },
+                priority = v.priority or 98,
+                raid = true,
+            }
+            for key, value in pairs(v) do
+                if key == "color" or key == "durationColorLow" or key == "durationColorMiddle" or key == "durationColorHigh"
+                        or key == "countColorLow" or key == "countColorMiddle" or key == "countColorHigh" then
+                    set[key] = { r = value[1], g = value[2], b = value[3], a = value[4] or 1 }
+                elseif key ~= "buff" and key ~= "indicator" then
+                    set[key] = value
+                end
+            end
+            local status_id
+            if v.buff then
+                set.buffID = id
+                set.buff = spell
+                set.desc = v.desc or format(L["Buff: %s"], spell)
+                status_id = "buff_" .. id
+            else
+                set.debuffID = id
+                set.debuff = spell
+                set.desc = v.desc or format(L["Debuff: %s"], spell)
+                status_id = "debuff_" .. id
+            end
+            more[status_id] = set
+
+            if def and v.indicator and def[v.indicator] then
+                def[v.indicator][status_id] = true
+            end
+        end
+    end
+    Mixin(GridStatus:GetModule("GridStatusAuras").defaultDB, more)
 end

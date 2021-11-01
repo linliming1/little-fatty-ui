@@ -6,47 +6,34 @@ U1PLUG["FiveCombo"] = function()
 -- 描述：盗贼、德鲁伊的5星技能提示
 -- 版权所有（c）多玩游戏网
 --------------------------------------------------------------------------------
-
---[[
-刺骨 2098
-毒伤 32645
-破甲 8647
-切割 5171
-肾击 408
-致命投掷 26679
-割裂 1943
-恢复 73651
-
-野蛮咆哮 52610
-割裂 1079
-割碎      22570
-凶猛撕咬 22568
-]]
 local OverlayedSpellID = {};
 -- 盗贼
 OverlayedSpellID["ROGUE"] = {
-	2098,
-	32645,
-	8647,
-	5171,
-	408,
-	26679,
-	1943,
-	73651,
-	193316,
-	199804,
-	196819,
-	195452,
-	206237
+	2098,       --斩击
+    315496,     --切割
+    196819,     --刺骨
+    --狂徒
+    408,        --肾击
+    315341,     --正中眉心
+    --奇袭
+    1943,       --割裂
+	32645,      --毒伤
+    121411,     --猩红风暴
+    --敏锐
+    319175,     --黑火药
+    280719,     --影分身
 };
 
 -- 德鲁伊
 OverlayedSpellID["DRUID"] = {
-	52610,
-	1079,
-	22568,
-	22570,
+	52610,  --野蛮咆哮，天赋
+    285381, --原始之怒，天赋
+	1079,   --割裂
+	22568,  --凶猛撕咬
+	22570,  --割碎
 };
+
+if not OverlayedSpellID[select(2, UnitClass("player"))] then return end
 
 local GlowSpells = {}
 for k,v in pairs(OverlayedSpellID) do
@@ -80,7 +67,7 @@ local function comboEventFrame_OnEvent(self, event, ...)
 end
 
 local function myActionButton_OnUpdate(self, elapsed)
-    if self.comboEventFrame then return end
+    if not self or self.comboEventFrame then return end
 	self.comboEventFrame = CreateFrame("Frame", nil, self);
 	self.comboEventFrame.countTime = 0;
 	self.comboEventFrame:RegisterEvent("UNIT_POWER_UPDATE");
@@ -89,5 +76,7 @@ local function myActionButton_OnUpdate(self, elapsed)
 	self.comboEventFrame:SetScript("OnEvent", comboEventFrame_OnEvent);
 end
 
-hooksecurefunc("ActionButton_OnUpdate", myActionButton_OnUpdate);
+    --abyui change for 9.0 hooksecurefunc("ActionButton_OnUpdate", myActionButton_OnUpdate);
+    for _, btn in ipairs(ActionBarButtonEventsFrame.frames) do myActionButton_OnUpdate(btn) end
+    hooksecurefunc(ActionBarButtonEventsFrame, "RegisterFrame", function(self, btn) myActionButton_OnUpdate(btn) end)
 end

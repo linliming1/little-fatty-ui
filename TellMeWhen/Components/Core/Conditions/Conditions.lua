@@ -799,6 +799,11 @@ CNDT.Substitutions = {
 		return strWrap(TMW:GetSpells(name).First)
 	end,
 },{
+	src = "c.NameStrings",
+	rep = function(conditionData, conditionSettings, name, name2)
+		return strWrap(";" .. table.concat(TMW:GetSpells(name).StringArray, ";") .. ";")
+	end,
+},{
 	src = "c.NameString",
 	rep = function(conditionData, conditionSettings, name, name2)
 		return strWrap(TMW:GetSpells(name).FirstString)
@@ -815,6 +820,11 @@ CNDT.Substitutions = {
 	src = "c.Name",
 	rep = function(conditionData, conditionSettings, name, name2)
 		return strWrap(name)
+	end,
+},{
+	src = "c.Spells",
+	rep = function(conditionData, conditionSettings, name, name2)
+		return CNDT:GetTableSubstitution(TMW:GetSpells(name))
 	end,
 },
 

@@ -1,18 +1,17 @@
 local mod	= DBM:NewMod(2170, "DBM-Party-BfA", 3, 1041)
 local L		= mod:GetLocalizedStrings()
 
-mod:SetRevision(("$Revision: 18026 $"):sub(12, -3))
+mod:SetRevision("20210614230033")
 mod:SetCreatureID(135475, 135470, 135472)
 mod:SetEncounterID(2140)
-mod:SetZone()
-mod:SetUsedIcons(1)
+mod:SetUsedIcons(1, 2)
 mod:SetBossHPInfoToHighest()
 
 mod:RegisterCombat("combat")
 
 mod:RegisterEventsInCombat(
 	"SPELL_AURA_APPLIED 267256 266231",
-	"SPELL_AURA_REMOVED 267256",
+	"SPELL_AURA_REMOVED 267256 266231",
 	"SPELL_CAST_START 266206 266951 266237 267273 267060",
 	"SPELL_CAST_SUCCESS 266231",
 	"UNIT_DIED",
@@ -23,18 +22,22 @@ mod:RegisterEventsInCombat(
 
 --TODO, finish accurate detection of who starts fight, and bosses swapping in and out.
 --TODO, I believe the inactive bosses assisting is health based off the enabled boss, so timers only work for ACTIVE boss.
+--[[
+(ability.id = 266206 or ability.id = 266951 or ability.id = 266237 or ability.id = 267273 or ability.id = 267060) and type = "begincast"
+ or ability.id = 266231 and type = "cast"
+--]]
 local warnSeveringAxe				= mod:NewTargetNoFilterAnnounce(266231, 3, nil, "Healer")
 
 --Kula the Butcher
-local specWarnWhirlingAxes			= mod:NewSpecialWarningDodge(266206, nil, nil, nil, 2, 1)
-local specWarnSeveringAxe			= mod:NewSpecialWarningDefensive(266231, nil, nil, nil, 1, 1)
+local specWarnWhirlingAxes			= mod:NewSpecialWarningDodge(266206, nil, nil, nil, 2, 2)
+local specWarnSeveringAxe			= mod:NewSpecialWarningDefensive(266231, nil, nil, nil, 1, 2)
 --local specWarnGTFO				= mod:NewSpecialWarningGTFO(238028, nil, nil, nil, 1, 8)
 --Aka'ali the Conqueror
-local specWarnBarrelThrough			= mod:NewSpecialWarningYou(266951, nil, nil, nil, 1, 1)
+local specWarnBarrelThrough			= mod:NewSpecialWarningYou(266951, nil, nil, nil, 1, 2)
 local yellBarrelThrough				= mod:NewYell(266951)
 local yellBarrelThroughFades		= mod:NewShortFadesYell(266951)
-local specWarnBarrelThroughSoak		= mod:NewSpecialWarningMoveTo(266951, nil, nil, nil, 1, 1)
-local specWarnDebilitatingBackhand	= mod:NewSpecialWarningRun(266237, nil, nil, nil, 4, 1)
+local specWarnBarrelThroughSoak		= mod:NewSpecialWarningMoveTo(266951, nil, nil, nil, 1, 2)
+local specWarnDebilitatingBackhand	= mod:NewSpecialWarningRun(266237, nil, nil, nil, 4, 2)
 --Zanazal the Wise
 local specWarnPoisonNova			= mod:NewSpecialWarningInterrupt(267273, "HasInterrupt", nil, nil, 1, 2)
 local specWarnTotems				= mod:NewSpecialWarningSwitch(267060, nil, nil, nil, 1, 2)
@@ -42,18 +45,17 @@ local specWarnEarthwall				= mod:NewSpecialWarningDispel(267256, "MagicDispeller
 
 --Kula the Butcher
 local timerWhirlingAxesCD			= mod:NewCDTimer(10.8, 266206, nil, nil, nil, 3)--Used inactive
-local timerSeveringAxeCD			= mod:NewCDTimer(13, 266231, nil, nil, nil, 3)--Actual timer needs doing
+local timerSeveringAxeCD			= mod:NewCDTimer(21.8, 266231, nil, nil, nil, 3)
 --Aka'ali the Conqueror
-local timerBarrelThroughCD			= mod:NewCDTimer(23.1, 266951, nil, nil, nil, 3)--Used inactive
-local timerDebilitatingBackhandCD	= mod:NewCDTimer(24.3, 266237, nil, nil, nil, 5, nil, DBM_CORE_TANK_ICON..DBM_CORE_DEADLY_ICON)
+local timerBarrelThroughCD			= mod:NewCDTimer(23, 266951, nil, nil, nil, 3)--Used inactive
+local timerDebilitatingBackhandCD	= mod:NewCDTimer(22.8, 266237, nil, nil, nil, 5, nil, DBM_CORE_L.TANK_ICON..DBM_CORE_L.DEADLY_ICON)
 --Zanazal the Wise
-local timerPoisonNovaCD				= mod:NewCDTimer(133, 267273, nil, nil, nil, 4, nil, DBM_CORE_INTERRUPT_ICON)--Used inactive
-local timerTotemsCD					= mod:NewCDTimer(13, 267060, nil, nil, nil, 1, nil, DBM_CORE_DAMAGE_ICON)--Actual timer needs doing
+local timerPoisonNovaCD				= mod:NewCDTimer(26.7, 267273, nil, nil, nil, 4, nil, DBM_CORE_L.INTERRUPT_ICON)--Used inactive
+local timerTotemsCD					= mod:NewCDTimer(53.5, 267060, nil, nil, nil, 1, nil, DBM_CORE_L.DAMAGE_ICON)--Actual timer needs doing
 
---mod:AddRangeFrameOption(5, 194966)
-mod:AddSetIconOption("SetIconOnBarrel", 266951, true)
+mod:AddSetIconOption("SetIconOnBarrel", 266951, true, false, {1})
+mod:AddSetIconOption("SetIconOnAxe", 266231, false, false, {2})
 
-mod.vb.phase = 1
 mod.vb.bossOne = 0
 mod.vb.bossTwo = 0
 mod.vb.earthTotemActive = false
@@ -80,7 +82,7 @@ local function whoDat(self, delay)
 end
 
 function mod:OnCombatStart(delay)
-	self.vb.phase = 1
+	self:SetStage(1)
 	self.vb.bossOne = 0
 	self.vb.bossTwo = 0
 	self.vb.bossName = "nil"
@@ -88,33 +90,33 @@ function mod:OnCombatStart(delay)
 	self:Schedule(2, whoDat, self, delay)
 end
 
-function mod:OnCombatEnd()
---	if self.Options.RangeFrame then
---		DBM.RangeCheck:Hide()
---	end
-end
-
 function mod:SPELL_AURA_APPLIED(args)
 	local spellId = args.spellId
-	if spellId == 267256 and not self.vb.earthTotemActive then
+	if spellId == 267256 and not self.vb.earthTotemActive and not args:IsDestTypePlayer() then
 		specWarnEarthwall:Show(args.destName)
 		specWarnEarthwall:Play("dispelboss")
 		self.vb.bossName = args.destName
-	elseif spellId == specWarnSeveringAxe then
+	elseif spellId == 266231 then
 		if args:IsPlayer() then
 			specWarnSeveringAxe:Show()
 			specWarnSeveringAxe:Play("defensive")
 		else
 			warnSeveringAxe:Show(args.destName)
 		end
+		if self.Options.SetIconOnAxe then
+			self:SetIcon(args.destName, 2)
+		end
 	end
 end
---mod.SPELL_AURA_APPLIED_DOSE = mod.SPELL_AURA_APPLIED
 
 function mod:SPELL_AURA_REMOVED(args)
 	local spellId = args.spellId
 	if spellId == 267256  then
 		self.vb.bossName = "nil"
+	elseif spellId == 266231 then
+		if self.Options.SetIconOnAxe then
+			self:SetIcon(args.destName, 0)
+		end
 	end
 end
 
@@ -146,20 +148,23 @@ function mod:SPELL_CAST_START(args)
 		end
 		local cid = self:GetCIDFromGUID(args.sourceGUID)
 		if cid ~= self.vb.bossOne and cid ~= self.vb.bossTwo then
-			--timerPoisonNovaCD:Start()--Not enough data
+			timerPoisonNovaCD:Start(26.7)
 		end
 	elseif spellId == 267060 then
 		self.vb.earthTotemActive = true
 		specWarnTotems:Show()
 		specWarnTotems:Play("changetarget")
-		--timerTotemsCD:Start()--Not enough data
+		local cid = self:GetCIDFromGUID(args.sourceGUID)
+		if cid ~= self.vb.bossOne and cid ~= self.vb.bossTwo then
+			timerTotemsCD:Start(53.5)
+		end
 	end
 end
 
 function mod:SPELL_CAST_SUCCESS(args)
 	local spellId = args.spellId
 	if spellId == 266231 then
-		--timerSeveringAxeCD:Start()--Not enough data
+		timerSeveringAxeCD:Start(21.8)
 	end
 end
 
@@ -174,7 +179,7 @@ function mod:UNIT_DIED(args)
 	end
 end
 
-function mod:CHAT_MSG_RAID_BOSS_EMOTE(msg, npc, _, _, target)
+function mod:CHAT_MSG_RAID_BOSS_EMOTE(msg, _, _, _, target)
 	if msg:find("spell:266951") then
 		local targetname = DBM:GetUnitFullName(target)
 		if targetname then
@@ -194,16 +199,6 @@ function mod:CHAT_MSG_RAID_BOSS_EMOTE(msg, npc, _, _, target)
 	end
 end
 
---[[
-function mod:SPELL_PERIODIC_DAMAGE(_, _, _, _, destGUID, _, _, _, spellId)
-	if spellId == 228007 and destGUID == UnitGUID("player") and self:AntiSpam(2, 4) then
-		specWarnGTFO:Show()
-		specWarnGTFO:Play("watchfeet")
-	end
-end
-mod.SPELL_PERIODIC_MISSED = mod.SPELL_PERIODIC_DAMAGE
---]]
-
 function mod:UNIT_SPELLCAST_SUCCEEDED(uId, _, spellId)
 	if spellId == 34098 and self:AntiSpam(3, uId) then--ClearAllDebuffs (sometimes fires twice, so antispam needed)
 		timerWhirlingAxesCD:Stop()
@@ -211,7 +206,7 @@ function mod:UNIT_SPELLCAST_SUCCEEDED(uId, _, spellId)
 		timerDebilitatingBackhandCD:Stop()
 		timerPoisonNovaCD:Stop()
 		timerTotemsCD:Stop()
-		self.vb.phase = self.vb.phase + 1
+		self:SetStage(0)
 		local cid = self:GetUnitCreatureId(uId)
 		if self.vb.phase == 2 then
 			self.vb.bossOne = cid
@@ -225,39 +220,7 @@ function mod:UNIT_SPELLCAST_SUCCEEDED(uId, _, spellId)
 			end
 		else
 			self.vb.bossTwo = cid
-			--Start Boss 1 Timer (17.9-25.5-28.9sec)
-			if self.vb.bossOne == 135475 then -- Kula the Butcher
-			--	timerWhirlingAxesCD:Start(25.5)
-			elseif self.vb.bossOne == 135470 then -- Aka'ali the Conqueror
-			--	timerBarrelThroughCD:Start(25.5)
-			elseif self.vb.bossOne == 135472 then -- Zanazal the Wise
-			--	timerPoisonNovaCD:Start(25.5)
-			end
-			--Start Boss 2 Timer (47.1/55.5 seconds)
-			if cid == 135475 then -- Kula the Butcher
-			--	timerWhirlingAxesCD:Start(55.5)
-			elseif cid == 135470 then -- Aka'ali the Conqueror
-			--	timerBarrelThroughCD:Start(55.5)
-			elseif cid == 135472 then -- Zanazal the Wise
-			--	timerPoisonNovaCD:Start(55.5)
-			end
 		end
-	--[[elseif spellID == 267422 then--Boss 1 Assist
-		if self.vb.bossOne == 135475 then -- Kula the Butcher
-
-		elseif self.vb.bossOne == 135470 then -- Aka'ali the Conqueror
-
-		elseif self.vb.bossOne == 135472 then -- Zanazal the Wise
-
-		end
-	elseif spellId == 267437 then--Boss 2 Assist
-		if cid == 135475 then -- Kula the Butcher
-
-		elseif cid == 135470 then -- Aka'ali the Conqueror
-
-		elseif cid == 135472 then -- Zanazal the Wise
-
-		end--]]
 	end
 end
 
@@ -276,4 +239,4 @@ function mod:UNIT_TARGETABLE_CHANGED(uId)
 			timerTotemsCD:Start(19.2)
 		end
 	end
-end	
+end

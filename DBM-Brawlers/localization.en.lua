@@ -3,7 +3,7 @@ local L
 --------------
 -- Brawlers --
 --------------
-L= DBM:GetModLocalization("Brawlers")
+L= DBM:GetModLocalization("BrawlersGeneral")
 
 L:SetGeneralLocalization({
 	name = "Brawlers: General"
@@ -167,7 +167,7 @@ L:SetGeneralLocalization({
 L= DBM:GetModLocalization("BrawlLegacy")
 
 L:SetGeneralLocalization({
-	name = "Brawlers: Random"
+	name = "Brawlers: Other"
 })
 
 L:SetOptionLocalization({
@@ -180,7 +180,7 @@ L:SetOptionLocalization({
 L= DBM:GetModLocalization("BrawlChallenges")
 
 L:SetGeneralLocalization({
-	name = "Brawlers: Random 2"
+	name = "Brawlers: Other 2"
 })
 
 L:SetWarningLocalization({

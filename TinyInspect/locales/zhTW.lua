@@ -9,10 +9,12 @@ ns.L = {
     ShowItemBorder              = "物品直角邊框",
     EnableItemLevel             = "物品等級顯示",
     ShowColoredItemLevelString  = "裝等文字隨物品品質",
+    ShowCorruptedMark           = "腐蝕裝備星星標記",
     ShowItemSlotString          = "顯示物品部位文字",
     ShowInspectAngularBorder    = "觀察面板直角邊框",
     ShowInspectColoredLabel     = "觀察面板高亮橙裝武器標簽",
     ShowCharacterItemSheet      = "顯示玩家自己裝備列表",
+    ShowInspectItemSheet        = "顯示觀察面板裝備列表",
     ShowOwnFrameWhenInspecting  = "觀察同時顯示自己裝備列表",
     ShowItemStats               = "顯示裝備屬性統計",
     DisplayPercentageStats      = "裝備屬性換算成百分比數值",
@@ -36,6 +38,7 @@ ns.L = {
     PaperDoll                   = "人物面板",
     Chat                        = "聊天",
     Loot                        = "拾取",
+    ShowCorruptedMark           = "裝等後面顯示腐蝕標記",
 }
 
 BINDING_NAME_InspectRaidFrame = "顯示團隊觀察面板"

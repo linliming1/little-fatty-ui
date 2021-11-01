@@ -16,13 +16,11 @@
     <Include file="..\..\AchievementsReminder\CfgAchievementsReminder.lua"/>
     <Include file="..\..\AngryKeystones\CfgAngryKeystones.lua"/>
     <Include file="..\..\AtlasLootReverse\CfgAtlasLootReverse.lua"/>
-    <Include file="..\..\AuctionLite\CfgAuctionLite.lua"/>
     <Include file="..\..\AutoTurnIn\CfgAutoTurnIn.lua"/>
     <Include file="..\..\BGDefender\CfgBGDefender.lua"/>
     <Include file="..\..\BagBrother\CfgBagBrother.lua"/>
     <Include file="..\..\Bagnon\CfgBagnon.lua"/>
-    <Include file="..\..\BattlegroundTargets\CfgBattlegroundTargets.lua"/>
-    <Include file="..\..\BaudAuction\CfgBaudAuction.lua"/>
+    <Include file="..\..\BattleGroundEnemies\CfgBattleGroundEnemies.lua"/>
     <Include file="..\..\BigDebuffs\CfgBigDebuffs.lua"/>
     <Include file="..\..\BlinkHealthText\CfgBlinkHealthText.lua"/>
     <Include file="..\..\BlizzMove\CfgBlizzMove.lua"/>
@@ -34,11 +32,8 @@
     <Include file="..\..\Comergy_Redux\CfgComergy_Redux.lua"/>
     <Include file="..\..\CompactRaid\CfgCompactRaid.lua"/>
     <Include file="..\..\DBM-Core\CfgDBM-Core.lua"/>
-    <Include file="..\..\DBM_Mods_Cataclysm\CfgDBM_Mods_Cataclysm.lua"/>
-    <Include file="..\..\DBM_Mods_MoP\CfgDBM_Mods_MoP.lua"/>
-    <Include file="..\..\DBM_Mods_WoD\CfgDBM_Mods_WoD.lua"/>
-    <Include file="..\..\DBM_Mods_WotLK\CfgDBM_Mods_WotLK.lua"/>
     <Include file="..\..\DBM_Mods_Legion\CfgDBM_Mods_Legion.lua"/>
+    <Include file="..\..\DBM_Mods_BfA\CfgDBM_Mods_BfA.lua"/>
     <Include file="..\..\DeathAnnounce\CfgDeathAnnounce.lua"/>
     <Include file="..\..\Decursive\CfgDecursive.lua"/>
     <Include file="..\..\DejaCharacterStats\CfgDejaCharacterStats.lua"/>
@@ -49,7 +44,7 @@
     <Include file="..\..\Ellipsis\CfgEllipsis.lua"/>
     <Include file="..\..\ErrorFilter\CfgErrorFilter.lua"/>
     <Include file="..\..\EventAlertMod\CfgEventAlertMod.lua"/>
-    <Include file="..\..\ExRT\CfgExRT.lua"/>
+    <Include file="..\..\MRT\CfgMRT.lua"/>
     <Include file="..\..\ExtraActionBar\CfgExtraActionBar.lua"/>
     <Include file="..\..\Fizzle\CfgFizzle.lua"/>
     <Include file="..\..\FriendsMenuXP\CfgFriendsMenuXP.lua"/>
@@ -76,7 +71,6 @@
     <Include file="..\..\MeetingStone\CfgMeetingStone.lua"/>
     <Include file="..\..\MerchantEx\CfgMerchantEx.lua"/>
     <Include file="..\..\MySlot\CfgMySlot.lua"/>
-    <Include file="..\..\NPCScan\CfgNPCScan.lua"/>
     <Include file="..\..\OmniBar\CfgOmniBar.lua"/>
     <Include file="..\..\OmniCC\CfgOmniCC.lua"/>
     <Include file="..\..\Parrot\CfgParrot.lua"/>
@@ -112,23 +106,28 @@
     <Include file="..\..\WorldQuestsList\CfgWorldQuestsList.lua"/>
     <Include file="..\..\XLoot\CfgXLoot.lua"/>
     <Include file="..\..\oGlow\CfgoGlow.lua"/>
-    <Include file="..\..\tdCore\CfgtdCore.lua"/>
+    <Include file="..\..\tdPack\CfgtdPack.lua"/>
     <Include file="..\..\tullaRange\CfgtullaRange.lua"/>
     <Include file="..\..\vBar\CfgvBar.lua"/>
     <Include file="..\..\wMarker\CfgwMarker.lua"/>
     <Include file="..\..\!KalielsTracker\Cfg!KalielsTracker.lua"/>
-    <Include file="..\..\AzeriteTooltip\CfgAzeriteTooltip.lua"/>
     <Include file="..\..\AbyBossGuide\CfgAbyBossGuide.lua"/>
-    <Include file="..\..\Paku_Totems\CfgPaku_Totems.lua"/>
     <Include file="..\..\ShadowedUnitFrames\CfgShadowedUnitFrames.lua"/>
-    <Include file="..\..\TomCats-DarkshoreRares\CfgTomCats-DarkshoreRares.lua"/>
-    <Include file="..\..\BFAInvasionTimer\CfgBFAInvasionTimer.lua"/>
-    <Include file="..\..\MethodDungeonTools\CfgMethodDungeonTools.lua"/>
+    <Include file="..\..\MythicDungeonTools\CfgMythicDungeonTools.lua"/>
+    <Include file="..\..\Details\CfgDetails.lua"/>
+    <Include file="..\..\RareScanner\CfgRareScanner.lua"/>
+    <Include file="..\..\RECrystallize\CfgRECrystallize.lua"/>
+    <Include file="..\..\SwitchSwitch\CfgSwitchSwitch.lua"/>
+    <Include file="..\..\VenturePlan\CfgVenturePlan.lua"/>
+    <Include file="..\..\OmniCD\CfgOmniCD.lua"/>
+    <Include file="..\..\DominationSocketHelper\CfgDominationSocketHelper.lua"/>
 
     <!-- local
     <Include file="..\..\AtlasLoot\CfgAtlasLoot.lua"/>
     <Include file="..\..\RaidAchievement\CfgRaidAchievement.lua"/>
-
+    -->
+    <!-- removed
+    <Include file="..\..\NPCScan\CfgNPCScan.lua"/>
     -->
 
     <Include file="Custom.xml"/>

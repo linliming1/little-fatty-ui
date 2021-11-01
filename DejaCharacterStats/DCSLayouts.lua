@@ -2,6 +2,8 @@
 --local ADDON_NAME, namespace = ... 	--localization
 local _, namespace = ... 	--localization
 local L = namespace.L 				--localization
+local _,addon = ...
+
 --local _, char_ctats_pane = ... --seems like shared upvaluing of tables isn't so easy
 local char_ctats_pane = CharacterStatsPane
 DCS_ClassSpecDB = {}
@@ -63,32 +65,15 @@ local StatScrollFrame = CreateFrame("ScrollFrame", nil, CharacterFrameInsetRight
 	char_ctats_pane.EnhancementsCategory:SetHeight(28)
 	char_ctats_pane.EnhancementsCategory.Background:SetHeight(28)
 
+	char_ctats_pane.ItemLevelFrame.Corruption:SetFrameStrata("TOOLTIP")
+
 local DefaultTankData = DCS_TableData:MergeTable({
-    { statKey = "ItemLevelFrame" },
-	{ statKey = "GeneralCategory" },
-        { statKey = "HEALTH" },
-        { statKey = "DCS_POWER" },
-        { statKey = "DCS_ALTERNATEMANA" },
-        { statKey = "ITEMLEVEL", hidden = true },
-        { statKey = "MOVESPEED" },
-		{ statKey = "DURABILITY_STAT" },
-        { statKey = "REPAIR_COST" },
+	{ statKey = "ItemLevelFrame" },
 	{ statKey = "AttributesCategory" },
         { statKey = "STRENGTH" },
         { statKey = "AGILITY" },
         { statKey = "INTELLECT" },
         { statKey = "STAMINA" },
-	{ statKey = "OffenseCategory" }, --Re-order before Enhancements to appear more logical.
-        { statKey = "ATTACK_DAMAGE" },
-        { statKey = "ATTACK_AP" },
-        { statKey = "DCS_ATTACK_ATTACKSPEED" },
-		{ statKey = "WEAPON_DPS" },
-        { statKey = "SPELLPOWER" },
-        { statKey = "MANAREGEN" },
-        { statKey = "ENERGY_REGEN" },
-        { statKey = "DCS_RUNEREGEN" },
-        { statKey = "FOCUS_REGEN" },		
-        { statKey = "GCD" },
 	{ statKey = "EnhancementsCategory" }, --Re-order after Offense to appear more logical.
         { statKey = "CRITCHANCE", hideAt = 0 },
 		{ statKey = "HASTE", hideAt = 0 },
@@ -100,36 +85,8 @@ local DefaultTankData = DCS_TableData:MergeTable({
         { statKey = "ARMOR" },
         { statKey = "DODGE", hideAt = 0 },
         { statKey = "PARRY", hideAt = 0 },
-        { statKey = "BLOCK", hideAt = 0 },
+		{ statKey = "BLOCK", hideAt = 0, showFunc = C_PaperDollInfo.OffhandHasShield },
 		{ statKey = "STAGGER", hideAt = 0, roles = {"TANK"} },
-	{ statKey = "RatingCategory" },
-		{ statKey = "CRITCHANCE_RATING", hideAt = 0 },
-		{ statKey = "HASTE_RATING", hideAt = 0 },
-		{ statKey = "VERSATILITY_RATING", hideAt = 0 },
-		{ statKey = "MASTERY_RATING", hideAt = 0 },
-		{ statKey = "LIFESTEAL_RATING", hideAt = 0 },
-		{ statKey = "AVOIDANCE_RATING", hideAt = 0 },
-		{ statKey = "DODGE_RATING", hideAt = 0 },
-		{ statKey = "PARRY_RATING", hideAt = 0 },
-		{ statKey = "SPEED_RATING", hideAt = 0, hidden = true },
-		{ statKey = "SPEED", hideAt = 0, hidden = true }, --seems like Blizzard's implemented speed rating
-})
-local DefaultNonTankData = DCS_TableData:MergeTable({
-    { statKey = "ItemLevelFrame" },
-	{ statKey = "GeneralCategory" },
-        { statKey = "HEALTH" },
-        { statKey = "DCS_POWER" },
-        { statKey = "DCS_ALTERNATEMANA" },
-        { statKey = "ITEMLEVEL", hidden = true },
-        { statKey = "MOVESPEED" },
-		{ statKey = "DURABILITY_STAT" },
-        { statKey = "REPAIR_COST" },
-	{ statKey = "AttributesCategory" },
-        { statKey = "STRENGTH" },
-        { statKey = "AGILITY" },
-        { statKey = "INTELLECT" },
-        { statKey = "STAMINA" },
-		{ statKey = "ARMOR" }, --Armor has always been an main attribute stat, except for tanks where it is a defense stat.
 	{ statKey = "OffenseCategory" }, --Re-order before Enhancements to appear more logical.
         { statKey = "ATTACK_DAMAGE" },
         { statKey = "ATTACK_AP" },
@@ -141,6 +98,47 @@ local DefaultNonTankData = DCS_TableData:MergeTable({
         { statKey = "DCS_RUNEREGEN" },
         { statKey = "FOCUS_REGEN" },		
         { statKey = "GCD" },
+	{ statKey = "GeneralCategory" },
+        { statKey = "HEALTH" },
+        { statKey = "DCS_POWER" },
+        { statKey = "DCS_ALTERNATEMANA" },
+        { statKey = "ITEMLEVEL", hidden = true },
+        { statKey = "MOVESPEED" },
+		{ statKey = "DURABILITY_STAT" },
+        { statKey = "REPAIR_COST" },
+	{ statKey = "RatingCategory" },
+		{ statKey = "CRITCHANCE_RATING", hideAt = 0 },
+		{ statKey = "HASTE_RATING", hideAt = 0 },
+		{ statKey = "VERSATILITY_RATING", hideAt = 0 },
+		{ statKey = "MASTERY_RATING", hideAt = 0 },
+		{ statKey = "LIFESTEAL_RATING", hideAt = 0 },
+		{ statKey = "AVOIDANCE_RATING", hideAt = 0 },
+		{ statKey = "DODGE_RATING", hideAt = 0 },
+		{ statKey = "PARRY_RATING", hideAt = 0 },
+		{ statKey = "SPEED_RATING", hideAt = 0, hidden = true },
+		{ statKey = "SPEED", hideAt = 0, hidden = true }, --seems like Blizzard's implemented speed rating
+	{ statKey = "CorruptionCategory" },
+		{ statKey = "CR_CORRUPTION", hideAt = 0 },
+		{ statKey = "CR_CORRUPTION_RESISTANCE", hideAt = 0 },
+		{ statKey = "CR_TOTAL_CORRUPTION", hideAt = 0 },
+	{ statKey = "HonorCategory", hidden = true},
+		{ statKey = "HONOR_PROGRESS", hideAt = 0, hidden = true },
+		{ statKey = "HONOR_LEVEL", hideAt = 0, hidden = true },
+	{ statKey = "ConquestCategory" },
+		{ statKey = "RATING_2V2", hideAt = 0 },
+		{ statKey = "RATING_3V3", hideAt = 0 },
+		{ statKey = "RATING_RBG", hideAt = 0 },
+		{ statKey = "CONQUEST_PROGRESS", hideAt = -1 },
+})
+
+local DefaultNonTankData = DCS_TableData:MergeTable({
+	{ statKey = "ItemLevelFrame" },
+	{ statKey = "AttributesCategory" },
+        { statKey = "STRENGTH" },
+        { statKey = "AGILITY" },
+        { statKey = "INTELLECT" },
+        { statKey = "STAMINA" },
+		{ statKey = "ARMOR" }, --Armor has always been an main attribute stat, except for tanks where it is a defense stat.
 	{ statKey = "EnhancementsCategory" }, --Re-order after Offense to appear more logical.
         { statKey = "CRITCHANCE", hideAt = 0 },
 		{ statKey = "HASTE", hideAt = 0 },
@@ -148,10 +146,31 @@ local DefaultNonTankData = DCS_TableData:MergeTable({
         { statKey = "MASTERY", hideAt = 0 },
         { statKey = "LIFESTEAL", hideAt = 0 },
         { statKey = "AVOIDANCE", hideAt = 0 },
+	{ statKey = "GeneralCategory" },
+        { statKey = "HEALTH" },
+        { statKey = "DCS_POWER" },
+        { statKey = "DCS_ALTERNATEMANA" },
+        { statKey = "ITEMLEVEL", hidden = true },
+        { statKey = "MOVESPEED" },
+		{ statKey = "DURABILITY_STAT" },
+        { statKey = "REPAIR_COST" },
+
+	{ statKey = "OffenseCategory" }, --Re-order before Enhancements to appear more logical.
+        { statKey = "ATTACK_DAMAGE" },
+        { statKey = "ATTACK_AP" },
+        { statKey = "DCS_ATTACK_ATTACKSPEED" },
+		{ statKey = "WEAPON_DPS" },
+        { statKey = "SPELLPOWER" },
+        { statKey = "MANAREGEN" },
+        { statKey = "ENERGY_REGEN" },
+        { statKey = "DCS_RUNEREGEN" },
+        { statKey = "FOCUS_REGEN" },		
+        { statKey = "GCD" },
+
 	{ statKey = "DefenseCategory" },
         { statKey = "DODGE", hideAt = 0 },
         { statKey = "PARRY", hideAt = 0 },
-        { statKey = "BLOCK", hideAt = 0 },
+		{ statKey = "BLOCK", hideAt = 0, showFunc = C_PaperDollInfo.OffhandHasShield },
 	{ statKey = "RatingCategory" },
 		{ statKey = "CRITCHANCE_RATING", hideAt = 0 },
 		{ statKey = "HASTE_RATING", hideAt = 0 },
@@ -164,12 +183,25 @@ local DefaultNonTankData = DCS_TableData:MergeTable({
 		{ statKey = "SPEED_RATING", hideAt = 0, hidden = true },
 		{ statKey = "SPEED", hideAt = 0, hidden = true }, --seems like Blizzard's implemented speed rating
 		{ statKey = "STAGGER", hideAt = 0, roles = {"TANK"} },
+	{ statKey = "CorruptionCategory" },
+		{ statKey = "CR_CORRUPTION", hideAt = 0 },
+		{ statKey = "CR_CORRUPTION_RESISTANCE", hideAt = 0 },
+		{ statKey = "CR_TOTAL_CORRUPTION", hideAt = 0 },
+    { statKey = "HonorCategory", hidden = true},
+   		{ statKey = "HONOR_PROGRESS", hideAt = 0, hidden = true },
+   		{ statKey = "HONOR_LEVEL", hideAt = 0, hidden = true },
+	{ statKey = "ConquestCategory" },
+		{ statKey = "RATING_2V2", hideAt = 0 },
+		{ statKey = "RATING_3V3", hideAt = 0 },
+		{ statKey = "RATING_RBG", hideAt = 0 },
+		{ statKey = "CONQUEST_PROGRESS",  hideAt = -1 },
 })
 --for _, v in ipairs(DefaultTankTBL) do if v.statKey:find("_RATING$") then v.hidden = true end end
 --for _, v in ipairs(DefaultNonTankTBL) do if v.statKey:find("_RATING$") then v.hidden = true end end
 --local DefaultTankData = DCS_TableData:MergeTable(DefaultTankTBL)
 --local DefaultNonTankData = DCS_TableData:MergeTable(DefaultTankTBL)
 
+--[[
 local function DefaultDataForSpec(specID)
     local _, cls = UnitClass("PLAYER")
     local _, _, _, _, role, primaryStat = GetSpecializationInfo(GetSpecialization())
@@ -189,6 +221,7 @@ local function DefaultDataForSpec(specID)
     end
     return DCS_TableData:MergeTable(StatsTable)
 end
+--]]
 
 --local ShownData = DefaultData
 local ShownData = DefaultNonTankData --TODO: find a reason why error during login with "local ShownData". Most probably too early PaperDollFrame_UpdateStats() calls due to DCS_configButton:RegisterEvent("UPDATE_INVENTORY_DURABILITY")
@@ -199,6 +232,12 @@ for k, v in pairs(DCS_TableData.StatData) do
 			v.frame = CreateFrame("FRAME", nil, StatFrame, "CharacterStatFrameCategoryTemplate")
 			v.frame:SetHeight(28)
 			v.frame.Background:SetHeight(28)
+			if k == "CorruptionCategory" then
+				v.frame.Title:SetText(L["Corruption"])
+			end
+			if k == "ActiBlizzWalkout" then
+				v.frame.Title:SetText(L["#ActiBlizzWalkout |cff00c0ff<3|r"])
+			end
 			if k == "GeneralCategory" then
 				v.frame.Title:SetText(L["General"])
 			end
@@ -210,6 +249,12 @@ for k, v in pairs(DCS_TableData.StatData) do
 			end
 			if k == "RatingCategory" then
 				v.frame.Title:SetText(L["Ratings"])
+			end
+			if k == "HonorCategory" then
+				v.frame.Title:SetText(L["Honor Category"])
+			end
+			if k == "ConquestCategory" then
+				v.frame.Title:SetText(L["Conquest Category"])
 			end
 		else
 			v.frame = CreateFrame("FRAME", nil, StatFrame, "CharacterStatFrameTemplate")
@@ -423,9 +468,28 @@ local function DCS_Table_Relevant()
 	--print(spec)
 	local role = GetSpecializationRole(spec)
 	--print(role)
+	local basecorruption = GetCorruption()
+	local hashonorlevel = UnitHonorLevel("player")
+	local hasconquestlevel,_,hasconquestquest = PVPGetConquestLevelInfo()
+
+
+
+
+
+
+
 	for _, v in ipairs(ShownData) do
 		if v.hidden then v.hidden = false end
 	end 
+
+    --abyui use default hidden
+    for _, v1 in ipairs(ShownData) do
+        for _, v2 in ipairs(role == "TANK" and DefaultTankData or DefaultNonTankData) do
+            if v1.statKey == v2.statKey then
+                if v2.hidden then v1.hidden = true end
+            end
+        end
+    end
 
 	local primaryStat = select(6, GetSpecializationInfo(spec, nil, nil, nil, UnitSex("player")));
 		--print(primaryStat)
@@ -465,7 +529,7 @@ local function DCS_Table_Relevant()
 			if v.statKey == "BLOCK" then v.hidden = true end
 		end
 		if v.roles then
-			hidden = true
+			local hidden = true
 			for _,j in pairs(v.roles) do
 				if j == role then
 					hidden = false
@@ -484,11 +548,41 @@ local function DCS_Table_Relevant()
 		if v.statKey == "PARRY_RATING" then v.hidden = true end
 		if v.statKey == "SPEED_RATING" then v.hidden = true end
 		if v.statKey == "SPEED" then v.hidden = true end
+
 		if v.statKey == "ITEMLEVEL" then v.hidden = true end
+		if basecorruption < 1 then		
+			if v.statKey == "CorruptionCategory" then v.hidden = true end
+			if v.statKey == "CR_CORRUPTION" then v.hidden = true end
+			if v.statKey == "CR_CORRUPTION_RESISTANCE" then v.hidden = true end
+			if v.statKey == "CR_TOTAL_CORRUPTION" then v.hidden = true end
+		end
+		if v.statKey == "ActiBlizzWalkout" then v.hidden = true end
+		if v.statKey == "BLACK_GIRLS_CODE" then v.hidden = true end
+		if v.statKey == "FUTURES" then v.hidden = true end
+		if v.statKey == "GIRLS_WHO_CODE" then v.hidden = true end
+		if v.statKey == "RAINN" then v.hidden = true end
+		if v.statKey == "WOMEN_IN__ANIMATION" then v.hidden = true end
+		if v.statKey == "WOMEN_IN_GAMES_INTL" then v.hidden = true end
+
 		--if v.statKey == "GeneralCategory" then v.hidden = true end
 		--if v.statKey == "OffenseCategory" then v.hidden = true end
 		--if v.statKey == "DefenseCategory" then v.hidden = true end
 		if v.statKey == "RatingCategory" then v.hidden = true end --ratings are invisible, so the category is also hidden
+		--visiblity of pvp info is off by default
+		if (hashonorlevel < 1 ) then		
+			--print(hashonorlevel)
+			if v.statKey == "HonorCategory" then v.hidden = true end
+			if v.statKey == "HONOR_PROGRESS" then v.hidden = true end
+			if v.statKey == "HONOR_LEVEL" then v.hidden = true end
+		end
+		if (hasconquestquest == nil ) then --abyui
+			--print(hasconquestlevel)	
+			if v.statKey == "ConquestCategory" then v.hidden = true end
+			if v.statKey == "RATING_2V2" then v.hidden = true end
+			if v.statKey == "RATING_3V3" then v.hidden = true end
+			if v.statKey == "RATING_RBG" then v.hidden = true end
+			if v.statKey == "CONQUEST_PROGRESS" then v.hidden = true end
+		end
 	end
 	--gdbprivate.gdb.gdbdefaults.DCS_TableRelevantStatsChecked.RelevantStatsSetChecked = false
 	ShownData.uniqueKey = uniqueKey
@@ -501,21 +595,21 @@ local function DCS_Login_Initialization()
 	local role = GetSpecializationRole(spec)
 	local primaryStat = select(6, GetSpecializationInfo(spec, nil, nil, nil, UnitSex("player")));
 	--print("spec, role, and primarystat",spec,role,primaryStat)
-	if role == "TANK" then
-		ShownData = DCS_TableData:CopyTable(DefaultTankData)
-	else
-		ShownData = DCS_TableData:CopyTable(DefaultNonTankData)
-	end
 	local uniqueKey = UnitName("player") .. ":" .. GetRealmName() .. ":" .. spec
 	--print(uniqueKey)
 	if (DCS_ClassSpecDB[uniqueKey]) then
 		if (ShownData.uniqueKey ~= uniqueKey) then
-			ShownData = DCS_TableData:MergeTable(DCS_ClassSpecDB[uniqueKey]) --not so easy to understand when gets here. is it during change of specialisation?
+			ShownData = DCS_TableData:MergeTable(DCS_ClassSpecDB[uniqueKey], DefaultNonTankData) --not so easy to understand when gets here. is it during change of specialisation?
 			--print("Set saved variables.")
 			verify_sanity()
 		end
 		--ShowCharacterStats("player")  --probably doesn't need this call
 	else
+		if role == "TANK" then
+			ShownData = DCS_TableData:CopyTable(DefaultTankData)
+		else
+			ShownData = DCS_TableData:CopyTable(DefaultNonTankData)
+		end
 		--print("Set default initialization")
 		DCS_Table_Relevant()
 	end
@@ -648,7 +742,6 @@ end)
 -- Show/Hide Logic --
 ---------------------
 
-
 char_ctats_pane:HookScript("OnShow", function(self)
 	self:Hide()
 	StatScrollFrame:Show()
@@ -665,85 +758,6 @@ hooksecurefunc("PaperDollFrame_SetSidebar", function(self, index)
 		StatScrollFrame:Hide()
 	end
 end)
-
-
-------------------------
--- Relevant Stats Button --
-------------------------
-
-local function DCS_TableRelevantStats_OnEnter(self)
-	GameTooltip:SetOwner(DCS_TableRelevantStats, "ANCHOR_RIGHT");
-	GameTooltip:SetText(DCS_TableRelevantStatstooltipText, 1, 1, 1, 1, true)
-	GameTooltip:Show()
-end
-
-local function DCS_TableRelevantStats_OnLeave(self)
-	GameTooltip_Hide()
- end
- 
-local DCS_TableRelevantStats = CreateFrame("Button", "DCS_TableRelevantStats", CharacterFrameInsetRight, "UIPanelButtonTemplate")
-	DCS_TableRelevantStats:RegisterEvent("VARIABLES_LOADED")
-	DCS_TableRelevantStats:RegisterEvent("PLAYER_SPECIALIZATION_CHANGED")
-	DCS_TableRelevantStats:ClearAllPoints()
-	DCS_TableRelevantStats:SetPoint("BOTTOMRIGHT", -130,-36)
-	DCS_TableRelevantStats:SetScale(0.80)
-	DCS_TableRelevantStats:Hide()
-
---local LOCALE = GetLocale() --Debugging code
---print (LOCALE)
-	--if (LOCALE == "ptBR" or LOCALE == "frFR" or LOCALE == "deDE") then
-		--print ("ptBR, frFR, deDE = 175")
-	--LOCALE = 175
-	--else
-	--print ("enUS = 125")
-	--LOCALE = 125
-	--end
-	--LOCALE = 175
-	--DCS_TableRelevantStats:SetWidth(LOCALE)
-
-	DCS_TableRelevantStats:SetWidth(125)
-	DCS_TableRelevantStats:SetHeight(30)
-
-	DCS_TableRelevantStats:SetScript("OnEnter", DCS_TableRelevantStats_OnEnter)
-	DCS_TableRelevantStats:SetScript("OnLeave", DCS_TableRelevantStats_OnLeave)
-
-	DCS_TableRelevantStats:SetScript("OnClick", function(self, button, up)
-		if relevantStatsSetChecked then
-			--print(checked)
-			DCS_Table_Relevant()
-			--print("Show All Button")
-			--DCS_TableRelevantStatstooltipText = L["Show all stats."] --Creates a tooltip on mouseover.
-			--_G[DCS_TableRelevantStats:GetName() .. "Text"]:SetText(L["All Stats"])
-			--gdbprivate.gdb.gdbdefaults.DCS_TableRelevantStatsChecked.RelevantStatsSetChecked = false
-		--return
-		--end
-		else
-		--if checked == false then
-			--print(checked)
-			DCS_Table_ShowAllStats()
-			--print("Show Relevant Button")
-			--DCS_TableRelevantStatstooltipText = L["Show only stats relevant to your class spec."] --Creates a tooltip on mouseover.
-			--_G[DCS_TableRelevantStats:GetName() .. "Text"]:SetText(L["Relevant Stats"])
-			--gdbprivate.gdb.gdbdefaults.DCS_TableRelevantStatsChecked.RelevantStatsSetChecked = true
-		--return
-		end
-		ShowCharacterStats("player")
-		DCS_TableRelevantStats_OnEnter()
-	end)
-
-	DCS_TableRelevantStats:SetScript("OnEvent", function(self, event, ...)
-		if event == "PLAYER_SPECIALIZATION_CHANGED" and (...) ~= "player" then return end
-		--registered events PLAYER_ENTERING_WORLD and PLAYER_SPECIALIZATION_CHANGED
-		DCS_Login_Initialization()
-		DCS_TableRelevantStats_init()
-		
-		--Login error of "Division by zero" in BfA 8.0 alpha as the globals have not instantiated yet.
-		--May be an alpha issue. Try other events like "PLAYER_LOGIN" if found to be needed.
-		if event == "PLAYER_SPECIALIZATION_CHANGED" then 
-			-- print("changed")
-			ShowCharacterStats("player")
-		end
-	end)
 
 ------------------------
 -- Reset Stats Button --
@@ -840,13 +854,51 @@ end
 local function configButtonOnClose()
 	if CharacterFrameInsetRightScrollBar.SetVerticalScroll then StatScrollFrame:SetVerticalScroll(0) end
 	set_config_mode(false)
-	
 	dcsRStatConfigButtonsHide()
 
 	DCS_configButton:SetNormalTexture("Interface\\Buttons\\LockButton-Locked-Up")
 	DCS_InterfaceOptConfigButton:SetNormalTexture("Interface\\Buttons\\LockButton-Locked-Up")
 	ShowCharacterStats("player")
 end
+
+
+--------------------------
+-- Toggle Expand Button --
+--------------------------
+
+local _, gdbprivate = ...
+	gdbprivate.gdbdefaults.gdbdefaults.dejacharacterstatsConfigButtonChecked = {
+		ConfigButtonSetChecked = true,
+}
+local DCS_ConfigButtonCheck = CreateFrame("CheckButton", "DCS_ConfigButtonCheck", DejaCharacterStatsPanel, "InterfaceOptionsCheckButtonTemplate")
+	DCS_ConfigButtonCheck:RegisterEvent("PLAYER_LOGIN")
+	DCS_ConfigButtonCheck:ClearAllPoints()
+	DCS_ConfigButtonCheck:SetPoint("LEFT", 130, -205)
+	DCS_ConfigButtonCheck:SetScale(1)
+	DCS_ConfigButtonCheck.tooltipText = L['Displays the configuration (lock) button for the character stats frame.'] --Creates a tooltip on mouseover.
+	_G[DCS_ConfigButtonCheck:GetName() .. "Text"]:SetText(L["Show Config"])
+	
+	DCS_ConfigButtonCheck:SetScript("OnEvent", function(self, event)
+		if event == "PLAYER_LOGIN" then
+			local checked = gdbprivate.gdb.gdbdefaults.dejacharacterstatsConfigButtonChecked.ConfigButtonSetChecked
+			self:SetChecked(checked)
+			if checked then
+				DCS_configButton:Show()
+			else
+				DCS_configButton:Hide()
+			end
+		end
+	end)
+
+	DCS_ConfigButtonCheck:SetScript("OnClick", function(self)
+		local checked = self:GetChecked()
+		gdbprivate.gdb.gdbdefaults.dejacharacterstatsConfigButtonChecked.ConfigButtonSetChecked = checked
+		if checked then
+			DCS_configButton:Show()
+		else
+			DCS_configButton:Hide()
+		end
+	end)
 
 local function DCS_ClassCrestBGCheck()
 	if DCS_ClassBackgroundCheck:GetChecked(true) then
@@ -892,6 +944,8 @@ local function DCS_DefaultStatsAnchors()
 	char_ctats_pane.ClassBackground:SetParent(StatScrollFrame)
 	char_ctats_pane.ClassBackground:SetPoint("TOP", StatScrollFrame, "TOP", -2.50, 3)
 	
+	char_ctats_pane.ItemLevelFrame.Corruption:SetFrameStrata("TOOLTIP")
+
 	configButtonOnClose()
 	DCS_ClassCrestBGCheck()
 	ShowCharacterStats("player")
@@ -928,6 +982,8 @@ local function DCS_InterfaceOptionsStatsAnchors()
 		char_ctats_pane.ClassBackground:SetPoint("TOPLEFT", DejaCharacterStatsPanel, "TOPLEFT", 377, -80)
 		char_ctats_pane.ClassBackground:SetPoint("BOTTOMRIGHT", DejaCharacterStatsPanel, "BOTTOMRIGHT", -48, 126)
 		char_ctats_pane.ClassBackground:Show()
+
+		char_ctats_pane.ItemLevelFrame.Corruption:SetFrameStrata("TOOLTIP")
 
 		DCS_ClassCrestBGCheck()
 		ShowCharacterStats("player")
@@ -988,6 +1044,88 @@ end)
 		DCS_configButton_OnEnter()
 	end)
 
+------------------------
+-- Relevant Stats Button --
+------------------------
+
+local function DCS_TableRelevantStats_OnEnter(self)
+	GameTooltip:SetOwner(DCS_TableRelevantStats, "ANCHOR_RIGHT");
+	GameTooltip:SetText(DCS_TableRelevantStatstooltipText, 1, 1, 1, 1, true)
+	GameTooltip:Show()
+end
+
+local function DCS_TableRelevantStats_OnLeave(self)
+	GameTooltip_Hide()
+ end
+ 
+local DCS_TableRelevantStats = CreateFrame("Button", "DCS_TableRelevantStats", CharacterFrameInsetRight, "UIPanelButtonTemplate")
+	DCS_TableRelevantStats:RegisterEvent("VARIABLES_LOADED")
+	DCS_TableRelevantStats:RegisterEvent("PLAYER_SPECIALIZATION_CHANGED")
+	DCS_TableRelevantStats:ClearAllPoints()
+	DCS_TableRelevantStats:SetPoint("BOTTOMRIGHT", -130,-36)
+	DCS_TableRelevantStats:SetScale(0.80)
+	DCS_TableRelevantStats:Hide()
+
+--local LOCALE = GetLocale() --Debugging code
+--print (LOCALE)
+	--if (LOCALE == "ptBR" or LOCALE == "frFR" or LOCALE == "deDE") then
+		--print ("ptBR, frFR, deDE = 175")
+	--LOCALE = 175
+	--else
+	--print ("enUS = 125")
+	--LOCALE = 125
+	--end
+	--LOCALE = 175
+	--DCS_TableRelevantStats:SetWidth(LOCALE)
+
+	DCS_TableRelevantStats:SetWidth(125)
+	DCS_TableRelevantStats:SetHeight(30)
+
+	DCS_TableRelevantStats:SetScript("OnEnter", DCS_TableRelevantStats_OnEnter)
+	DCS_TableRelevantStats:SetScript("OnLeave", DCS_TableRelevantStats_OnLeave)
+
+	DCS_TableRelevantStats:SetScript("OnClick", function(self, button, up)
+		if relevantStatsSetChecked then
+			--print(checked)
+			DCS_Table_Relevant()
+			--print("Show All Button")
+			--DCS_TableRelevantStatstooltipText = L["Show all stats."] --Creates a tooltip on mouseover.
+			--_G[DCS_TableRelevantStats:GetName() .. "Text"]:SetText(L["All Stats"])
+			--gdbprivate.gdb.gdbdefaults.DCS_TableRelevantStatsChecked.RelevantStatsSetChecked = false
+		--return
+		--end
+		else
+		--if checked == false then
+			--print(checked)
+			DCS_Table_ShowAllStats()
+			--print("Show Relevant Button")
+			--DCS_TableRelevantStatstooltipText = L["Show only stats relevant to your class spec."] --Creates a tooltip on mouseover.
+			--_G[DCS_TableRelevantStats:GetName() .. "Text"]:SetText(L["Relevant Stats"])
+			--gdbprivate.gdb.gdbdefaults.DCS_TableRelevantStatsChecked.RelevantStatsSetChecked = true
+		--return
+		end
+		ShowCharacterStats("player")
+		DCS_TableRelevantStats_OnEnter()
+	end)
+
+	DCS_TableRelevantStats:SetScript("OnEvent", function(self, event, ...)
+		if event == "PLAYER_SPECIALIZATION_CHANGED" and (...) ~= "player" then return end
+		--registered events PLAYER_ENTERING_WORLD and PLAYER_SPECIALIZATION_CHANGED
+		DCS_Login_Initialization()
+		DCS_TableRelevantStats_init()
+		
+		--Login error of "Division by zero" in BfA 8.0 alpha as the globals have not instantiated yet.
+		--May be an alpha issue. Try other events like "PLAYER_LOGIN" if found to be needed.
+		if event == "PLAYER_SPECIALIZATION_CHANGED" then 
+			-- print("changed")
+			set_config_mode(true) -- This allows the ratings and corruption stats and category headrs to be shown when changin specs. No clue why, but it works.
+			local function DCS_ReShowSelectedStats()
+				set_config_mode(false) -- This hides the above shown config mode 0.01 secs after showing it becasue we dont want it shown, but showing it shows the selected stats, so we need to exit config after entering it.
+			end
+			C_Timer.After(0.01, DCS_ReShowSelectedStats)
+			ShowCharacterStats("player")
+		end
+	end)
 	
 ------------------------------------------
 -- Interface Options Config Mode Toggle --

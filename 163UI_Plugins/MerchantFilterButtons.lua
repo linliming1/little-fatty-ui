@@ -41,7 +41,7 @@ local function BuildButtons()
 		["CLASS"] = {
 			text = select(1,UnitClass("player")),
 			texture = "Interface\\WorldStateFrame\\ICONS-CLASSES",
-			coord = CLASS_BUTTONS[select(2,UnitClass("player"))],
+			coord = CLASS_ICON_TCOORDS[select(2,UnitClass("player"))],
 			filter = LE_LOOT_FILTER_CLASS,
 			x = -(spacing*2) - 10
 		}
@@ -81,7 +81,7 @@ local function BuildButtons()
 	for k,v in pairs(Buttons) do
 		local button = CreateFrame("Button","MFB_"..k,MerchantFrame,"MainMenuBarMicroButton")
 		button.text = v.text
-        button:SetSize(28,58) button.Flash:SetPoint("TOPLEFT", -2, -18) --aby8
+        button:SetSize(28,58) button.Flash:SetPoint("TOPLEFT", -2, -18) --abyui8
 		button:SetPoint("TOPRIGHT",MerchantFrame,"TOPRIGHT",v.x,-4)
 		button:SetScript("OnEnter",function()
 			GameTooltip:SetOwner(button, "ANCHOR_RIGHT")

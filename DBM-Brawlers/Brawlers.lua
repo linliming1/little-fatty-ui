@@ -1,7 +1,7 @@
-local mod	= DBM:NewMod("Brawlers", "DBM-Brawlers")
+local mod	= DBM:NewMod("BrawlersGeneral", "DBM-Brawlers")
 local L		= mod:GetLocalizedStrings()
 
-mod:SetRevision(("$Revision: 18462 $"):sub(12, -3))
+mod:SetRevision("20201102223314")
 --mod:SetCreatureID(60491)
 --mod:SetModelID(41448)
 mod:SetZone(DBM_DISABLE_ZONE_DETECTION)
@@ -171,17 +171,17 @@ function mod:ZONE_CHANGED_NEW_AREA()
 			mod2:Stop()--Stop all timers and warnings
 		end
 	end
-	local mod2 = DBM:GetModByName("BrawlChallenges")
-	if mod2 then
-		mod2:Stop()--Stop all timers and warnings
+	local mod3 = DBM:GetModByName("BrawlChallenges")
+	if mod3 then
+		mod3:Stop()--Stop all timers and warnings
 	end
-	local mod2 = DBM:GetModByName("BrawlLegacy")
-	if mod2 then
-		mod2:Stop()--Stop all timers and warnings
+	local mod4 = DBM:GetModByName("BrawlLegacy")
+	if mod4 then
+		mod4:Stop()--Stop all timers and warnings
 	end
-	local mod2 = DBM:GetModByName("BrawlRumble")
-	if mod2 then
-		mod2:Stop()--Stop all timers and warnings
+	local mod5 = DBM:GetModByName("BrawlRumble")
+	if mod5 then
+		mod5:Stop()--Stop all timers and warnings
 	end
 	setDialog(self)
 	modsStopped = true
@@ -212,7 +212,7 @@ function mod:OnSync(msg)
 		end
 		self:Stop()--Sometimes NPC doesn't yell when a match ends too early, if a new match begins we stop on begin before starting new stuff
 		berserkTimer:Start()
-		for i, v in ipairs(startCallbacks) do
+		for _, v in ipairs(startCallbacks) do
 			v()
 		end
 	elseif msg == "MatchEnd" then
@@ -220,7 +220,7 @@ function mod:OnSync(msg)
 		currentFighter = nil
 		self:Stop()
 		--Boss from any rank can be fought by any rank now, so we just need to always cancel them all
-		for i, v in ipairs(endCallbacks) do
+		for _, v in ipairs(endCallbacks) do
 			v()
 		end
 		for i = 1, 7 do
@@ -233,11 +233,11 @@ function mod:OnSync(msg)
 		if mod2 then
 			mod2:Stop()--Stop all timers and warnings
 		end
-		local mod2 = DBM:GetModByName("BrawlLegacy")
+		mod2 = DBM:GetModByName("BrawlLegacy")
 		if mod2 then
 			mod2:Stop()--Stop all timers and warnings
 		end
-		local mod2 = DBM:GetModByName("BrawlRumble")
+		mod2 = DBM:GetModByName("BrawlRumble")
 		if mod2 then
 			mod2:Stop()--Stop all timers and warnings
 		end
@@ -245,7 +245,7 @@ function mod:OnSync(msg)
 end
 
 do
-	function mod:UNIT_AURA(uId)
+	function mod:UNIT_AURA()
 		local currentQueueRank = select(16, DBM:UnitBuff("player", QueuedBuff))
 		if currentQueueRank and currentQueueRank ~= lastRank then
 			lastRank = currentQueueRank

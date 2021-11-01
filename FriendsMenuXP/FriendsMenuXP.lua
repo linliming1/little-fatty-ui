@@ -35,6 +35,7 @@ function FriendsMenuXP_ShowDropdown(buttonSet, closeOrigin, anchor, relative, of
     if not shown and closeOrigin == false then return end
     if closeOrigin then HideDropDownMenu(1) end
     local dropDown = InCombatLockdown() and FriendsMenuXP or FriendsMenuXPSecure
+    dropDown.originDropDown = _G["DropDownList1"]
     local appendBottom = relative and anchor and anchor:find("TOP") and relative:find("BOTTOM")
     FriendsMenuXP_Show(dropDown, buttonSet, appendBottom, ...)
     dropDown:ClearAllPoints();
@@ -91,7 +92,7 @@ function FriendsMenuXPButton_OnClick(self)
 
     self:GetParent():Hide();
     if(DropDownList1) then DropDownList1:Hide(); end;
-    PlaySound163("UChatScrollButton");
+    PlaySound(SOUNDKIT.U_CHAT_SCROLL_BUTTON);
 end
 
 function FriendsMenuXP_ChatFrame_OnHyperlinkShow(self, playerString, text, button)
@@ -167,6 +168,12 @@ function FriendsMenuXP_OnLoad(self)
 
     self:RegisterEvent("PLAYER_REGEN_DISABLED");
     self:RegisterEvent("PLAYER_REGEN_ENABLED");
+
+    FriendsMenuXP_HandlesGlobalMouseEvent = function(self, button, event)
+        return self:IsShown() and (self:IsMouseOver() or self:GetParent():IsMouseOver() or DropDownList1:IsMouseOver())
+    end
+    FriendsMenuXP.HandlesGlobalMouseEvent = FriendsMenuXP_HandlesGlobalMouseEvent
+    FriendsMenuXPSecure.HandlesGlobalMouseEvent = FriendsMenuXP_HandlesGlobalMouseEvent
 
     if(FRIENDS_MENU_XP_LOADED) then DEFAULT_CHAT_FRAME:AddMessage(FRIENDS_MENU_XP_LOADED,1,1,0); end
 	-- 5.4.1, fix IsDisabledByParentalControls taint
@@ -273,7 +280,7 @@ function FriendsMenuXP_Show(listFrame, arg2, appendBottom, name, connected, line
     end
     listFrame.buttonSet = buttonSet;
     FriendsMenu_Initialize(listFrame, buttonSet, appendBottom); --TODO: OFFLINE
-    if(not relativeFrame) then PlaySound163("igMainMenuOpen"); end --open at last place should not play sound.
+    if(not relativeFrame) then PlaySound(SOUNDKIT.IG_MAINMENU_OPEN); end --open at last place should not play sound.
 
     -- Hide the listframe anyways since it is redrawn OnShow()
     listFrame:Hide();

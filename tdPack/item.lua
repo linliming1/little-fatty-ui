@@ -16,7 +16,9 @@ function Item:New(parent, bag, slot)
 
     if type(itemID) == 'number' then
         local itemLink = tdPack:GetBagSlotLink(bag, slot)
-        itemLevel = U1GetItemLevelByScanTooltip(itemLink)
+        local _
+        itemName, _, itemQuality, itemLevel, _, itemType, itemSubType, _, itemEquipLoc, itemTexture = GetItemInfo(itemLink)
+        itemLevel = U1GetRealItemLevel(itemLink)
     end
 
     if not itemName then return end  --163ui sometime can't get iteminfo , 2016.9
@@ -99,7 +101,7 @@ function Item:NewByLink(itemLink)
     local itemName, itemType, itemSubType, itemEquipLoc, itemQuality, itemLevel, itemTexture = tdPack:GetItemInfo(itemID)
 
     if type(itemID) == 'number' then
-        itemLevel = U1GetItemLevelByScanTooltip(itemLink)
+        itemLevel = U1GetRealItemLevel(itemLink)
     end
 
     if not itemName then return end  --163ui sometime can't get iteminfo , 2016.9

@@ -39,7 +39,7 @@ end
 -- Create module
 local addon, L = XLoot:NewModule("Frame")
 -- Prepare frame/global
-local XLootFrame = CreateFrame("Frame", "XLootFrame", UIParent)
+local XLootFrame = CreateFrame("Frame", "XLootFrame", UIParent, BackdropTemplateMixin and "BackdropTemplate")
 XLootFrame.addon = addon
 -- Grab locals
 local mouse_focus, opt
@@ -66,7 +66,7 @@ local function GetItemInfoTable(link)
 		quality = rarity,
 		level = level,
 		minLevel = minLevel,
-		typeName = type, -- type and subType are localzied
+		typeName = type, -- type and subType are localized
 		subTypeName = subType,
 		stackCount = stackCount,
 		equipLoc = equipLoc,
@@ -144,7 +144,9 @@ local defaults = {
 
 		linkall_threshold = 2, -- Quality from 0 - 6, Poor - Artifact
 		linkall_channel = 'RAID',
+		linkall_channel_secondary = 'NONE',
 		linkall_show = 'group',
+		linkall_first_only = false,
 
 		old_close_button = false,
 
@@ -205,6 +207,12 @@ local preview_loot = {
 	{ 15487, false, false, false }
 }
 
+local preview_currency = {
+	828,
+	-- 1728,
+	-- 1767,
+}
+
 for i=1,#preview_loot do
 	XLootTooltip:SetItemByID(preview_loot[i][1])
 	GetItemInfo(preview_loot[i][1])
@@ -240,18 +248,21 @@ function addon:ApplyOptions(in_options)
 				max_quality = math.max(max_quality, t.quality)
 			end
 		end
-		do
-			local name, currentAmount, texture, earnedThisWeek, weeklyMax, totalMax, isDiscovered, rarity = GetCurrencyInfo(828)
-			if name and texture then
-				local row =  Fake.rows[slot+1]
-				max_width = math.max(max_width, row:Update({
-					name = name,
-					icon = texture,
-					quality = rarity,
-					slotType = LOOT_SLOT_CURRENCY,
-					quantity = 5,
-				}))
-				Fake.slots[#preview_loot+1] = row
+		-- !CLASSIC
+		if C_CurrencyInfo then
+			for i,id in ipairs(preview_currency) do
+				local c = C_CurrencyInfo.GetCurrencyInfo(id)
+				if c.name then
+					local row =  Fake.rows[slot+i]
+					max_width = math.max(max_width, row:Update({
+						name = c.name,
+						icon = c.iconFileID,
+						quality = c.quality,
+						slotType = LOOT_SLOT_CURRENCY,
+						quantity = 5,
+					}))
+					Fake.slots[#preview_loot+i] = row
+				end
 			end
 		end
 		Fake:SizeAndColor(max_width, max_quality)
@@ -262,7 +273,7 @@ function addon:OnOptionsShow(panel)
 	-- Create preview frame
 	local frame = XLootFakeFrame
 	if not frame then
-		frame = CreateFrame('Frame', 'XLootFakeFrame', panel)
+		frame = CreateFrame('Frame', 'XLootFakeFrame', panel, BackdropTemplateMixin and "BackdropTemplate")
 		frame.fake = true
 		frame.opt = XLootFrame.opt
 		self:BuildLootFrame(frame)
@@ -300,9 +311,12 @@ do
 		end
 
 		local linkthreshold, reached = opt.linkall_threshold
+
+		local first_only = opt.linkall_first_only
+
 		for i=1, GetNumLootItems() do
 			if GetLootSlotType(i) == LOOT_SLOT_ITEM then 
-				local texture, item, quantity, rarity = GetLootSlotInfo(i)
+				local _, _, quantity, _, rarity = GetLootSlotInfo(i)
 				local link = GetLootSlotLink(i)
 				if rarity >= linkthreshold then
 					reached = true
@@ -312,6 +326,9 @@ do
 						output[key] = (quantity > 1 and quantity.."x" or "")..link
 					else
 						output[key] = buffer
+					end
+					if opt.linkall_first_only then
+						break
 					end
 				end
 			end
@@ -327,6 +344,9 @@ do
 		for k, v in pairs(output) do
 			v  = string.gsub(v, "\n", " ", 1, true) -- DIE NEWLINES, DIE A HORRIBLE DEATH
 			SendChatMessage(v, channel)
+			if opt.linkall_channel_secondary ~= 'NONE' then
+				SendChatMessage(v, opt.linkall_channel_secondary)
+			end
 			output[k] = nil
 		end
 
@@ -709,7 +729,7 @@ do
 	function BuildRow(frame, i)
 		local frame_name, opt, fake = frame:GetName()..'Button'..i, frame.opt, frame.fake
 		-- Create frames
-		local row = CreateFrame('Button', not fake and frame_name or nil, frame)
+		local row = CreateFrame('Button', not fake and frame_name or nil, frame, BackdropTemplateMixin and "BackdropTemplate")
 		local item = CreateFrame('Frame', nil, row)
 		local button_auto = CreateFrame('Button', nil, row)
 		local tex = item:CreateTexture(not fake and frame_name..'IconTexture' or nil, 'BACKGROUND')
@@ -999,7 +1019,7 @@ do
 
 		
 		-- Use a secondary frame for backdrop/border to allow the "frame" opacity to be changed
-		local overlay = CreateFrame('Frame', nil, f)
+		local overlay = CreateFrame('Frame', nil, f, BackdropTemplateMixin and "BackdropTemplate")
 		overlay:SetFrameLevel(5)
 		overlay:SetAllPoints()
 		f:Skin(overlay)

@@ -5,7 +5,7 @@ local MainFrame = GUI:NewModule('MainFrame', CreateFrame('Frame', 'tdCoreMainFra
 MainFrame:SetPadding(20, -50, -20, 20)
 
 function MainFrame:New()
-    local obj = self:Bind(CreateFrame('Frame', nil, UIParent))
+    local obj = self:Bind(CreateFrameAby('Frame', nil, UIParent))
     
     obj:SetBackdrop{
         bgFile = [[Interface\DialogFrame\UI-DialogBox-Background]],
@@ -47,7 +47,7 @@ function MainFrame:SetAllowEscape(enable)
 end
 
 function MainFrame:OnHide()
-    PlaySound163("gsTitleOptionExit")
+    PlaySound(SOUNDKIT.GS_TITLE_OPTION_EXIT)
     for frame in pairs(frames) do
         if frame:IsShown() then
             return
@@ -58,7 +58,7 @@ function MainFrame:OnHide()
 end
 
 function MainFrame:OnShow()
-    PlaySound163('igMainMenuOption')
+    PlaySound(SOUNDKIT.IG_MAINMENU_OPTION)
     if frames[self] then
         MainFrame:Show()
     end

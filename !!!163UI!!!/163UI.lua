@@ -1,6 +1,6 @@
 local floor,ceil,format,tostring=floor,ceil,format,tostring
 local pairs,ipairs,next,wipe,assert,type,tinsert,select,tremove,GetTime = pairs,ipairs,next,wipe,assert,type,tinsert,select,tremove,GetTime
-local n2s,safecall,copy,tinsertdata,tremovedata = n2s,safecall,copy,tinsertdata,tremovedata
+local n2s,safecall,u1copy,tinsertdata,tremovedata = n2s,safecall,u1copy,tinsertdata,tremovedata
 local U2, _, U1 = 163, ...
 local L = U1.L;
 U1.PINYIN = U1.PINYIN or {}
@@ -24,43 +24,11 @@ CoreAddEvent("ADDON_SELECTED")
 CoreAddEvent("DB_LOADED")
 CoreAddEvent("INIT_COMPLETED")
 
-local addonToLoadSecure, addonToLoad = {}, {}
-
-local function dbLoaded(db)
-
---[[
-    -- 2014082901 换回简约背包，确保该插件被激活，同时禁用分类背包（如果没有别卸载的话）
-    if (db.verison or 0) < 2014082901 then
-        U1LoadAddOn("Bagnon",true)
-        U1ToggleAddon("combuctor",nil,nil,true,true)
-    end
-
-    if (db.verison or 0) < 2014082904 then
-        tinsert(addonToLoad, "tdPack")
-    end
-
-    db.verison = tonumber(GetAddOnMetadata("!!!163UI!!!","X-163UI-Version")or"0")
-]]
-end
-
---[[ --fix7
-local NoGoldSeller163ui = LibStub("AceAddon-3.0"):NewAddon("NoGoldSeller163ui", "AceTimer-3.0")
-function NoGoldSeller163ui:OnInitialize()
-    if(NGSSymbolsUI)then
-        NGSSymbols = NGSSymbolsUI
-    else
-        NGSSymbolsUI = NGSSymbols
-    end
-    if(NGSwordsUI)then
-        NGSwords = NGSwordsUI
-    else
-        NGSwordsUI = NGSwords
-    end
-end
---]]
+local addonToLoad = {}
 
 local defaultDB = {
     --checkVendor = 1, --无爱不易标记的插件但是在整合包列表中，是否算爱不易的。现在用 UI163_USER_MODE
+    first_run = true,
     selectedTag = UI163_USER_MODE and "ALL" or "ABYUI",
     showOrigin = nil, --插件原名
     disableLaterLoading = false,
@@ -110,7 +78,7 @@ local function getInitialAddonInfo()
 
         --- copy a deps is mainly to calc parent, and the table is used later as info.optdeps
         --- there is no deps in raw_infos
-        local deps = copy(realDeps)
+        local deps = u1copy(realDeps)
         for _, known in ipairs(knownAddonPacks) do
             tremovedata(deps, known:lower())
         end
@@ -204,7 +172,7 @@ function U1LoadDBValue(cfg)
         local has, default = U1LoadDBDefault(cfg)
         if has then
             if type(default) == "table" then
-                v = copy(default)
+                v = u1copy(default)
             else
                 v = default
             end
@@ -301,6 +269,7 @@ function U1GetCfgValue(addon, path, safe)
     assert(cfg, format("Error, can't find config [%s] of addon [%s].", path, addon));
     return U1LoadDBValue(cfg), cfg;
 end
+U1SetCfgValue = U1ChangeCfg
 
 ---显示一下配置项，调试用的
 function U1ShowCfg(addon, pattern)
@@ -390,7 +359,7 @@ function U1UpdateTags(onlyAffectLoaded, addonName)
         U1SortTag()
         CoreFireEvent("CURRENT_ADDONS_UPDATED") --更新数量，按钮等信息
     end
-	
+
     --这里屏蔽右侧的更新，但是如果是其他插件加载了插件，右侧不会更新
     if(not addonName or addonName==db.selectedAddon) then
         if(db.selectedAddon)then U1SelectAddon(db.selectedAddon) end;
@@ -416,7 +385,7 @@ local tagComparator = function(v1, v2)
     elseif o1 > 0 and o2 < 0 then
         return true
     elseif (o1 == o2) then
-            return v1 < v2
+        return v1 < v2
     else
         return o1 < o2;
     end
@@ -512,7 +481,7 @@ function U1RegisterAddon(name, infoReg)
             --如果是我们整合的插件则默认是LATER，否则默认是NORMAL
             infoReg.load = infoReg.load or (UI163_USER_MODE and not infoRaw.vendor and "NORMAL" or "LATER") --设置非LOD的默认的加载方式为LATER
         end
-       
+
         infoRaw.lod = (infoRaw.realLOD and infoReg.load==nil) or (infoReg.load=="DEMAND"); --reg.load可以覆盖LoadOnDemand，因为大脚魔盒之类的一些插件都加了标签
         --复制系统获取的addonInfo数据到注册的table中,因为注册的table大
         for k, v in pairs(infoRaw) do
@@ -558,6 +527,97 @@ function U1RegisterAddon(name, infoReg)
 
     infoReg.parent = infoReg.parent and infoReg.parent~="" and infoReg.parent~=0 and infoReg.parent:lower() or nil
 end if strupper(...) ~= currList..tostring(0xA3).."\85\73"..currList then return end --插件名称保护
+
+--- Called in ConfigsLoaded.lua and after all calls of U1RegisterAddon()
+function U1ConfigsLoaded()
+    local addonInfo = U1.addonInfo;
+
+    --处理在reg里注册了parent但却不存在的
+    for _, info in pairs(addonInfo) do
+        if (info.parent and not info.tags and not addonInfo[info.parent] and U1.parentTags[info.parent]) then
+            info.tags = U1.parentTags[info.parent]
+            info.parent = nil
+        end
+    end
+    wipe(U1.parentTags); U1.parentTags = nil
+
+    --一些特殊插件不采用强制关闭的方式, protected也有自身的加载模式，所以不必在这里Enable.
+    --要把parent也设置为NORMAL，但用了这种方式, 则runfirst，toggle等一系列处理就都没用了
+    for k,v in pairs(addonInfo) do
+        if not v.registered then v.lod = v.realLOD end
+        if v.registered and v.defaultEnable == nil and v.parent == nil and not v.hide and k~=strlower(_) then
+            U1Message(format("插件 %s 没有设置defaultEnable", v.name))
+        end
+        if not v.registered and v.xcategories then
+            U1RegisterAddon(v.name, { registered = false, tags = {strsplit(",", v.xcategories:gsub(",[ ]+", ","))}})
+        end
+        v.xcategories = nil
+    end
+
+    for k,v in pairs(addonInfo) do
+        --Grid这种自己添加模块的，必须
+        --v.load = "NORMAL" --TODO: 可以强制设置全部NORMAL, 可能利用多线程
+        if v.lod and not v.parent and not v.nolodbutton then
+            tinsert(v, 1, {text=L["强制加载"], enableOnNotLoad = 1, disableOnLoad = 1, tip=L["说明`本插件会在满足条件时自动加载，如果现在就要加载请点击此按钮` `|cffff0000注意：有可能会出错|r"], callback=function()
+                if not IsAddOnLoaded(k) then
+                    local loaded, reason = LoadAddOn(k)
+                    U1OutputAddonLoaded(k, loaded, reason);
+                    if loaded then UUI.Right.ADDON_SELECTED() UUI.Center.Refresh() end
+                end
+            end})
+        end
+
+        -- children of registered addon are also registered
+        local pinfo = v.parent and addonInfo[v.parent]
+        if not pinfo then v.parent = nil end
+        if not v.registered and v.parent and pinfo and pinfo.registered then
+            v.load = pinfo.load;
+            v.registered = true
+        end
+        --把true条件去掉就是默认的不变，加上就是默认的也是VARIABLE_LOADED之后加载
+        --如果没有realLOD，则DBM模块无法显示
+        if (v.registered and v.load~="NORMAL" and not v.realLOD) and k~=strlower(_) then
+            DisableAddOn(k); --v.load = "NORMAL" --用来完全关闭LATER和LOGIN
+        end
+
+        if v.dummy then
+            if v.defaultEnable == nil then v.defaultEnable = 1 end --dummy默认启用
+            v.author = v.author or L["爱不易插件集"]
+            v.desc = v.desc or L["此项功能为一系列功能相关的小插件组合，可以分别开启或关闭，为您提供最清晰的分类和最强大的灵活性。"]
+        end
+
+        --如果父被隐藏，则转移为deps, 似乎还应该回溯之前的deps，但是hide这个是人工属性，parent也人工处理吧
+        if (v.parent and addonInfo[v.parent] and addonInfo[v.parent].hide and not v.hide) then
+            v.deps = v.deps or {};
+            tinsertdata(v.deps, v.parent);
+            v.parent = nil;
+        end
+
+        --父是安全加载，则子也一样
+        if (v.parent and addonInfo[v.parent] and addonInfo[v.parent].secure) then
+            v.secure = 1
+        end
+    end
+
+    --处理标签，应在最后进行，只处理没有依赖的
+    for _, info in pairs(addonInfo) do
+        if not info.parent and not info.hide then
+            info.tags = info.tags or (info.xcategories and {strsplit(",", info.xcategories:gsub(",[ ]+", ","))})
+            for _, v in ipairs(info.tags or _empty_table) do
+                --转换为hash，用于快速检索.
+                if v == "CLASS" then info._classAddon = true end --标记插件是职业相关，如果不是本职业则隐藏
+                if true or info.vendor then --只处理标准的。
+                    info.tags[v] = true;
+                    U1RegisterTag(v);
+                end
+            end
+        end
+    end
+
+    U1ConfigsLoaded = nil;
+    U1RegisterAddon = nil;
+    U1ChangeTags = nil;
+end
 
 function U1ChangeTags(name, tags, add)
     local info = U1GetAddonInfo(name)
@@ -759,7 +819,7 @@ function U1SearchAddon(text)
                     end
                 end
             end
-			-- 整合版不需要搜索插件介绍
+            -- 整合版不需要搜索插件介绍
             if false and v.filtered then
                 if searchAddonDesc(k, v, pattern) then
                     v.filtered = nil
@@ -771,17 +831,23 @@ function U1SearchAddon(text)
 end
 
 local outputOnce = {} --在全部插件加载完后才设置上值, 用来控制初始的显示
-function U1OutputAddonState(text, addon, force)
-    if force or (DEBUG_MODE or initComplete and not outputOnce[addon]) then
+function U1OutputAddonState(text, addon, duration, force)
+    local dtext = ""
+    duration = duration or 0
+    if duration > 0 then
+        local color = (duration > 250 and "ff0000") or ( duration > 100 and "ff7f00" ) or "7fff7f"
+        dtext = "，用时" .. format("|cff%s%.3f|r", color, duration/1000)
+    end
+    if duration > 100 or force or (DEBUG_MODE or initComplete and not outputOnce[addon]) then
         if not U1GetAddonInfo(addon).hide and (not U1GetAddonInfo(addon).parent or U1GetAddonInfo(U1GetAddonInfo(addon).parent).dummy) then
-            U1Message(format(text, format(L["插件-|cffffd100%s|r-"], U1GetAddonTitle(addon))));
+            U1Message(format(text .. dtext, format(L["插件-|cffffd100%s|r-"], U1GetAddonTitle(addon))));
         end
         outputOnce[addon] = 1;
     end
 end
-function U1OutputAddonLoaded(name, loaded, reason)
+function U1OutputAddonLoaded(name, loaded, reason, duration)
     if(loaded)then
-        U1OutputAddonState(L["%s加载成功"], name);
+        U1OutputAddonState(L["%s加载成功"], name, duration);
     else
         U1OutputAddonState(L["%s加载失败, 原因："]..(reason and _G["U1REASON_"..reason] or reason or L["未知"]), name);
     end
@@ -952,7 +1018,7 @@ wowluacopy(qq)
 
 --- supported frameTypes (with RegisterEvent)
 local frameTypes = { "Frame", "GameTooltip", "ScrollFrame", "Cooldown", "StatusBar", "MessageFrame", "ScrollingMessageFrame", "Button", "Slider", "CheckButton", "EditBox", }
-    --"SimpleHTML", "QuestPOIFrame", "ColorSelect", "ArchaeologyDigSiteFrame", "MovieFrame", "Model", "DressUpModel", "TabardModel", "PlayerModel",
+--"SimpleHTML", "QuestPOIFrame", "ColorSelect", "ArchaeologyDigSiteFrame", "MovieFrame", "Model", "DressUpModel", "TabardModel", "PlayerModel",
 
 --只需要hook RegisterEvent. UnregisterEvent是在Simulate里用IsEventRegistered来等价实现
 local metaHooked = {}
@@ -1091,13 +1157,13 @@ end
 local loadPath = {} --用来保存当前加载的路径，递归optdeps防止死循环的
 --参数bundleSim是否直接模拟事件
 function U1LoadAddOn(name, bundleSim)
-    local before = time()
+    local before = u1debugprofilestop()
     wipe(loadPath)
     if not bundleSim then startCapturing(); end
     local result, reason = select(2, _G.pcall(U1LoadAddOnBackend, name))
     if not bundleSim then simEventsAndLoadCfgs(); end
-    if time()-before>1 then U1OutputAddonState(L["（%s加载时间较长）"], name, true) end
-    return result, reason
+    local duration = u1debugprofilestop() - before
+    return result, reason, duration
 end
 function U1LoadAddOnBackend(name)
     if IsAddOnLoaded(name) then return 1 end
@@ -1117,7 +1183,7 @@ function U1LoadAddOnBackend(name)
     if(ii.parent and not IsAddOnLoaded(ii.parent) and not iip.dummy and not loadPath[ii.parent]) then
         local loaded = U1LoadAddOnBackend(ii.parent);
         if(not loaded) then
-            U1OutputAddonState(L["%s加载失败，依赖插件["]..ii.parent..L["]无法加载。"], name, true);
+            U1OutputAddonState(L["%s加载失败，依赖插件["]..ii.parent..L["]无法加载。"], name, nil, true);
             return false, "DEP_CORRUPT";
         end
         U1GetAddonInfo(ii.parent).load = "NORMAL"; --防止其他时刻再加载的时候调用
@@ -1131,7 +1197,7 @@ function U1LoadAddOnBackend(name)
                 if GetAddOnEnableState(U1PlayerName,dep)<2 then EnableAddOn(dep) end --EnableAddOn会触发右侧显示面板，而右侧有连续显示的保护
                 local loaded = U1LoadAddOnBackend(dep);
                 if(not loaded) then
-                    U1OutputAddonState(L["%s加载失败，依赖插件["]..dep..L["]无法加载。"], ii.name, true);
+                    U1OutputAddonState(L["%s加载失败，依赖插件["]..dep..L["]无法加载。"], ii.name, nil, true);
                     return false, "DEP_CORRUPT";
                 end
             end
@@ -1178,10 +1244,10 @@ function U1ToggleChildren(name, enabled, noset, deepToggleChildren, bundleSim)
                 --当父启用(enabled，暂时不考虑enable但无法Load的情况，即enabled时父插件就必然是Loaded)时，子插件就启用
                 --当父停用时，如果子插件已加载，则调用Toggle，否则肯定是已经Disable了的（不然父停用之前肯定已经加载了)
                 if (enabled) then
-                    local r2 = U1ToggleAddon(subName, enabled, nil, true, bundleSim);
+                    local r2 = U1ToggleAddon(subName, enabled, nil, deepToggleChildren, bundleSim);
                     reloadChildren =  reloadChildren or r2;
                 elseif (not enabled and IsAddOnLoaded(subName) and U1IsAddonEnabled(subName)) then
-                    local r2 = U1ToggleAddon(subName, enabled, nil, true, bundleSim);
+                    local r2 = U1ToggleAddon(subName, enabled, nil, deepToggleChildren, bundleSim);
                     reloadChildren =  reloadChildren or r2;
                 end
             else
@@ -1189,10 +1255,10 @@ function U1ToggleChildren(name, enabled, noset, deepToggleChildren, bundleSim)
                 --当父停用而子插件被加载了，则关闭子插件
                 --这两个操作都不修改子插件的状态
                 if enabled and U1IsAddonEnabled(subName) then
-                    local r2 = U1ToggleAddon(subName, true, "noset", true, bundleSim);
+                    local r2 = U1ToggleAddon(subName, true, "noset", deepToggleChildren, bundleSim);
                     reloadChildren =  reloadChildren or r2;
                 elseif not enabled and IsAddOnLoaded(subName) and U1IsAddonEnabled(subName) then
-                    local r2 = U1ToggleAddon(subName, false, "noset", true, bundleSim);
+                    local r2 = U1ToggleAddon(subName, false, "noset", deepToggleChildren, bundleSim);
                     reloadChildren =  reloadChildren or r2;
                 end
             end
@@ -1204,11 +1270,12 @@ end
 function U1ToggleAddon(name, enabled, noset, deepToggleChildren, bundleSim)
 
     local info = addonInfo[name];
-    if not info then 
-        return 
+    if not info then
+        return
     end
     local reload = false;
     local status;
+    local before, realLoaded = u1debugprofilestop(), false; --因为bundleSim时，时间消耗在外面，所以要在外面统计
 
     if not bundleSim then startCapturing(name); end
 
@@ -1247,9 +1314,13 @@ function U1ToggleAddon(name, enabled, noset, deepToggleChildren, bundleSim)
         else
             if(enabled)then
                 if(not info.lod or info.loadWith and IsAddOnLoaded(info.loadWith))then
-                    local loaded, reason = U1LoadAddOn(name, true);
+                    local loaded, reason, duration = U1LoadAddOn(name, true);
                     --if(loaded) then collectgarbage() end
-                    if not noset then U1OutputAddonLoaded(name, loaded, reason); end
+                    if not loaded then
+                        U1OutputAddonLoaded(name, loaded, reason, duration);
+                    else
+                        realLoaded = true;
+                    end
                 else
                     --按需加载的
                     if not noset then U1OutputAddonState(L["%s已启用, 需要时会自动加载"], name); end
@@ -1262,6 +1333,8 @@ function U1ToggleAddon(name, enabled, noset, deepToggleChildren, bundleSim)
     local reloadChildren = U1ToggleChildren(name, enabled, noset, deepToggleChildren, true) --开启子插件的时候就会根据依赖开启了父插件, 放在前面是为了刷新右侧面板
 
     if not bundleSim then simEventsAndLoadCfgs(); end
+
+    if not noset and realLoaded then U1OutputAddonLoaded(name, true, "", u1debugprofilestop() - before); end
 
     return reload or reloadChildren;
 end
@@ -1396,8 +1469,8 @@ function U1:PLAYER_LOGIN()
 
     for name,info in pairs(addonInfo) do
         if(shouldLoadAddon(name, info, nil) or shouldLoadAddon(name, info, "LOGIN"))then
-            local loaded, reason = U1LoadAddOn(name, true);
-            U1OutputAddonLoaded(name, loaded, reason);
+            local loaded, reason, duration = U1LoadAddOn(name, true);
+            U1OutputAddonLoaded(name, loaded, reason, duration);
         end
     end
 
@@ -1419,6 +1492,21 @@ local function processAceDBs()
 end
 
 local function processDefaultEnable()
+    --2020.10 似乎暴雪在版本或插件TOC版本号改变时会强制设置全部插件为开启状态
+    -- 所以如果发现之前的buildinfo和现在的buildinfo不一样，则强制使用db的插件开启状态
+    -- 这样并不影响在插件里用非控制台修改插件状态（因为有hook然后设置db），只可能版本更新当天在人物界面里开关插件是无效的
+    local game_version, _, _, toc_version = GetBuildInfo()
+    if U1DBG.lastGameVersion ~= game_version or U1DBG.lastTocVersion ~= toc_version then
+        for name,info in pairs(addonInfo) do
+            if db.addons[name] then
+                info.originEnabled = db.addons[name] == 1
+                if not info.originEnabled then DisableAddOn(name) end -- ConfigsLoaded里，NORMAL的不会被关闭
+            end
+        end
+        U1DBG.lastGameVersion = game_version
+        U1DBG.lastTocVersion = toc_version
+    end
+
     --以当前插件状态设置加载状态
     for name,info in pairs(addonInfo) do
         --以插件状态为准设置当前状态
@@ -1459,7 +1547,7 @@ local function processDefaultEnable()
                     if not enabled and info.originEnabled then
                         DisableAddOn(name)
                     elseif enabled and not info.originEnabled then
-                        EnableAddOn(name)
+                        EnableAddOn(name) --forceDisables will be handled in processSpecialDeps
                     end
                 end
             else
@@ -1478,6 +1566,32 @@ local function processDefaultEnable()
     end
 end
 
+-- PlexusStatusRaidDebuff必须依赖Grid或Plexus之一，否则报错，暴雪没有这种语义
+local function processSpecialDeps()
+    local SpecialDependencies = {
+        ["PlexusStatusRaidDebuff"] = { "Grid", "Plexus" }
+    }
+    local forceDisables = {}
+    for addon, deps in pairs(SpecialDependencies) do
+        if select(5, GetAddOnInfo(addon)) ~= "MISSING" then
+            local mustDisable = true
+            for _, dep in ipairs(deps) do
+                if GetAddOnEnableState(UnitName("player"), dep) ~= 0 then
+                    mustDisable = false
+                    break
+                end
+            end
+            if mustDisable then
+                --print("must disable", addon, GetAddOnEnableState(UnitName("player"), addon) ~= 0)
+                forceDisables[addon:lower()] = true
+                if GetAddOnEnableState(UnitName("player"), addon) ~= 0 then
+                    DisableAddOn(addon)
+                end
+            end
+        end
+    end
+end
+
 local EnableOrLoadDependencies
 
 function U1:ADDON_LOADED(event, name)
@@ -1488,8 +1602,6 @@ function U1:ADDON_LOADED(event, name)
         --print("ADDON_LOADED2", db, U1DB, db==U1DB, db==defaultDB)
         U1DB = db;
         db.LS = nil;
-
-        dbLoaded(U1DB)
 
         --处理老版本的插件开关
         if db.addons then
@@ -1508,6 +1620,7 @@ function U1:ADDON_LOADED(event, name)
         U1DBG = U1DBG or { first_run = true }
         U1DBG.ap_spell = nil
         U1DBG.AtlasLootReverseDBx = nil
+        if U1DBG.lastReloadTime and math.abs(GetTime() - U1DBG.lastReloadTime) > 5 then U1DBG.lastReloadTime = nil end
         db.selectedTag = db.selectedTag or defaultDB.selectedTag;
 
         if U1.returnFromDisableAll then
@@ -1547,20 +1660,34 @@ function U1:ADDON_LOADED(event, name)
             for j=1,#pageself do deepLoad(pageself[j]) end
         end
 
+        --新用户第一次用的时候关闭全部单体插件，经测试(2021.3)，暴雪角色A修改插件设置进角色B，仍然是默认值，但是如果在任务选择界面选中角色然后修改插件，则能生效
+        if U1DB.first_run then
+            U1DB.first_run = nil
+            for k, info in pairs(addonInfo) do
+                if not info.registered then
+                    DisableAddOn(k)
+                    info.originEnabled = true
+                end
+            end
+        end
+
         -- Deal with info.defaultEnable property
         processDefaultEnable()
-		
-		--这里再打开
-		for name,info in pairs(addonInfo) do
-	        if(db.addons[name]==1 and not info.dummy) then
-    	        --增加这个条件是为了让所有插件都通过U1LoadAddOn加载，而不会被暴雪根据依赖关系自动加载。参见VARIABLES_LOADED里的说明。
+
+        -- Must be called after processDefaultEnable
+        processSpecialDeps()
+
+        --这里再打开
+        for name,info in pairs(addonInfo) do
+            if(db.addons[name]==1 and not info.dummy) then
+                --增加这个条件是为了让所有插件都通过U1LoadAddOn加载，而不会被暴雪根据依赖关系自动加载。参见VARIABLES_LOADED里的说明。
                 --一些插件的配置模块如果未开启则无法加载，此时可设置为protected，但不能自动设置，有一些LOD的模块还是看状态加载的
-        	    if info.realLOD or info.protected then
-            	    tinsert(addonsToEnable, name)
-	            end
-    	    end
-		end
-		
+                if info.realLOD or info.protected then
+                    tinsert(addonsToEnable, name)
+                end
+            end
+        end
+
         db.enteredWorld = nil;
 
         local saveState = function(name, value)
@@ -1752,80 +1879,73 @@ function U1:VARIABLES_LOADED(calledFromLogin)
 end
 
 --loadTimer是PLAYER_ENTERING_WORLD和REGEN_ENABLE共用的.
---local addonToLoadSecure, addonToLoad = {}, {}
-local loadTimer, loadTimerSecure
+local loadTimer, loadSpeed, loadCount = nil, 10, 0
 local secureLoadAnnounced = false
 local needSecureLoadAnnounced = false
-local messageInterval = random(11,18); local messageIntervalR = random(messageInterval-3, messageInterval-1); --用来显示剩余个数
-local loadSpeed2;
-local function loadAddon(secure)
-    if InCombatLockdown() and secure then return end
-    local addonList = secure and addonToLoadSecure or addonToLoad
-    local used = 0;
-    while (used < 0.2) do
-        if InCombatLockdown() and secure then return end
-        local name = tremove(addonList, 1);
-        if(not name) then
-            if not secure and #addonToLoadSecure>0 and not needSecureLoadAnnounced then
-                U1Message(format(L["延迟加载 - 还有 |cff00ff00%d|r 个插件将在战斗结束后加载。"], #addonToLoadSecure))
-                --simEventsAndLoadCfgs();
-                needSecureLoadAnnounced = true;
-            end
-            if #addonToLoadSecure==0 and #addonToLoad==0 and not initComplete then
-                if U1_ATD then
-                    local count = 0
-                    for k, v in pairs(U1_ATD) do
-                        count = count + 1
-                    end
-                    U1Message(L["还有至少["]..count..L["]个插件尚未更新完，请等待更新器全部完成后运行/reload重载界面。"], 1, 1, 0);
-                else
-                    U1Message(L["全部插件加载完毕。"])
-                end
-                --simEventsAndLoadCfgs(); --因为先加载插件再注册事件的话，可能导致一些插件加载后先响应了其他事件，而DB却未创建
-                initComplete = true;
-                db.enteredWorld = true; --如果没加载完全部插件, 则下次还原db的设置, 而不是使用Enable/Disable状态
-                CoreFireEvent("INIT_COMPLETED")
-                wipe(loadedNormalAddons);
-                if ( UnitIsDead("player") and not StaticPopup_Visible("DEATH") ) then
-                    if ( GetReleaseTimeRemaining() == 0 ) then
-                        StaticPopup_Show("DEATH");
-                        local name = StaticPopup_Visible("DEATH")
-                        if name then _G[name].text:SetText(DEATH_RELEASE_NOTIMER) end
-                    end
-                end
-            end
-            if secure then
-                CoreCancelTimer(loadTimerSecure);
-            else
-                CoreCancelTimer(loadTimer);
-                --db.enteredWorld = true; --有时卡的不能进, 这时要还原状态, 但如果战斗插件没加载的时候reload, 这些插件就被关了, 所以要挪到initComplete处
-            end
-            break
+local startMillis, lastMillis = 0, nil
+local LOAD_INFO_INTERVAL = 3000 --表示3秒显示一次加载信息
+
+local function loadAddon()
+
+    if InCombatLockdown() then
+        if not needSecureLoadAnnounced then
+            U1Message(format(L["延迟加载 - 还有 |cff00ff00%d|r 个插件将在战斗结束后加载。"], #addonToLoad))
+            needSecureLoadAnnounced = true;
+        end
+        return --5.0之后战斗中必然无法加载插件，会导致script run too long
+    else
+        if needSecureLoadAnnounced and not secureLoadAnnounced then
+            U1Message(L["战斗结束，继续加载插件，请安心等待……"])
+            secureLoadAnnounced = true
+        end
+    end
+
+    local curr = u1debugprofilestop()
+    local used = curr - startMillis
+    if used < loadCount / loadSpeed * 1000 then
+        return
+    end
+
+    if #addonToLoad > 0 then
+        -- 离开战斗了，重置提示信息
+        if needSecureLoadAnnounced then
+            needSecureLoadAnnounced = false
+            secureLoadAnnounced = false
         end
 
+        local name = tremove(addonToLoad, 1);
         if(not IsAddOnLoaded(name)) then
             local info = U1GetAddonInfo(name)
-            if InCombatLockdown() then --and info.secure then --5.0 script ran too long
-                tinsert(addonToLoadSecure, name);
-            else
-                if not secureLoadAnnounced and secure then
-                    --下个周期再添加
-                    tinsert(addonToLoadSecure, name);
-                    U1Message(L["战斗结束，继续加载插件，请安心等待……"])
-                    secureLoadAnnounced = true
-                    used = 1
-                else
-                    if(#addonList % messageInterval == messageIntervalR)then
-                        U1Message(format("延迟加载 - 正在载入插件, 剩余 |cff00ff00%d|r", #addonList));
-                    end
-                    local loaded, reason = U1LoadAddOn(name); --later的还是不能后模拟事件，总之Toggle和Login的能模拟就好了
-                    U1OutputAddonLoaded(name, loaded, reason);
-                    local speed = loadSpeed2 or U1DB.loadSpeed or 20
-                    if speed == 0 then speed = 100 elseif speed==100 then speed = 0 else speed = 0.2/speed end
-                    used = used + speed;
-                end
+
+            -- 每3秒显示一次信息
+            if curr - (lastMillis or 0) > LOAD_INFO_INTERVAL then
+                lastMillis = curr
+                U1Message(format("延迟加载 - 正在载入插件, 剩余 |cff00ff00%d|r, 每秒 |cff00ff00%d|r", #addonToLoad, loadSpeed));
             end
+
+            local loaded, reason, duration
+            if info.bundleSim then
+                -- 因为子模块的事件模拟问题, U1ToggleAddon是父插件和所有子模块加载完后一起模拟事件。handynotes如果不处理，会显示不了路径 TODO: add a config
+                loaded, reason, duration = U1ToggleAddon(name, true, "noset", false, false) --later的还是不能后模拟事件，总之Toggle和Login的能模拟就好了
+            else
+                loaded, reason, duration = U1LoadAddOn(name)
+            end
+            if loaded then loadCount = loadCount + 1 end
+            U1OutputAddonLoaded(name, loaded, reason, duration);
         end
+
+    else
+        -- 全部插件加载完毕了
+        if #addonToLoad==0 and not initComplete then
+             U1Message(L["全部插件加载完毕。"] .. (U1DBG.lastReloadTime and format("本次重载用时%.1f秒。", GetTime() - U1DBG.lastReloadTime) or ""))
+            --simEventsAndLoadCfgs(); --因为先加载插件再注册事件的话，可能导致一些插件加载后先响应了其他事件，而DB却未创建
+            initComplete = true;
+            db.enteredWorld = true; --如果没加载完全部插件, 则下次还原db的设置, 而不是使用Enable/Disable状态
+            CoreFireEvent("INIT_COMPLETED")
+            SaveAddOns() --非常重要，如果这里不保存一下，ESC-插件 然后点击取消会调用ResetAddOns，就会重新开启所有插件，大概是因为加载时DisableAddOn不更新存储状态
+            wipe(loadedNormalAddons);
+        end
+        CoreCancelTimer(loadTimer)
     end
 
     RunOnNextFrameKey("U1MMB_CheckMinimapChildren", CoreCall)
@@ -1844,9 +1964,14 @@ function U1:PLAYER_ENTERING_WORLD(event)
     table.sort(addonToLoad)
 
     if DEBUG_MODE then U1Message(L["进入世界"]) end
-    loadSpeed2 = U1DB.loadSpeed2; U1DB.loadSpeed2 = nil;
-    loadTimer = CoreScheduleTimer(true, 0.01, loadAddon, false);
-    loadTimerSecure = CoreScheduleTimer(true, 0.01, loadAddon, true);
+
+    loadSpeed = U1DB.loadSpeed2 or U1DB.loadSpeed or 20  --loadSpeed2是/rl2临时设置的慢速加载
+    U1DB.loadSpeed2 = nil
+    if loadSpeed < 5 then loadSpeed = 5 elseif loadSpeed > 100 then loadSpeed = 100 end
+
+    --debugprofilestart()
+    startMillis = u1debugprofilestop()
+    loadTimer = CoreScheduleTimer(true, 0.01, loadAddon);
 
     f:UnregisterEvent("PLAYER_ENTERING_WORLD") U1.PLAYER_ENTERING_WORLD = nil;
 end

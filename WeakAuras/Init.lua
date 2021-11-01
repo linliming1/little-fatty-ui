@@ -1,56 +1,116 @@
+local AddonName, Private = ...
 WeakAuras = {}
 WeakAuras.L = {}
+WeakAuras.frames = {}
 
-WeakAuras.normalWidth = 1.25
+WeakAuras.normalWidth = 1.3
 WeakAuras.halfWidth = WeakAuras.normalWidth / 2
 WeakAuras.doubleWidth = WeakAuras.normalWidth * 2
 
-local versionStringFromToc = GetAddOnMetadata("WeakAuras", "Version");
-local versionString = "2.11.6"
-local buildTime = "20190226183814"
+local versionStringFromToc = GetAddOnMetadata("WeakAuras", "Version")
+local versionString = "3.7.2"
+local buildTime = "20211004005241"
+local isDevVersion = false
 
---[===[@debug@
-if versionStringFromToc == "2.11.6" then
+--[==[@debug@
+if versionStringFromToc == "3.7.2" then
   versionStringFromToc = "Dev"
   buildTime = "Dev"
+  isDevVersion = true
 end
---@end-debug@]===]
+--@end-debug@]==]
+
+local intendedWoWProject = WOW_PROJECT_MAINLINE
+
+--[===[@non-version-retail@
+--[====[@version-classic@
+intendedWoWProject = WOW_PROJECT_CLASSIC
+--@end-version-classic@]====]
+--[====[@version-bcc@
+intendedWoWProject = WOW_PROJECT_BURNING_CRUSADE_CLASSIC or 5 -- TODO: Remove when every flavor build has the constant
+--@end-version-bcc@]====]
+--@end-non-version-retail@]===]
 
 WeakAuras.versionString = versionStringFromToc
 WeakAuras.buildTime = buildTime
-WeakAuras.printPrefix = "|cff9900ffWeakAuras:|r "
 WeakAuras.newFeatureString = "|TInterface\\OptionsFrame\\UI-OptionsFrame-NewFeatureIcon:0|t"
+WeakAuras.BuildInfo = select(4, GetBuildInfo())
 
-WeakAuras.prettyPrint = function(msg)
-  print(WeakAuras.printPrefix .. msg)
+function WeakAuras.IsClassic()
+  return WOW_PROJECT_ID == WOW_PROJECT_CLASSIC
 end
 
-WeakAuras.versionMismatchPrint = function()
-  WeakAuras.prettyPrint("You need to restart your game client to complete the WeakAuras update!")
+function WeakAuras.IsBCC()
+  return WOW_PROJECT_ID == WOW_PROJECT_BURNING_CRUSADE_CLASSIC
 end
 
-if versionString ~= versionStringFromToc and versionStringFromToc ~= "Dev" then
-  C_Timer.After(1, WeakAuras.versionMismatchPrint)
+function WeakAuras.IsRetail()
+  return WOW_PROJECT_ID == WOW_PROJECT_MAINLINE
 end
 
-WeakAuras.PowerAurasPath = "Interface\\Addons\\WeakAuras\\PowerAurasMedia\\Auras\\"
-WeakAuras.PowerAurasSoundPath = "Interface\\Addons\\WeakAuras\\PowerAurasMedia\\Sounds\\"
+function WeakAuras.IsCorrectVersion()
+  return isDevVersion or intendedWoWProject == WOW_PROJECT_ID
+end
 
---These function stubs are defined here to reduce the number of errors that occur if WeakAuras.lua fails to compile
+WeakAuras.prettyPrint = function(...)
+  print("|cff9900ffWeakAuras:|r ", ...)
+end
+
+local intendedWoWProjectName = {
+  [WOW_PROJECT_MAINLINE] = "Retail",
+  [WOW_PROJECT_CLASSIC] = "Classic",
+  [WOW_PROJECT_BURNING_CRUSADE_CLASSIC or 5] = "The Burning Crusade Classic" -- TODO: Remove when every flavor build has the constant
+}
+
+Private.wrongTargetMessage = "This version of WeakAuras was packaged for World of Warcraft " .. intendedWoWProjectName[intendedWoWProject] ..
+                              ". Please install the " .. intendedWoWProjectName[WOW_PROJECT_ID] ..
+                              " version instead.\nIf you are using an addon manager, then" ..
+                              " contact their support for further assistance and reinstall WeakAuras manually."
+
+if not WeakAuras.IsCorrectVersion() then
+  C_Timer.After(1, function() WeakAuras.prettyPrint(Private.wrongTargetMessage) end)
+end
+
+-- Force enable WeakAurasCompanion and Archive because some addon managers interfere with it
+EnableAddOn("WeakAurasCompanion")
+EnableAddOn("WeakAurasArchive")
+
+-- These function stubs are defined here to reduce the number of errors that occur if WeakAuras.lua fails to compile
 function WeakAuras.RegisterRegionType()
 end
 
 function WeakAuras.RegisterRegionOptions()
 end
 
-function WeakAuras.StartProfileSystem()
+function Private.StartProfileSystem()
 end
 
-function WeakAuras.StartProfileAura()
+function Private.StartProfileAura()
 end
 
-function WeakAuras.StopProfileSystem()
+function Private.StopProfileSystem()
 end
 
-function WeakAuras.StopProfileAura()
+function Private.StopProfileAura()
+end
+
+function Private.StartProfileUID()
+end
+
+function Private.StopProfileUID()
+end
+
+-- If WeakAuras shuts down due to being installed on the wrong target, keep the bindings from erroring
+function WeakAuras.StartProfile()
+end
+
+function WeakAuras.StopProfile()
+end
+
+function WeakAuras.PrintProfile()
+end
+
+function WeakAuras.CountWagoUpdates()
+  -- XXX this is to work around the Companion app trying to use our stuff!
+  return 0
 end

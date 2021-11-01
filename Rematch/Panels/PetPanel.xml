@@ -7,7 +7,7 @@
 		</KeyValues>
 		<Layers>
 			<Layer level="BACKGROUND">
-				<Texture parentKey="Back" file="Interface\AddOns\Rematch\Textures\backplate.tga">
+				<Texture parentKey="Back" file="Interface\AddOns\Rematch\Textures\backplate">
 					<Anchors>
 						<Anchor point="TOPLEFT" x="27" y="0"/>
 						<Anchor point="BOTTOMRIGHT"/>
@@ -16,7 +16,7 @@
 				</Texture>
 			</Layer>
 			<Layer level="ARTWORK">
-				<Texture parentKey="Pet" file="Interface\Icons\INV_Misc_QuestionMark">
+				<Texture parentKey="Pet">
 					<Size x="25" y="25"/>
 					<Anchors>
 						<Anchor point="LEFT" x="1" y="0"/>
@@ -70,6 +70,21 @@
 					</Anchors>
 					<TexCoords left="0.125" right="0.25" top="0" bottom="0.25"/>
 				</Texture>				
+				<Texture parentKey="InTeams" file="Interface\AddOns\Rematch\Textures\Footnotes" hidden="false">
+					<Size x="20" y="20"/>
+					<Anchors>
+						<Anchor point="RIGHT" x="-64" y="0"/>
+					</Anchors>
+					<TexCoords left="0.5" right="0.625" top="0.5" bottom="0.75"/>
+				</Texture>				
+				<!-- either the dead or injured texture (maybe others in the future) -->
+				<Texture parentKey="Status" file="Interface\AddOns\Rematch\Textures\petstatus" hidden="true">
+					<Size x="24" y="24"/>
+					<Anchors>
+						<Anchor point="LEFT" x="2" y="-1"/>
+					</Anchors>
+				</Texture>
+
 				<Texture parentKey="Favorite" atlas="PetJournal-FavoritesIcon" hidden="true">
 					<Size x="20" y="20"/>
 					<Anchors>
@@ -122,7 +137,7 @@
 		<Size x="200" y="44"/> <!-- can be any width; 1px unused across top so 43px usable height -->
 		<Layers>
 			<Layer level="BACKGROUND">
-				<Texture parentKey="Back" file="Interface\AddOns\Rematch\Textures\backplate.tga">
+				<Texture parentKey="Back" file="Interface\AddOns\Rematch\Textures\backplate">
 					<Anchors>
 						<Anchor point="TOPLEFT" x="48" y="0"/>
 						<Anchor point="BOTTOMRIGHT"/>
@@ -131,7 +146,7 @@
 				</Texture>
 			</Layer>
 			<Layer level="ARTWORK">
-				<Texture parentKey="Pet" file="Interface\Icons\INV_Misc_Questionmark">
+				<Texture parentKey="Pet">
 					<Size x="40" y="40"/>
 					<Anchors>
 						<Anchor point="LEFT" x="3" y="0"/>
@@ -170,7 +185,7 @@
 			</Layer>
 			<Layer level="BORDER">
 				<!-- big type symbol in background right edge of list button -->
-				<Texture parentKey="TypeDecal" file="Interface\AddOns\Rematch\Textures\PetTypeDecals" alpha="0.4">
+				<Texture parentKey="TypeDecal" file="Interface\AddOns\Rematch\Textures\PetTypeDecals" alpha="0.4" hidden="true">
 					<Size x="58" y="41"/> <!-- was 55x38 -->
 					<Anchors>
 						<Anchor point="RIGHT" x="-1" y="0"/>
@@ -179,15 +194,22 @@
 			</Layer>
 			<Layer level="OVERLAY">
 				<!-- blue up arrow on right side; in this layer so it's not clickable -->
-				<Texture parentKey="Leveling" file="Interface\AddOns\Rematch\Textures\Footnotes" hidden="false">
+				<Texture parentKey="Leveling" file="Interface\AddOns\Rematch\Textures\Footnotes" hidden="true">
 					<Size x="20" y="20"/>
 					<Anchors>
 						<Anchor point="TOPRIGHT" x="-22" y="-3"/>
 					</Anchors>
 					<TexCoords left="0.125" right="0.25" top="0" bottom="0.25"/>
-				</Texture>				
+				</Texture>
+				<Texture parentKey="InTeams" file="Interface\AddOns\Rematch\Textures\Footnotes" hidden="false">
+					<Size x="20" y="20"/>
+					<Anchors>
+						<Anchor point="TOPRIGHT" x="-43" y="-3"/>
+					</Anchors>
+					<TexCoords left="0.5" right="0.625" top="0.5" bottom="0.75"/>
+				</Texture>
 				<!-- border around the pet icon to the left -->
-				<Texture parentKey="Rarity" file="Interface\AddOns\Rematch\Textures\slotborder.tga">
+				<Texture parentKey="Rarity" file="Interface\AddOns\Rematch\Textures\slotborder">
 					<Size x="44" y="44"/>
 					<Anchors>
 						<Anchor point="TOPLEFT" relativeKey="$parent.Pet" x="-2" y="2"/>
@@ -196,9 +218,16 @@
 					<!-- <Color r="0.5" g="0.5" b="0.5"/> -->
 					<TexCoords left="0" right="0.34375" top="0" bottom="0.34375"/>
 				</Texture>
+				<!-- either the dead or injured texture (maybe others in the future) -->
+				<Texture parentKey="Status" file="Interface\AddOns\Rematch\Textures\petstatus" hidden="true">
+					<Size x="39" y="39"/>
+					<Anchors>
+						<Anchor point="LEFT" x="4" y="0"/>
+					</Anchors>
+				</Texture>
 			</Layer>
 			<Layer level="OVERLAY" textureSubLevel="2">
-				<Texture parentKey="Favorite" atlas="PetJournal-FavoritesIcon" useAtlasSize="true" hidden="false">
+				<Texture parentKey="Favorite" atlas="PetJournal-FavoritesIcon" useAtlasSize="true" hidden="true">
 					<Anchors>
 						<Anchor point="TOPLEFT" x="-6" y="5"/>
 					</Anchors>
@@ -258,7 +287,7 @@
 
 	<!-- template for the typebar tabs -->
 	<Button name="RematchTypeBarTabTemplate" inherits="RematchTabTemplate" virtual="true">
-		<Size x="84" y="24"/>
+		<Size x="66" y="24"/>
 		<Scripts>
 			<OnClick>
 				RematchPetPanel.TypeBarTabOnClick(self)
@@ -326,37 +355,47 @@
 						</Scripts>
 					</EditBox>
 					<!-- the actual typebar -->
-					<Frame parentKey="TypeBar" hidden="true">
+					<Frame parentKey="TypeBar" hidden="true" inherits="RematchBorderBackdropTemplate">
 						<Size x="270" y="36"/>
 						<Anchors>
 							<Anchor point="BOTTOM" x="0" y="3"/>
 						</Anchors>
-						<Backdrop edgeFile="Interface\Tooltips\UI-Tooltip-Border" tile="true">
+						<!-- <Backdrop edgeFile="Interface\Tooltips\UI-Tooltip-Border" tile="true">
 							<EdgeSize val="16"/>
 							<BorderColor r="0.6" g="0.6" b="0.6"/>
-						</Backdrop>
+						</Backdrop> -->
 						<Frames>
 							<!-- type tab -->
 							<Button parentArray="Tabs" inherits="RematchTypeBarTabTemplate" id="1">
+								<Size x="56" y="24"/>
 								<Anchors>
-									<Anchor point="BOTTOMLEFT" relativePoint="TOPLEFT" x="4" y="-4"/>
+									<Anchor point="BOTTOMLEFT" relativePoint="TOPLEFT" x="2" y="-4"/>
 								</Anchors>
 							</Button>
 							<!-- strong vs tab -->
 							<Button parentArray="Tabs" inherits="RematchTypeBarTabTemplate" id="2">
+								<Size x="72" y="24"/>
 								<Anchors>
-									<Anchor point="BOTTOMLEFT" relativePoint="TOPLEFT" x="83" y="-4"/>
+									<Anchor point="BOTTOMLEFT" relativePoint="TOPLEFT" x="52" y="-4"/>
 								</Anchors>
 							</Button>
 							<!-- tough vs tab -->
 							<Button parentArray="Tabs" inherits="RematchTypeBarTabTemplate" id="3">
+								<Size x="72" y="24"/>
 								<Anchors>
-									<Anchor point="BOTTOMLEFT" relativePoint="TOPLEFT" x="162" y="-4"/>
+									<Anchor point="BOTTOMLEFT" relativePoint="TOPLEFT" x="118" y="-4"/>
+								</Anchors>
+							</Button>
+							<!-- quality tab -->
+							<Button parentArray="Tabs" inherits="RematchTypeBarTabTemplate" id="4">
+								<Size x="68" y="24"/>
+								<Anchors>
+									<Anchor point="BOTTOMLEFT" relativePoint="TOPLEFT" x="184" y="-4"/>
 								</Anchors>
 							</Button>
 							<Button parentKey="Clear" inherits="RematchClearButtonTemplate">
 								<Anchors>
-									<Anchor point="BOTTOMRIGHT" relativePoint="TOPRIGHT" x="-5" y="0"/>
+									<Anchor point="BOTTOMRIGHT" relativePoint="TOPRIGHT" x="-3" y="-1"/>
 								</Anchors>
 								<Scripts>
 									<OnClick>
@@ -374,6 +413,62 @@
 							<CheckButton parentArray="Buttons" inherits="RematchTypeBarButtonTemplate" id="8"/>
 							<CheckButton parentArray="Buttons" inherits="RematchTypeBarButtonTemplate" id="9"/>
 							<CheckButton parentArray="Buttons" inherits="RematchTypeBarButtonTemplate" id="10"/>
+							<Frame parentKey="QualityBar">
+								<Anchors>
+									<Anchor point="TOPLEFT"/>
+									<Anchor point="BOTTOMRIGHT"/>
+								</Anchors>
+								<Layers>
+									<Layer level="ARTWORK">
+										<FontString parentKey="SortLabel" inherits="GameFontHighlightSmall" text="Sort by">
+											<Anchors>
+												<Anchor point="LEFT" x="20" y="0"/>
+											</Anchors>
+										</FontString>
+										<FontString parentKey="OnlyLabel" inherits="GameFontHighlightSmall" text="Only">
+											<Anchors>
+												<Anchor point="RIGHT" x="-80" y="0"/>
+											</Anchors>
+										</FontString>
+									</Layer>
+								</Layers>
+								<Frames>
+									<CheckButton parentKey="Level25Button" inherits="RematchTypeBarButtonTemplate">
+										<Anchors>
+											<Anchor point="LEFT" relativeKey="$parent.OnlyLabel" relativePoint="RIGHT" x="4" y="0"/>
+										</Anchors>
+										<Layers>
+											<Layer level="OVERLAY">
+												<FontString inherits="GameFontNormalSmall" text="25">
+													<Anchors>
+														<Anchor point="CENTER"/>
+													</Anchors>
+												</FontString>
+											</Layer>
+										</Layers>
+									</CheckButton>
+									<CheckButton parentKey="RareButton" inherits="RematchTypeBarButtonTemplate">
+										<Anchors>
+											<Anchor point="LEFT" relativeKey="$parent.OnlyLabel" relativePoint="RIGHT" x="30" y="0"/>
+										</Anchors>
+									</CheckButton>
+									<CheckButton parentKey="HealthButton" inherits="RematchTypeBarButtonTemplate">
+										<Anchors>
+											<Anchor point="LEFT" relativeKey="$parent.SortLabel" relativePoint="RIGHT" x="4" y="0"/>
+										</Anchors>
+									</CheckButton>
+									<CheckButton parentKey="PowerButton" inherits="RematchTypeBarButtonTemplate">
+										<Anchors>
+											<Anchor point="LEFT" relativeKey="$parent.SortLabel" relativePoint="RIGHT" x="30" y="0"/>
+										</Anchors>
+									</CheckButton>
+									<CheckButton parentKey="SpeedButton" inherits="RematchTypeBarButtonTemplate">
+										<Anchors>
+											<Anchor point="LEFT" relativeKey="$parent.SortLabel" relativePoint="RIGHT" x="56" y="0"/>
+										</Anchors>
+									</CheckButton>
+								</Frames>
+							</Frame>
 						</Frames>
 					</Frame>
 				</Frames>

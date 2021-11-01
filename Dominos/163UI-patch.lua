@@ -78,17 +78,17 @@ function Dominos:U1_GetPreset(style)
 
     else
         frames.menu = {
-            x = 0, y = 0, point = 'BOTTOMRIGHT',
+            x = 0, y = 0, point = 'LEFT',
             anchor = '1RC',
-            spacing = 3, padW = 4, padH = 4,
-            scale = 0.9,
+            spacing = 0, padW = 3, padH = 1,
+            scale = 1.0,
         }
 
         frames.bags = {
-            x = 0, y = 0, point = 'TOPLEFT',
-            anchor = 'menuRT',
-            scale = 0.93,
-            spacing = 2,
+            x = 0, y = 0, point = 'BOTTOMLEFT',
+            anchor = 'menuRC',
+            scale = 0.90,
+            spacing = 3, padW = 2, padH = 2,
         }
 
         for i = 1, 10 do
@@ -148,9 +148,6 @@ function Dominos:U1_GetPreset(style)
         padW = 1, spacing = 1, padH = 1,
     }
 
-    frames.artifact = Mixin({x=0, y=0, point='BOTTOMLEFT', width=mini and 280 or 130, display={label=false, value=true, max=true}}, exp_default)
-    frames.artifact.display.percent = false
-    frames.artifact.numButtons = 1
     --/run Dominos:GetModule("ProgressBars").bars[2]:SetNumButtons(5)
     frames.exp = Mixin({x=0, y=0, point='BOTTOM', width=mini and 480 or 950, display={label=true, value=true, max=true, bonus=true, percent=true}}, exp_default)
 
@@ -186,19 +183,20 @@ function Dominos:U1_GetPreset(style)
         }
     }
 
-    frames.cast = { x=0, y=180, point='BOTTOM', showText=true, }
+    frames.cast = { x=0, y=180, point='BOTTOM', showText=true, showInOverrideUI = true }
     frames.roll = { point='BOTTOM', x=0, y=128, spacing=2, columns=1, }
     frames.alerts = { point='BOTTOM', x=0, y=138, spacing=2, columns=1, }
     --frames.roll = { x=0, y=0, point='CENTER', numButtons = NUM_GROUP_LOOT_FRAMES, spacing=2, columns=1, }
     frames.page = { x=0, y=0, point='BOTTOMLEFT', spacing=0, columns=1, anchor='1LC', scale=0.9, fadeAlpha=0.35, }
     frames.encounter = { x=0, point='BOTTOM', x=0, y=mini and 200+30 or 160+30, anchor='BOTTOM' }
+    frames.extra = { point = 'CENTER', x = -244, y = 0, showInPetBattleUI = true, showInOverrideUI = true }
+    frames.zone = { point = 'CENTER', x = 0, y = -244, showInPetBattleUI = true, showInOverrideUI = true }
 
     --基于MINI
     if real_style == "COMPACT" then
-        Mixin(frames.artifact, { point="BOTTOMRIGHT", width=166 })
-        Mixin(frames.exp, { point="BOTTOMRIGHT", anchor="artifactLC", width=439 })
-        Mixin(frames[1], { point="BOTTOMRIGHT", anchor="expTR" })
-        Mixin(frames.menu, { point="BOTTOMRIGHT", anchor="artifactTR" })
+        Mixin(frames.exp, { point="BOTTOMRIGHT", width=610 })
+        Mixin(frames.menu, { point="BOTTOMRIGHT", anchor="expTR" })
+        Mixin(frames[1], { point="BOTTOMLEFT", anchor="expTL" })
         for i=1, 10 do
             frames[i].scale = (i==3 or i==4) and 0.82 or 0.92
         end

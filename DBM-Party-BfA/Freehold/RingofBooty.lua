@@ -1,10 +1,9 @@
 local mod	= DBM:NewMod(2094, "DBM-Party-BfA", 2, 1001)
 local L		= mod:GetLocalizedStrings()
 
-mod:SetRevision(("$Revision: 18153 $"):sub(12, -3))
+mod:SetRevision("20201116014239")
 mod:SetCreatureID(126969)
 mod:SetEncounterID(2095)
-mod:SetZone()
 
 mod:RegisterCombat("combat")
 
@@ -29,7 +28,6 @@ local specWarnSharkTossNear			= mod:NewSpecialWarningClose(256358, nil, nil, nil
 local yellSharkToss					= mod:NewYell(256358)
 local specWarnSharknado				= mod:NewSpecialWarningRun(256405, nil, nil, nil, 4, 2)
 local specWarnRearm					= mod:NewSpecialWarningDodge(256489, nil, nil, nil, 2, 2)
---local specWarnGTFO				= mod:NewSpecialWarningGTFO(238028, nil, nil, nil, 1, 8)
 
 local timerRP						= mod:NewRPTimer(68)
 --local timerSharkTossCD			= mod:NewCDTimer(31.5, 194956, nil, nil, nil, 3)--Disabled until more data, seems highly variable, even pull to pull
@@ -106,31 +104,16 @@ function mod:UNIT_DIED(args)
 	end
 end
 
-function mod:CHAT_MSG_MONSTER_YELL(msg, npc, _, _, target)
-	--"<0.92 02:51:13> [CHAT_MSG_MONSTER_YELL] Gather 'round and place yer bets! We got a new set of vict-- uh... competitors! Take it away, Gurthok and Wodin!#Davey \"Two Eyes\"###Hunyadi##0#0##0#1165#nil#0#false#false#false#false", 
+function mod:CHAT_MSG_MONSTER_YELL(msg)
+	--"<0.92 02:51:13> [CHAT_MSG_MONSTER_YELL] Gather 'round and place yer bets! We got a new set of vict-- uh... competitors! Take it away, Gurthok and Wodin!#Davey \"Two Eyes\"###Hunyadi##0#0##0#1165#nil#0#false#false#false#false",
 	--"<63.07 02:52:15> [CLEU] SPELL_AURA_APPLIED#Creature-0-2084-1754-9152-130099-00007D20E9#Lightning#Creature-0-2084-1754-9152-130099-00007D20E9#Lightning#257829#Greasy#BUFF#nil", -- [23]
 	if (msg == L.openingRP or msg:find(L.openingRP)) and self:LatencyCheck(1000) then
 		self:SendSync("openingRP")
 	end
 end
 
-function mod:OnSync(msg, targetname)
+function mod:OnSync(msg)
 	if msg == "openingRP" and self:AntiSpam(10, 6) then
 		timerRP:Start(62)
 	end
 end
-
---[[
-function mod:SPELL_PERIODIC_DAMAGE(_, _, _, _, destGUID, _, _, _, spellId)
-	if spellId == 228007 and destGUID == UnitGUID("player") and self:AntiSpam(2, 4) then
-		specWarnGTFO:Show()
-		specWarnGTFO:Play("watchfeet")
-	end
-end
-mod.SPELL_PERIODIC_MISSED = mod.SPELL_PERIODIC_DAMAGE
-
-function mod:UNIT_SPELLCAST_SUCCEEDED(uId, _, spellId)
-	if spellId == 257939 then
-	end
-end
---]]

@@ -32,7 +32,12 @@
 <frames>
 
 
-<Frame name="icralistach" hidden="true" parent="ARmain1">
+<Frame name="icralistach" hidden="true" parent="ARmain1" inherits="BackdropTemplate">
+    <KeyValues>
+        <KeyValue key="backdropInfo" value="BACKDROP_TOOLTIP_16_16_5555" type="global"/>
+        <KeyValue key="backdropBorderColor" value="TOOLTIP_DEFAULT_COLOR" type="global"/>
+        <KeyValue key="backdropBorderColorAlpha" value="0.25" type="number"/>
+    </KeyValues>
 
 <Size x="750" y="500"/>
 	<Anchors>
@@ -45,17 +50,6 @@
 	</FontString>
 	</Layer>
 	</Layers>
-	<Backdrop bgFile="Interface\DialogFrame\UI-DialogBox-Background" edgeFile="Interface\DialogFrame\UI-DialogBox-Border" tile="true">
-	<TileSize>
-	<AbsValue val="32"/>
-	</TileSize>
-	<EdgeSize>
-	<AbsValue val="32"/>
-	</EdgeSize>
-	<BackgroundInsets>
-	<AbsInset left="11" right="12" top="12" bottom="11"/>
-	</BackgroundInsets>
-	</Backdrop>
 <frames>
 <Button name="$parent_Button7" inherits="UIPanelButtonTemplate" text="rallsend">
 	<Size x="130" y="21"/><Anchors><Anchor point="TOPLEFT"><Offset x="610" y="-385"/></Anchor></Anchors>
@@ -69,7 +63,12 @@
 
 	</Frame>
 
-<Frame name="icralistach2" hidden="true" parent="ARmain1">
+<Frame name="icralistach2" hidden="true" parent="ARmain1" inherits="BackdropTemplate">
+    <KeyValues>
+        <KeyValue key="backdropInfo" value="BACKDROP_TOOLTIP_16_16_5555" type="global"/>
+        <KeyValue key="backdropBorderColor" value="TOOLTIP_DEFAULT_COLOR" type="global"/>
+        <KeyValue key="backdropBorderColorAlpha" value="0.25" type="number"/>
+    </KeyValues>
 
 <Size x="750" y="500"/>
 	<Anchors>
@@ -82,17 +81,6 @@
 	</FontString>
 	</Layer>
 	</Layers>
-	<Backdrop bgFile="Interface\DialogFrame\UI-DialogBox-Background" edgeFile="Interface\DialogFrame\UI-DialogBox-Border" tile="true">
-	<TileSize>
-	<AbsValue val="32"/>
-	</TileSize>
-	<EdgeSize>
-	<AbsValue val="32"/>
-	</EdgeSize>
-	<BackgroundInsets>
-	<AbsInset left="11" right="12" top="12" bottom="11"/>
-	</BackgroundInsets>
-	</Backdrop>
 <frames>
 <Button name="$parent_Button7" inherits="UIPanelButtonTemplate" text="rallsend">
 	<Size x="130" y="21"/><Anchors><Anchor point="TOPLEFT"><Offset x="610" y="-385"/></Anchor></Anchors>
@@ -110,7 +98,12 @@
 
 	</Frame>
 
-<Frame name="icralistach3" hidden="true" parent="ARmain1">
+<Frame name="icralistach3" hidden="true" parent="ARmain1" inherits="BackdropTemplate">
+    <KeyValues>
+        <KeyValue key="backdropInfo" value="BACKDROP_TOOLTIP_16_16_5555" type="global"/>
+        <KeyValue key="backdropBorderColor" value="TOOLTIP_DEFAULT_COLOR" type="global"/>
+        <KeyValue key="backdropBorderColorAlpha" value="0.25" type="number"/>
+    </KeyValues>
 
 <Size x="750" y="500"/>
 	<Anchors>
@@ -123,17 +116,6 @@
 	</FontString>
 	</Layer>
 	</Layers>
-	<Backdrop bgFile="Interface\DialogFrame\UI-DialogBox-Background" edgeFile="Interface\DialogFrame\UI-DialogBox-Border" tile="true">
-	<TileSize>
-	<AbsValue val="32"/>
-	</TileSize>
-	<EdgeSize>
-	<AbsValue val="32"/>
-	</EdgeSize>
-	<BackgroundInsets>
-	<AbsInset left="11" right="12" top="12" bottom="11"/>
-	</BackgroundInsets>
-	</Backdrop>
 <frames>
 <Button name="$parent_Button7" inherits="UIPanelButtonTemplate" text="rallsend">
 	<Size x="130" y="21"/><Anchors><Anchor point="TOPLEFT"><Offset x="610" y="-385"/></Anchor></Anchors>

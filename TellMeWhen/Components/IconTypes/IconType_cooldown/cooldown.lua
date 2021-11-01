@@ -66,6 +66,9 @@ Type:RegisterIconDefaults{
 	-- True to cause the icon to act as unusable when the ability lacks power to be used.
 	ManaCheck				= false,
 
+	-- True to treat the spell as unusable if it is on the GCD.
+	GCDAsUnusable			= false,
+
 	-- True to prevent rune cooldowns from causing the ability to be deemed unusable.
 	IgnoreRunes				= false,
 }
@@ -110,6 +113,10 @@ Type:RegisterConfigPanel_ConstructorFunc(150, "TellMeWhen_CooldownSettings", fun
 		function(check)
 			check:SetTexts(L["ICONMENU_MANACHECK"], L["ICONMENU_MANACHECK_DESC"])
 			check:SetSetting("ManaCheck")
+		end,
+		function(check)
+			check:SetTexts(L["ICONMENU_GCDASUNUSABLE"], L["ICONMENU_GCDASUNUSABLE_DESC"])
+			check:SetSetting("GCDAsUnusable")
 		end,
 		pclass == "DEATHKNIGHT" and function(check)
 			check:SetTexts(L["ICONMENU_IGNORERUNES"], L["ICONMENU_IGNORERUNES_DESC"])
@@ -168,8 +175,8 @@ local usableData = {}
 local unusableData = {}
 local function SpellCooldown_OnUpdate(icon, time)    
 	-- Upvalue things that will be referenced a lot in our loops.
-	local IgnoreRunes, RangeCheck, ManaCheck, NameArray, NameStringArray =
-	icon.IgnoreRunes, icon.RangeCheck, icon.ManaCheck, icon.Spells.Array, icon.Spells.StringArray
+	local IgnoreRunes, RangeCheck, ManaCheck, GCDAsUnusable, NameArray, NameStringArray =
+	icon.IgnoreRunes, icon.RangeCheck, icon.ManaCheck, icon.GCDAsUnusable, icon.Spells.Array, icon.Spells.StringArray
 
 	local usableAlpha = icon.States[STATE_USABLE].Alpha
 	local runeCD = IgnoreRunes and GetRuneCooldownDuration()
@@ -217,7 +224,7 @@ local function SpellCooldown_OnUpdate(icon, time)
 					-- If the spell has charges and they aren't all depeleted, its usable
 					or (charges and charges > 0)
 					-- If we're just on a GCD, its usable
-					or OnGCD(duration)
+					or (not GCDAsUnusable and OnGCD(duration))
 				)
 			then --usable
 				if not usableFound then
@@ -293,7 +300,6 @@ function Type:Setup(icon)
 		icon.IgnoreRunes =  nil
 	end
 	
-	if TMW.HELP then TMW.HELP:Hide("ICONTYPE_COOLDOWN_VOIDBOLT") end
 	if icon.Spells.FirstString == strlower(GetSpellInfo(75)) and not icon.Spells.Array[2] then
 		-- Auto shot needs special handling - it isn't a regular cooldown, so it gets its own update function.
 		icon:SetInfo("texture", GetSpellTexture(75))
@@ -308,52 +314,34 @@ function Type:Setup(icon)
 		icon:SetScript("OnEvent", AutoShot_OnEvent)
 		
 		icon:SetUpdateFunction(AutoShot_OnUpdate)
-	else
-		local voidBolt = GetSpellInfo(228266)
-		if icon.Spells.FirstString == strlower(voidBolt)
-			and not icon.Spells.Array[2]
-			and icon:IsBeingEdited() == "MAIN"
-			and TellMeWhen_ChooseName
-		then
-			-- Tracking the CD of void bolt doesn't work - you have to check void eruption.
-			local voidEruption = GetSpellInfo(228260)
-			local voidForm = GetSpellInfo(228264)
-			TMW.HELP:Show{
-				code = "ICONTYPE_COOLDOWN_VOIDBOLT",
-				codeOrder = 2,
-				icon = icon,
-				relativeTo = TellMeWhen_ChooseName,
-				x = 0,
-				y = 0,
-				text = format(L["HELP_COOLDOWN_VOIDBOLT"], voidBolt, voidEruption, voidForm, voidBolt)
-			}
-		end
+		icon:Update()
+		
+		return
+	end
 
-		icon.FirstTexture = GetSpellTexture(icon.Spells.First)
-		
-		icon:SetInfo("texture; reverse; spell", Type:GetConfigIconTexture(icon), false, icon.Spells.First)
-		
-		
-		if not icon.RangeCheck then
-			-- There are no events for when you become in range/out of range for a spell
+	icon.FirstTexture = GetSpellTexture(icon.Spells.First)
+	
+	icon:SetInfo("texture; reverse; spell", Type:GetConfigIconTexture(icon), false, icon.Spells.First)
+	
+	
+	if not icon.RangeCheck then
+		-- There are no events for when you become in range/out of range for a spell
 
-			icon:RegisterSimpleUpdateEvent("SPELL_UPDATE_COOLDOWN")
-			icon:RegisterSimpleUpdateEvent("SPELL_UPDATE_USABLE")
-			icon:RegisterSimpleUpdateEvent("SPELL_UPDATE_CHARGES")
-			if icon.IgnoreRunes then
-				icon:RegisterSimpleUpdateEvent("RUNE_POWER_UPDATE")
-			end    
-			if icon.ManaCheck then
-				icon:RegisterSimpleUpdateEvent("UNIT_POWER_FREQUENT", "player")
-				-- icon:RegisterSimpleUpdateEvent("SPELL_UPDATE_USABLE")-- already registered
-			end
-			
-			icon:SetUpdateMethod("manual")
+		icon:RegisterSimpleUpdateEvent("SPELL_UPDATE_COOLDOWN")
+		icon:RegisterSimpleUpdateEvent("SPELL_UPDATE_USABLE")
+		icon:RegisterSimpleUpdateEvent("SPELL_UPDATE_CHARGES")
+		if icon.IgnoreRunes then
+			icon:RegisterSimpleUpdateEvent("RUNE_POWER_UPDATE")
+		end    
+		if icon.ManaCheck then
+			icon:RegisterSimpleUpdateEvent("UNIT_POWER_FREQUENT", "player")
+			-- icon:RegisterSimpleUpdateEvent("SPELL_UPDATE_USABLE")-- already registered
 		end
 		
-		icon:SetUpdateFunction(SpellCooldown_OnUpdate)
+		icon:SetUpdateMethod("manual")
 	end
 	
+	icon:SetUpdateFunction(SpellCooldown_OnUpdate)
 	icon:Update()
 end
 

@@ -1,10 +1,9 @@
 local mod	= DBM:NewMod(2129, "DBM-Party-BfA", 10, 1001)
 local L		= mod:GetLocalizedStrings()
 
-mod:SetRevision(("$Revision: 18036 $"):sub(12, -3))
+mod:SetRevision("20201116014239")
 mod:SetCreatureID(131864)
 mod:SetEncounterID(2117)
-mod:SetZone()
 
 mod:RegisterCombat("combat")
 
@@ -22,18 +21,16 @@ local warnDeathlens					= mod:NewTargetNoFilterAnnounce(268202, 4)
 local specWarnSummonSlaver			= mod:NewSpecialWarningSwitch(266266, "-Healer", nil, nil, 1, 2)
 local specWarnDreadEssence			= mod:NewSpecialWarningSpell(266181, nil, nil, nil, 2, 2)
 local specWarnDarkenedLightning		= mod:NewSpecialWarningInterrupt(266225, "HasInterrupt", nil, nil, 1, 2)
---local yellSwirlingScythe			= mod:NewYell(195254)
---local specWarnGTFO				= mod:NewSpecialWarningGTFO(238028, nil, nil, nil, 1, 8)
 
-local timerDarkenedLightningCD		= mod:NewCDTimer(15.7, 266225, nil, nil, nil, 4, nil, DBM_CORE_INTERRUPT_ICON)--Has interrupt spell icon but it's not actually interruptable
+local timerDarkenedLightningCD		= mod:NewCDTimer(15.7, 266225, nil, nil, nil, 4, nil, DBM_CORE_L.INTERRUPT_ICON)--Has interrupt spell icon but it's not actually interruptable
 local timerSummonSlaverCD			= mod:NewCDTimer(17, 266266, nil, nil, nil, 1)--17-22
 local timerDreadEssenceCD			= mod:NewCDTimer(27.9, 266181, nil, nil, nil, 2)
 
 mod:AddRangeFrameOption(6, 266225)--Range guessed, can't find spell data for it
 
 function mod:OnCombatStart(delay)
-	timerDarkenedLightningCD:Start(8-delay)
-	timerSummonSlaverCD:Start(13-delay)
+	timerSummonSlaverCD:Start(2.5-delay)
+	timerDarkenedLightningCD:Start(6.1-delay)
 	timerDreadEssenceCD:Start(25-delay)
 	if self.Options.RangeFrame then
 		DBM.RangeCheck:Show(6)
@@ -52,8 +49,6 @@ function mod:SPELL_AURA_APPLIED(args)
 		warnDeathlens:CombinedShow(0.3, args.destName)
 	end
 end
---mod.SPELL_AURA_APPLIED_DOSE = mod.SPELL_AURA_APPLIED
-
 
 function mod:SPELL_CAST_START(args)
 	local spellId = args.spellId
@@ -79,25 +74,3 @@ function mod:SPELL_CAST_SUCCESS(args)
 		specWarnSummonSlaver:Play("killmob")
 	end
 end
-
---[[
-function mod:SPELL_PERIODIC_DAMAGE(_, _, _, _, destGUID, _, _, _, spellId)
-	if spellId == 228007 and destGUID == UnitGUID("player") and self:AntiSpam(2, 4) then
-		specWarnGTFO:Show()
-		specWarnGTFO:Play("watchfeet")
-	end
-end
-mod.SPELL_PERIODIC_MISSED = mod.SPELL_PERIODIC_DAMAGE
-
-function mod:UNIT_DIED(args)
-	local cid = self:GetCIDFromGUID(args.destGUID)
-	if cid == 124396 then
-		
-	end
-end
-
-function mod:UNIT_SPELLCAST_SUCCEEDED(uId, _, spellId)
-	if spellId == 257939 then
-	end
-end
---]]

@@ -1,6 +1,6 @@
-## Interface: 80100
+## Interface: 90100
 ## Title: ToyPlus
-## Version: 1.7.1
+## Version: 1.7.2
 ## Author: distnz
 ## SavedVariables: ToyPlusDB
 ## Notes: Launcher for your favourite toys.

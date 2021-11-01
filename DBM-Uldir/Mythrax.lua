@@ -1,10 +1,9 @@
 local mod	= DBM:NewMod(2194, "DBM-Uldir", nil, 1031)
 local L		= mod:GetLocalizedStrings()
 
-mod:SetRevision(("$Revision: 18139 $"):sub(12, -3))
+mod:SetRevision("20201116005403")
 mod:SetCreatureID(134546)--138324 Xalzaix
 mod:SetEncounterID(2135)
-mod:SetZone()
 mod:SetBossHPInfoToHighest()
 mod:SetUsedIcons(1, 2)
 mod:SetHotfixNoticeRev(17895)
@@ -48,8 +47,8 @@ local specWarnImminentRuin				= mod:NewSpecialWarningYouPos(272536, nil, nil, ni
 local yellImminentRuin					= mod:NewPosYell(272536, 139073)--Short name "Ruin"
 local yellImminentRuinFades				= mod:NewIconFadesYell(272536, 139073)
 local specWarnImminentRuinNear			= mod:NewSpecialWarningClose(272536, false, nil, 2, 1, 2)
-local specWarnLivingWeapon				= mod:NewSpecialWarningSwitch(276922, "RangedDps", nil, nil, 1, 2)--Mythic (include melee dps too? asuming do to spheres, a big no)
-local specWarnVoidEchoes				= mod:NewSpecialWarningCount(279157, false, nil, 2, 2, 2)--Mythic
+local specWarnLivingWeapon				= mod:NewSpecialWarningSwitch(276922, "RangedDps", nil, nil, 1, 2, 4)--Mythic (include melee dps too? asuming do to spheres, a big no)
+local specWarnVoidEchoes				= mod:NewSpecialWarningCount(279157, false, nil, 2, 2, 2, 4)--Mythic
 --Stage Two: Fury of the C'thraxxi
 local specWarnObliterationbeam			= mod:NewSpecialWarningDodgeCount(272115, nil, nil, nil, 2, 2)--Generic for now
 --local specWarnObliterationbeamYou		= mod:NewSpecialWarningRun(272115, nil, nil, nil, 4, 2)--Generic for now
@@ -58,25 +57,20 @@ local specWarnVoidVolley				= mod:NewSpecialWarningInterruptCount(273944, "HasIn
 local specWarnMindFlay					= mod:NewSpecialWarningInterrupt(274019, "HasInterrupt", nil, nil, 1, 2)
 
 mod:AddTimerLine(SCENARIO_STAGE:format(1))
-local timerEssenceShearCD				= mod:NewNextSourceTimer(19.5, 274693, 41032, "Tank", nil, 5, nil, DBM_CORE_TANK_ICON)--Short Text "Shear", All timers generlaly 20 but 19.9 can happen and DBM has to use lost known time
+local timerEssenceShearCD				= mod:NewNextSourceTimer(19.5, 274693, 41032, "Tank", nil, 5, nil, DBM_CORE_L.TANK_ICON, nil, 2, 3)--Short Text "Shear", All timers generlaly 20 but 19.9 can happen and DBM has to use lost known time
 local timerObliterationBlastCD			= mod:NewNextSourceTimer(14.9, 273538, 158259, nil, nil, 3)--Short Text "Blast"
-local timerOblivionSphereCD				= mod:NewNextCountTimer(14.9, 272407, nil, nil, nil, 3)
-local timerImminentRuinCD				= mod:NewNextCountTimer(14.9, 272536, 139074, nil, nil, 3)--Short Text "Ruin"
-local timerLivingWeaponCD				= mod:NewNextTimer(60.5, 276922, nil, nil, nil, 1, nil, DBM_CORE_HEROIC_ICON)--Mythic
-local timerVoidEchoesCD					= mod:NewNextCountTimer(60.5, 279157, nil, nil, nil, 2, nil, DBM_CORE_HEROIC_ICON)
+local timerOblivionSphereCD				= mod:NewNextCountTimer(14.9, 272407, nil, nil, nil, 3, nil, nil, nil, 1, 3)
+local timerImminentRuinCD				= mod:NewNextCountTimer(14.9, 272536, 139074, nil, nil, 3, nil, nil, nil, not mod:IsTank() and 3, 3)--Short Text "Ruin"
+local timerLivingWeaponCD				= mod:NewNextTimer(60.5, 276922, nil, nil, nil, 1, nil, DBM_CORE_L.MYTHIC_ICON)--Mythic
+local timerVoidEchoesCD					= mod:NewNextCountTimer(60.5, 279157, nil, nil, nil, 2, nil, DBM_CORE_L.HEROIC_ICON)
 mod:AddTimerLine(SCENARIO_STAGE:format(2))
 local timerIntermission					= mod:NewPhaseTimer(60)
-local timerObliterationbeamCD			= mod:NewCDCountTimer(12.1, 272115, 194463, nil, nil, 3, nil, DBM_CORE_DEADLY_ICON)--Short Text "Beam"
-local timerVisionsoMadnessCD			= mod:NewNextCountTimer(20, 273949, nil, nil, nil, 1, nil, DBM_CORE_DAMAGE_ICON)
+local timerObliterationbeamCD			= mod:NewCDCountTimer(12.1, 272115, 194463, nil, nil, 3, nil, DBM_CORE_L.DEADLY_ICON, nil, 3, 3)--Short Text "Beam"
+local timerVisionsoMadnessCD			= mod:NewNextCountTimer(20, 273949, nil, nil, nil, 1, nil, DBM_CORE_L.DAMAGE_ICON)
 
 --local berserkTimer					= mod:NewBerserkTimer(600)
 
-local countdownOblivionSphere			= mod:NewCountdown(19.9, 272407, nil, nil, 3)
-local countdownEssenceShear				= mod:NewCountdown("Alt20", 274693, "Tank", nil, 3)
-local countdownImminentRuin				= mod:NewCountdown("AltTwo20", 272536, "-Tank", nil, 3)
-local countdownBeam						= mod:NewCountdown("AltTwo20", 272115, nil, nil, 3)
-
-mod:AddSetIconOption("SetIconRuin", 272536, true)
+mod:AddSetIconOption("SetIconRuin", 272536, true, false, {1, 2})
 mod:AddRangeFrameOption(5, 272407)
 mod:AddInfoFrameOption(272146, true)
 
@@ -100,7 +94,6 @@ local function beamCorrection(self)
 	local timer = self:IsMythic() and mythicBeamTimers[self.vb.beamCast+1] or beamTimers[self.vb.beamCast+1]
 	if timer then
 		timerObliterationbeamCD:Start(timer-4, self.vb.beamCast+1)
-		countdownBeam:Start(timer-4)
 		local timer2 = self:IsMythic() and mythicBeamTimers[self.vb.beamCast+1] or beamTimers[self.vb.beamCast+2]
 		if timer2 then
 			self:Schedule(timer2, beamCorrection, self)
@@ -121,19 +114,15 @@ function mod:OnCombatStart(delay)
 	table.wipe(infoframeTable)
 	if not self:IsLFR() then
 		timerImminentRuinCD:Start(4.9-delay, 1)
-		countdownImminentRuin:Start(4.9-delay)
 	end
 	if self:IsMythic() then
 		timerOblivionSphereCD:Start(7-delay, 1)
-		countdownOblivionSphere:Start(7-delay)
 		timerLivingWeaponCD:Start(15.2)
 	else
 		timerOblivionSphereCD:Start(9-delay, 1)--Verify
-		countdownOblivionSphere:Start(9-delay)
 	end
 	timerObliterationBlastCD:Start(14.9-delay, BOSS)
 	timerEssenceShearCD:Start(19-delay, BOSS)--START
-	countdownEssenceShear:Start(19-delay)
 	if self.Options.RangeFrame then
 		DBM.RangeCheck:Show(5)
 	end
@@ -167,10 +156,9 @@ function mod:SPELL_CAST_START(args)
 		local cid = self:GetCIDFromGUID(args.sourceGUID)
 		if cid == 134546 then--Main boss
 			timerEssenceShearCD:Start(19.5, BOSS, args.sourceGUID)
-			countdownEssenceShear:Start(19.5)
 		else--Big Adds (cid==139381)
 			if self:AntiSpam(3, 1) then
-				timerEssenceShearCD:Start(19.5, DBM_ADD)
+				timerEssenceShearCD:Start(19.5, DBM_CORE_L.ADD)
 			end
 		end
 	elseif spellId == 273538 then--Antispammed since he casts double on mythic
@@ -186,19 +174,16 @@ function mod:SPELL_CAST_START(args)
 				timerObliterationBlastCD:Start(14.9, BOSS)
 			end
 		else--Big Adds (cid==139381)
-			timerObliterationBlastCD:Start(12, DBM_ADD)
+			timerObliterationBlastCD:Start(12, DBM_CORE_L.ADD)
 		end
 	elseif spellId == 273810 then--Timers start here, because we have to factor boss movement
 		timerOblivionSphereCD:Start(7, self.vb.sphereCast+1)--Resets to 7
-		countdownOblivionSphere:Start(7)--Still seems same in all
 		if self:IsMythic() then
 			timerObliterationbeamCD:Start(18.5, 1)
-			countdownBeam:Start(18.5)
 			timerVisionsoMadnessCD:Start(26.1, 1)
 			timerIntermission:Start(75)
 		else
 			timerObliterationbeamCD:Start(20.5, 1)
-			countdownBeam:Start(20.5)
 			if not self:IsLFR() then
 				timerVisionsoMadnessCD:Start(31.5, 1)
 			end
@@ -212,7 +197,6 @@ function mod:SPELL_CAST_START(args)
 		local timer = self:IsMythic() and mythicBeamTimers[self.vb.beamCast+1] or beamTimers[self.vb.beamCast+1]
 		if timer then
 			timerObliterationbeamCD:Start(timer, self.vb.beamCast+1)
-			countdownBeam:Start(timer)
 			local timer2 = self:IsMythic() and mythicBeamTimers[self.vb.beamCast+1] or beamTimers[self.vb.beamCast+2]
 			if timer2 then
 				self:Schedule(timer2+4, beamCorrection, self)
@@ -229,7 +213,7 @@ function mod:SPELL_CAST_START(args)
 		else
 			warnVoidEchoes:Show(self.vb.echoesCast)
 		end
-		timerVoidEchoesCD:Start(9.7, self.vb.echoesCast+1)
+		timerVoidEchoesCD:Start(8.4, self.vb.echoesCast+1)
 	elseif spellId == 273944 then
 		if not castsPerGUID[args.sourceGUID] then
 			castsPerGUID[args.sourceGUID] = 0
@@ -260,7 +244,6 @@ function mod:SPELL_CAST_SUCCESS(args)
 	if spellId == 272533 then
 		self.vb.ruinCast = self.vb.ruinCast + 1
 		timerImminentRuinCD:Start(15, self.vb.ruinCast+1)
-		countdownImminentRuin:Start(15)
 	elseif spellId == 273949 then
 		self.vb.visionsCount = self.vb.visionsCount + 1
 		specWarnVisionsofMadness:Show(self.vb.visionsCount)
@@ -273,14 +256,13 @@ function mod:SPELL_CAST_SUCCESS(args)
 		specWarnLivingWeapon:Show()
 		specWarnLivingWeapon:Play("bigmob")
 		timerVoidEchoesCD:Start(2.5, 1)
-		timerObliterationBlastCD:Start(16.5, DBM_ADD)
+		timerObliterationBlastCD:Start(6.8, DBM_CORE_L.ADD)
 		timerLivingWeaponCD:Start(60)
 	elseif spellId == 272404 then
 		self.vb.sphereCast = self.vb.sphereCast + 1
 		warnOblivionSphere:Show(self.vb.sphereCast)
 		if not self.vb.isIntermission then
 			timerOblivionSphereCD:Start(14.9, self.vb.sphereCast+1)
-			countdownOblivionSphere:Start(14.9)
 		end
 	end
 end
@@ -299,7 +281,7 @@ function mod:SPELL_AURA_APPLIED(args)
 			end
 		end
 	elseif spellId == 272407 then--Purple Ball Lovin
-		
+
 		if args:IsPlayer() then
 			yellOblivionSphere:Yell()
 		end
@@ -309,10 +291,9 @@ function mod:SPELL_AURA_APPLIED(args)
 			specWarnImminentRuin:Show(self:IconNumToTexture(icon))
 			specWarnImminentRuin:Play("runout")--"mm"..icon
 			yellImminentRuin:Yell(icon, icon, icon)
-			yellImminentRuinFades:Countdown(12, nil, icon)
+			yellImminentRuinFades:Countdown(spellId, nil, icon)
 		elseif self:CheckNearby(12, args.destName) and not DBM:UnitDebuff("player", spellId) then
 			specWarnImminentRuinNear:CombinedShow(0.3, args.destName)--Combined show to prevent warning spam if multiple targets near you
-			specWarnImminentRuinNear:CancelVoice()--Avoid spam
 			specWarnImminentRuinNear:ScheduleVoice(0.3, "runaway")
 		--else
 			--warnImminentRuin:CombinedShow(0.3, args.destName)
@@ -346,7 +327,7 @@ function mod:SPELL_AURA_REMOVED(args)
 		end
 	elseif spellId == 279157 then--CLEU method of detecting add leaving, TODO, see if can detect it with IEEU or UNIT_TARGETABLE_CHANGED so it's reliable when add can be killed in 3 seconds (so, like next expansion :D)
 		timerVoidEchoesCD:Stop()
-		timerObliterationBlastCD:Stop(DBM_ADD)
+		timerObliterationBlastCD:Stop(DBM_CORE_L.ADD)
 	elseif spellId == 272146 then
 		infoframeTable[args.destName] = nil
 		if self.Options.InfoFrame then
@@ -373,7 +354,7 @@ function mod:UNIT_DIED(args)
 		warnDestroyerRemaining:Show(self.vb.destroyersRemaining)
 		--TODO, infoframe add tracking
 		if self.vb.destroyersRemaining == 0 then
-			timerEssenceShearCD:Stop(DBM_ADD)
+			timerEssenceShearCD:Stop(DBM_CORE_L.ADD)
 		end
 	end
 end
@@ -385,15 +366,12 @@ function mod:UNIT_SPELLCAST_SUCCEEDED(uId, _, spellId)
 		self.vb.destroyersRemaining = 2
 		self.vb.visionsCount = 0
 		self.vb.isIntermission = true
-		warnPhase:Show(DBM_CORE_AUTO_ANNOUNCE_TEXTS.stage:format(2))
+		warnPhase:Show(DBM_CORE_L.AUTO_ANNOUNCE_TEXTS.stage:format(2))
 		warnPhase:Play("phasechange")
 		timerEssenceShearCD:Stop()
-		countdownEssenceShear:Cancel()
 		timerObliterationBlastCD:Stop()
 		timerOblivionSphereCD:Stop()
-		countdownOblivionSphere:Cancel()
 		timerImminentRuinCD:Stop()
-		countdownImminentRuin:Cancel()
 		timerLivingWeaponCD:Stop()
 	elseif spellId == 279748 then
 		self:Unschedule(beamCorrection)
@@ -401,27 +379,21 @@ function mod:UNIT_SPELLCAST_SUCCEEDED(uId, _, spellId)
 		self.vb.ruinCast = 0
 		self.vb.isIntermission = false
 		timerIntermission:Stop()
-		warnPhase:Show(DBM_CORE_AUTO_ANNOUNCE_TEXTS.stage:format(1))
+		warnPhase:Show(DBM_CORE_L.AUTO_ANNOUNCE_TEXTS.stage:format(1))
 		warnPhase:Play("phasechange")
 		timerObliterationbeamCD:Stop()
-		countdownBeam:Cancel()
 		timerVisionsoMadnessCD:Stop()
 		if self:IsMythic() then
 			timerImminentRuinCD:Start(5, 1)--SUCCESS
-			countdownImminentRuin:Start(5)
 			timerOblivionSphereCD:Start(7, 1)
-			countdownOblivionSphere:Start(7)
 			timerLivingWeaponCD:Start(16.6)
 		else
 			if not self:IsLFR() then
 				timerImminentRuinCD:Start(7.5, 1)--SUCCESS
-				countdownImminentRuin:Start(7.5)
 			end
 			timerOblivionSphereCD:Start(9, 1)
-			countdownOblivionSphere:Start(9)
 		end
 		timerObliterationBlastCD:Start(15, BOSS)
 		timerEssenceShearCD:Start(20, BOSS)--START
-		countdownEssenceShear:Start(20)
 	end
 end

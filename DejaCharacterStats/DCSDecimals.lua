@@ -165,17 +165,18 @@ local function DCS_Decimals()
 				color_mastery = STAT_MASTERY ..":"
 			end
 			local color_format = statformat
-			if (UnitLevel("player") < SHOW_MASTERY_LEVEL) then
-				if not namespace.configMode then
-					if hidemastery then
-						statFrame:Hide();
-						--print("hiding")
-						return;
-					end
-				end
-				color_mastery = "|cff7f7f7f" .. color_mastery .. "|r"
-				color_format = "|cff7f7f7f" .. color_format .. "|r"
-			end
+			-- Mastery is always shown now in Shadowlands
+			-- if (UnitLevel("player") < SHOW_MASTERY_LEVEL) then
+			-- 	if not namespace.configMode then
+			-- 		if hidemastery then
+			-- 			statFrame:Hide();
+			-- 			--print("hiding")
+			-- 			return;
+			-- 		end
+			-- 	end
+			-- 	color_mastery = "|cff7f7f7f" .. color_mastery .. "|r"
+			-- 	color_format = "|cff7f7f7f" .. color_format .. "|r"
+			-- end
 			local mastery = GetMasteryEffect();
 		-- PaperDollFrame_SetLabelAndText Format Change
     
@@ -280,20 +281,22 @@ local function DCS_Decimals()
 				statFrame:Hide();
 				return;
 			end
-
+		
 			local chance = GetBlockChance();
-		-- PaperDollFrame_SetLabelAndText Format Change
-			if notexactlyzero then
-				PaperDollFrame_SetLabelAndText(statFrame, STAT_BLOCK, dcs_format(statformat, chance), false, round(multiplier*chance)/multiplier);
-			else
-				PaperDollFrame_SetLabelAndText(statFrame, STAT_BLOCK, dcs_format(statformat, chance), false, chance);
+			
+            if notexactlyzero then
+                PaperDollFrame_SetLabelAndText(statFrame, STAT_BLOCK, dcs_format(statformat, chance), false, round(multiplier*chance)/multiplier);
+            else
+                PaperDollFrame_SetLabelAndText(statFrame, STAT_BLOCK, dcs_format(statformat, chance), false, chance);
 			end
-			statFrame.tooltip = highlight_code..dcs_format(doll_tooltip_format, BLOCK_CHANCE).." "..dcs_format("%.2f", chance).."%"..font_color_close;
+			
+			statFrame.tooltip = HIGHLIGHT_FONT_COLOR_CODE..format(PAPERDOLLFRAME_TOOLTIP_FORMAT, BLOCK_CHANCE).." "..string.format("%.2F", chance).."%"..FONT_COLOR_CODE_CLOSE;
+		
 			local shieldBlockArmor = GetShieldBlock();
 			local blockArmorReduction = PaperDollFrame_GetArmorReduction(shieldBlockArmor, UnitEffectiveLevel(unit));
 			local blockArmorReductionAgainstTarget = PaperDollFrame_GetArmorReductionAgainstTarget(shieldBlockArmor);
+		
 			statFrame.tooltip2 = CR_BLOCK_TOOLTIP:format(blockArmorReduction);
-			--statFrame.tooltip2 = dcs_format(CR_BLOCK_TOOLTIP, GetShieldBlock());
 			if (blockArmorReductionAgainstTarget) then
 				statFrame.tooltip3 = format(STAT_BLOCK_TARGET_TOOLTIP, blockArmorReductionAgainstTarget);
 			else

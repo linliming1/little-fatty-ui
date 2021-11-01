@@ -29,6 +29,7 @@ TidyPlatesHubDefaults = {
 	StyleForceBarsOnTargets = true,
 
 	StyleHeadlineNeutral = false,
+    StyleHeadlineNeutralCombatOverride = false,
 	StyleHeadlineMiniMobs = false,
 
 	ColorEnemyBarMode =  1,
@@ -82,7 +83,7 @@ TidyPlatesHubDefaults = {
 	UnitSpotlightScaleEnable = true,
 	UnitSpotlightBarEnable = true,
 	UnitSpotlightGlowEnable = false,
-	UnitSpotlightList = "爆炸物\n炸藥\nTest地下城训练假人",
+	UnitSpotlightList = "爆炸物\n炸藥\n彼岸之物\nTest地下城训练假人",
 	UnitSpotlightLookup = {},
     UnitSpotlightVersion = "20180804",
 
@@ -121,6 +122,7 @@ TidyPlatesHubDefaults = {
 	-- Text
 	---------------------------------------
 	TextShowLevel = false,
+    TextShowPercent = false,
 	TextUseBlizzardFont = false,
 	TextHealthTextMode = 1,
 	TextShowOnlyOnTargets = false,
@@ -141,6 +143,7 @@ TidyPlatesHubDefaults = {
 	ColorThreatTransition = {r = 255/255, g = 160/255, b = 0},	-- Yellow
 	ColorThreatSafe = {r = 15/255, g = 150/255, b = 230/255},	-- Bright Blue
 	ColorAttackingOtherTank = {r = 15/255, g = 170/255, b = 200/255},	-- Bright Blue
+	CountPetAsOtherTank = true,
 	ColorShowPartyAggro = false,
 	ColorPartyAggro = {r = 255/255, g = 0, b = .4,},
 	ColorPartyAggroBar = false,
@@ -168,9 +171,15 @@ TidyPlatesHubDefaults = {
 
 	-- Casting
 	---------------------------------------
-	ColorNormalSpellCast = { r = 252/255, g = 140/255, b = 0, },
-	ColorUnIntpellCast = { r = 0.5137243866920471, g = 0.7529395222663879, b = 0.7647042274475098, },
+	ColorNormalSpellCast = {r = 252/255, g = 140/255, b = 0/255},
+	ColorUnIntpellCast = {r = 131/255, g = 192/255, b = 195/255},
 	SpellCastEnableFriendly = false,
+
+	SpellsCastAtPlayerEnable = false,
+	ColorNormalSpellsCastAtPlayer = {r = 255/255, g = 3/255, b = 194/255},
+	ColorUnIntSpellsCastAtPlayer = {r = 195/255, g = 90/255, b = 150/255},
+	SpellCastAtPlayerList = "",
+	SpellCastAtPlayerLookup = {},
 
 	-- Status Text
 	---------------------------------------
@@ -199,7 +208,8 @@ TidyPlatesHubDefaults = {
 	ClassEnemyIcon = false,
 	ClassPartyIcon = false,
 	WidgetsTotemIcon = false,
-	WidgetsComboPoints = true,
+	--WidgetsComboPoints = true, --abyui
+    WidgetsComboPoints2 = false,
 	WidgetsThreatIndicator = true,
 	WidgetsRangeIndicator = false,
 	WidgetsRangeMode = 1,
@@ -210,7 +220,8 @@ TidyPlatesHubDefaults = {
 	WidgetsDebuff = true,
 	WidgetsDebuffStyle = 2,
 	--WidgetsAuraMode = 1,
-	WidgetsMyDebuff = true,
+    WidgetsOnlyListDebuff = false,
+    WidgetsMyDebuff = true,
 	WidgetsMyBuff = false,
     WidgetsHostileBuff = true,
     WidgetsHostilePlayerBuff = false,

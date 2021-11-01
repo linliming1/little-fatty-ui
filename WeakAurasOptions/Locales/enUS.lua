@@ -1,3 +1,5 @@
+if not WeakAuras.IsCorrectVersion() then return end
+
 local L = WeakAuras.L
 
 -- Options translation
@@ -160,7 +162,10 @@ There are several special codes available to make this text dynamic:
 |cFFFF0000%i|r - Icon - The icon associated with the display
 |cFFFF0000%s|r - Stacks - The number of stacks of an aura (usually)
 |cFFFF0000%c|r - Custom - Allows you to define a custom Lua function that returns a list of string values. %c1 will be replaced by the first value returned, %c2 by the second, etc.
-|cFFFF0000%%|r - % - To show a percent sign]=]
+|cFFFF0000%%|r - % - To show a percent sign
+
+By default these show the information from the trigger selected via dynamic information. The information from a specific trigger can be shown via e.g. %2.p.
+]=]
 L["Enabled"] = "Enabled"
 L["Enter an aura name, partial aura name, or spell id"] = "Enter an aura name, partial aura name, or spell id"
 L["Event Type"] = "Event Type"
@@ -204,7 +209,6 @@ If the entered number is a decimal (e.g. 0.5), fraction (e.g. 1/2), or percentag
 |cFF00CC00!= 2|r will trigger when the number of units of type '%s' affected is not exactly 2
 |cFF00CC00<= 0.8|r will trigger when less than 80%% of the units of type '%s' is affected (4 of 5 party members, 8 of 10 or 20 of 25 raid members)
 |cFF00CC00> 1/2|r will trigger when more than half of the units of type '%s' is affected
-|cFF00CC00>= 0|r will always trigger, no matter what
 ]=]
 L["Group Member Count"] = "Group Member Count"
 L["Group (verb)"] = "Group"
@@ -213,7 +217,7 @@ L["Hide this group's children"] = "Hide this group's children"
 L["Hide When Not In Group"] = "Hide When Not In Group"
 L["Horizontal Align"] = "Horizontal Align"
 L["Icon Info"] = "Icon Info"
-L["Icon Inset"] = "Item Inset"
+L["Icon Inset"] = "Icon Inset"
 L["Ignored"] = "Ignored"
 L["Ignore GCD"] = "Ignore GCD"
 L["%i Matches"] = "%i Matches"
@@ -344,7 +348,6 @@ L["Stance (Warrior)"] = "Stance"
 L["Start"] = "Start"
 L["Stealable"] = "Stealable"
 L["Stealthed"] = "Stealthed"
-L["Sticky Duration"] = "Sticky Duration"
 L["Temporary Group"] = "Temporary Group"
 L["Text"] = "Text"
 L["Text Color"] = "Text Color"

@@ -1,12 +1,11 @@
 local mod	= DBM:NewMod(1697, "DBM-Party-Legion", 9, 777)
 local L		= mod:GetLocalizedStrings()
 
-mod:SetRevision(("$Revision: 2 $"):sub(12, -3))
+mod.statTypes = "normal,heroic,mythic"
+
+mod:SetRevision("20210905144759")
 --mod:SetCreatureID(99200)
 mod:SetEncounterID(1851)
-mod:SetZone()
-
-mod.imaspecialsnowflake = true
 
 mod:RegisterCombat("combat")
 
@@ -73,8 +72,7 @@ function mod:SPELL_PERIODIC_DAMAGE(_, _, _, _, destGUID, _, _, _, spellId)
 end
 mod.SPELL_PERIODIC_MISSED = mod.SPELL_PERIODIC_DAMAGE
 
-function mod:UNIT_SPELLCAST_SUCCEEDED(uId, _, bfaSpellId, _, legacySpellId)
-	local spellId = legacySpellId or bfaSpellId
+function mod:UNIT_SPELLCAST_SUCCEEDED(uId, _, spellId)
 	if spellId == 153500 then
 
 	end

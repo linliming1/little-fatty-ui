@@ -3,6 +3,161 @@ if not TMW then return end
 TMW.CHANGELOG_LASTVER="7.4.0"
 
 TMW.CHANGELOG = [==[
+## v9.1.1
+### Bug Fixes
+* Fixed #1909 - IconConfig.lua:127: attempt to index field "CurrentTabGroup" (a nil value)
+* Fixed #1913 (LibDogTag-Stats-3.0/1) - Error with code "[SpellCrit]"
+* Fixed #1914 - Meta icons that switch between shown/hidden OmniCC timer text without changing the duration of their timer now properly hide/show the timer text.
+
+
+## v9.1.0
+* Version bump for WoW 9.1
+* Minor performance improvements
+
+## v9.0.7
+### Bug Fixes
+* Fixed #1886 - invalid key to "next" (new version of LibDogTag-Unit-3.0 should resolve this).
+* Fixed #1889 - error thrown when attempting to import corrupted strings
+
+## v9.0.6
+* New Condition: Covenant Membership
+* New group sort option: Timer start
+* New slash command: `/tmw counter counter-name operation value`. E.g. `/tmw counter casts = 0`
+
+### Bug Fixes
+* Fixed an issue with some types of items in the item suggestion list.
+
+## v9.0.5
+
+### Bug Fixes
+* Fixed an error with the `[Name]` DogTag breaking when LibDogTag-Unit gets upgraded after TMW loads.
+* Fixed incorrect labels on Text Display editboxes after changing an icon's text layout.
+* Fixed #1868 - Lua errors and broken sliders in WoW 9.0.5.
+
+## v9.0.4
+* New Condition: Torghast Anima Power Count
+* New Condition: Soulbind Active
+* #1811 - The group/target point of a group will now be preserved when moving a shrunk group via click-and-drag.
+### Bug Fixes
+* #1840 - Talents granted by Torghast powers are now correctly reflected by the Talent Learned condition.
+* #1844 - The Totem icon type has been updated for Monks to better support the wide range of "totems" that Monks have.
+* #1842 - Fixed handling of Shadowlands legendaries in item suggestion lists
+
+## v9.0.3
+### Bug Fixes
+* #1824 - Fix incorrect detection of Defensive mode in the Pet Attack Mode condition.
+* #1828 - Fix tooltips mentioning obsolete ways of tracking PvP trinkets.
+* #1829 - Fixed Guardians icon type Felguard timer (15 -> 17 seconds).
+* #1831 - Blacklist "Sinful Revelation" from the last cast condition
+* #1819 - Cloning notifications will now always clone all condition settings for condition-based triggers.
+* #1821 - Fix errors caused by Brewmaster stagger APIs returning nil in loading screens.
+* #1822 - All-Unit Buffs/Debuffs icons configured to only show when All Absent should now function as such.
+
+## v9.0.2
+### Bug Fixes
+* #1814 - Fix issues with range checking for some abilities
+* #1815 - Fix Weapon Imbue icon type & conditions
+
+## v9.0.0
+* Initial Shadowlands/Patch 9.0 support. Please report bugs to https://github.com/ascott18/TellMeWhen/issues. Additional support for Shadowlands features (soulbinds, conduits, etc) will be added closer to the expansion's launch.
+
+## v8.7.5
+* #1787 - Added Vulpera and Mechagnomes to Unit Race condition.
+* #1784 - Let OmniCC detect charge-type cooldowns 
+
+### Bug Fixes
+* Fix #1764 - Fix resizing of the main configuration window, the color picker, and a few others.
+* Fix #1790 - Attack Power condition doesn't work.
+* Fix #1786 - TimerBar.lua:162: TexCoord out of range
+
+## v8.7.4
+### Bug Fixes
+* Fix #1762 - Suggestion list insertion via left-click not working due to bizarre new focus-clearing mechanism in WoW 8.3.
+
+## v8.7.3
+* Added a new "Any Totem" condition that will check all totem slots.
+
+### Bug Fixes
+* Fix #1742 - Errors related to improper escaping of user input for the suggestion list.
+* Fix #1755 - Swing Timer conditions with durations other than zero seconds were not triggering updates at the proper moment.
+
+## v8.7.2
+### Bug Fixes
+* Fixed handling of spell names in French that have a space before a colon.
+* More fixes for Blizzard's weird change in 8.2.5 that prevented UnitAura from defaulting to buffs unless explicitly told to.
+
+## v8.7.1
+### Bug Fixes
+* Fixed the buff/debuff "Either" setting for WoW 8.2.5.
+
+## v8.7.0
+* The Missing Buffs/Debuffs icon type now sorts by lowest duration first.
+* Switched to DRList-1.0 (from DRData-1.0) for DR category data.
+* Added events to the Combat Event icon type for swing & spell dodges/blocks/parries.
+* Added an option to Spell Cooldown icons and Cooldown conditions to prevent the GCD from being ignored.
+
+### Bug Fixes
+* Fixed an uncommon issue that could cause some event-driven icons to not update correctly after one of the units being tracked by an icon stops existing.
+
+## v8.6.9
+### Bug Fixes
+* Fixed an issue with Unit Conditions where the initial state of the conditions sometimes wouldn't be taken into account.
+* Changed the Slowed equivalency to track Crippling Poison by ID to prevent it from picking up the Rogue buff by the same name.
+* When scrolling with the mousewheel, sliders that happen to land under your mouse will no longer be adjusted as long as your cursor does not move.
+* Fixed an issue where the Artificial Maximum setting for Bar groups was not properly saving its value as a number.
+
+## v8.6.8
+* Re-releasing TellMeWhen for Retail WoW as 8.6.8 so it will be the latest file for people with out-of-date Twitch apps.
+ * IMPORTANT: If your Twitch app was installing TellMeWhen Classic into your Retail WoW installation, that means your Twitch app is out of date and needs to be updated.
+ * To update your Twitch app, open the menu in the top-left corner of the app and choose "Check for Updates" under the "Help" menu.
+
+## v8.6.7
+* Added an Inset option to the border for both Bar and Icon views.
+
+## v8.6.6
+* Added border options to the standard Icon view (#1705).
+* Added Heal Crit & Non-Crit events to the Combat Event icon (#1685).
+
+### Bug Fixes
+* Fixed a number of errors around the Azerite Essence Active conditions that would occur for characters without a Heart of Azeroth (i.e. sub level 120).
+* Fixed an issue that prevented a descriptive message from being visible in the icon editor when no icon is loaded.
+* Added workarounds to errors that will arise when anchoring a group to a "restricted" region (like a nameplate).
+* Fixed #1696: When swapping profiles, run snippets before setting up icons.
+
+## v8.6.5
+### Bug Fixes
+* The Major Azerite Essence Active condition will now properly update after changing essence.
+
+## v8.6.4
+* New Conditions: 
+ * Azerite Essence Active
+ * Major Azerite Essence Active
+* Added better error messages when testing sounds for sound notifications.
+
+### Bug Fixes
+* Fixed an issue where custom sounds entered by a SoundKitID would not play using the configured sound channel.
+
+## v8.6.3
+### Bug Fixes
+* Fixed #1698 (again): Utils.lua:438: attempt to index local 'path' (a number value)
+* Switched WoW-built-in sounds that TMW registers with LSM to use FileDataIDs instead of paths, since paths aren't allowed anymore in WoW 8.2.
+ * Note that if you have other addons which are still incorrectly registering these sounds (like Omen), they won't work for you.
+
+## v8.6.2
+### Bug Fixes
+* Fixed #1698: Utils.lua:438: attempt to index local 'path' (a number value)
+* Fixed #1699: Several lists when editing notifications were no longer displaying correctly, if at all, in WoW 8.2.
+
+## v8.6.1
+* Buff/Debuff equivalency improvements
+* Added Kul Tiran and Zandalari to the Unit Race condition
+
+### Bug Fixes
+* Fixed #1690: Framelevel issue with latest alphas of Masque.
+* Fixed #1694: Empty group shrinks to minimum size of 1 icon.
+* Fixed that Reactive Ability icons wouldn't use the No Mana state.
+* Fixed #1697: Error when logging in in WoW 8.2.
+
 ## v8.6.0
 
 ### Discord
@@ -15,6 +170,7 @@ TMW.CHANGELOG = [==[
 * You can now toggle an icon's enabled/disabled state by Ctrl+clicking it. (#22)
 * New setting for Combat Event icons: Only if Conditions Passing. (#20)
 * Unit Conditions can now be copied from one icon to another. (#18)
+* Added Raise Abomination to the totem icon type for DKs (#1688)
 
 ### Bug Fixes
 * Fixed a bug that caused export strings to sometimes contain a large amount of superfluous defaults.
@@ -60,7 +216,7 @@ TMW.CHANGELOG = [==[
 
 ## v8.5.4
 * New icon drag operation - Insert.
-* Added Dark Icon and Mag'har to Unit Race condition.
+* Added Dark Iron and Mag'har to Unit Race condition.
 * Added Stagger to the Resouce Display icon type.
 
 ### Bug Fixes

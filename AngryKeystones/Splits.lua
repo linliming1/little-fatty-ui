@@ -16,6 +16,7 @@ end
 local function UpdateSplits(self, numCriteria, objectiveBlock, addObjectives)
 	local scenarioType = select(10, C_Scenario.GetInfo())
 	if not self:ShouldShowCriteria() or not Mod.splits or not Mod.splitNames or scenarioType ~= LE_SCENARIO_TYPE_CHALLENGE_MODE then return end
+	if not SCENARIO_TRACKER_MODULE or not objectiveBlock or not objectiveBlock.lines then return end
 
 	for criteriaIndex, elapsed in ipairs(Mod.splits) do
 		local criteriaString = Mod.splitNames[criteriaIndex]
@@ -136,7 +137,7 @@ function Mod:CHALLENGE_MODE_COMPLETED()
 		if elapsed == false then
 			splits[index] = floor(timeElapsed / 1000)
 			missingCount = missingCount + 1
-		elseif elapse == true then
+		elseif elapsed == true then
 			missingCount = missingCount + 1
 		end
 	end

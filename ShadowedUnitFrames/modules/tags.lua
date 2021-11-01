@@ -37,9 +37,9 @@ function Tags:RegisterEvents(parent, fontString, tags)
 		local tagKey = select(2, string.match(tag, "(%b())([%w%p]+)(%b())"))
 		if( not tagKey ) then tagKey = select(2, string.match(tag, "(%b())([%w%p]+)")) end
 		if( not tagKey ) then tagKey = string.match(tag, "([%w%p]+)(%b())") end
-		
+
 		tag = tagKey or tag
-		
+
 		local tagEvents = Tags.defaultEvents[tag] or ShadowUF.db.profile.tags[tag] and ShadowUF.db.profile.tags[tag].events
 		if( tagEvents ) then
 			for event in string.gmatch(tagEvents, "%S+") do
@@ -47,7 +47,7 @@ function Tags:RegisterEvents(parent, fontString, tags)
 				if( powerFilters[event] ) then
 					fontString.powerFilters = fontString.powerFilters or {}
 					fontString.powerFilters[powerFilters[event]] = true
-					
+
 					if( powerFilters[event] == "CURRENT" ) then
 						if( not hasPowerFilters ) then
 							parent:RegisterUnitEvent("UNIT_DISPLAYPOWER", self, "UpdatePowerType")
@@ -108,7 +108,7 @@ function Tags:Reload()
 	table.wipe(functionPool)
 	table.wipe(ShadowUF.tagFunc)
 	table.wipe(tagPool)
-	
+
 	-- Now update frames
 	for fontString, tags in pairs(regFontStrings) do
 		self:Register(fontString.parent, fontString, tags)
@@ -168,7 +168,7 @@ local function createTagFunction(tags, resetCache)
 			local tagKey = select(2, string.match(tag, "(%b())([%w%p]+)(%b())"))
 			if( not tagKey ) then hasPre, hasAp = true, false tagKey = select(2, string.match(tag, "(%b())([%w%p]+)")) end
 			if( not tagKey ) then hasPre, hasAp = false, true tagKey = string.match(tag, "([%w%p]+)(%b())") end
-			
+
 			frequencyCache[tag] = tagKey and (Tags.defaultFrequents[tagKey] or ShadowUF.db.profile.tags[tagKey] and ShadowUF.db.profile.tags[tagKey].frequency)
 
 			local tagFunc = tagKey and ShadowUF.tagFunc[tagKey]
@@ -176,7 +176,7 @@ local function createTagFunction(tags, resetCache)
 				local startOff, endOff = string.find(tag, tagKey)
 				local pre = hasPre and string.sub(tag, 2, startOff - 2)
 				local ap = hasAp and string.sub(tag, endOff + 2, -2)
-				
+
 				if( pre and ap ) then
 					cachedFunc = function(...)
 						local str = tagFunc(...)
@@ -193,7 +193,7 @@ local function createTagFunction(tags, resetCache)
 						if( str ) then return str .. ap end
 					end
 				end
-				
+
 				functionPool[tag] = cachedFunc
 			end
 		else
@@ -205,18 +205,23 @@ local function createTagFunction(tags, resetCache)
 		if( frequencyCache[tag] ) then
 			lowestFrequency = math.min(lowestFrequency, frequencyCache[tag])
 		end
-		
+
 		-- It's an invalid tag, simply return the tag itself wrapped in brackets
 		if( not cachedFunc ) then
 			functionPool[tag] = functionPool[tag] or function() return string.format("[%s-error]", tag) end
 			cachedFunc = functionPool[tag]
 		end
-		
+
 		table.insert(args, cachedFunc)
 	end
-	
+
 	frequencyCache[tags] = lowestFrequency < 9999 and lowestFrequency or nil
 	tagPool[tags] = function(fontString, frame, event, unit, powerType)
+		-- we can only run on frames with units set
+		if not fontString.parent.unit then
+			return
+		end
+
 		if( event and powerType and fontString.powerFilters and powerEvents[event] ) then
 			if( not fontString.powerFilters[powerType] and ( not fontString.powerFilters.CURRENT or fontString.powerType ~= powerType ) ) then
 				return
@@ -255,10 +260,10 @@ function Tags:Register(parent, fontString, tags, resetCache)
 	if( fontString.UpdateTags ) then
 		self:Unregister(fontString)
 	end
-	
+
 	fontString.parent = parent
 	regFontStrings[fontString] = tags
-		
+
 	-- And give other frames an easy way to force an update
 	local frequency
 	fontString.UpdateTags, frequency = createTagFunction(tags, resetCache)
@@ -275,7 +280,7 @@ end
 
 function Tags:Unregister(fontString)
 	regFontStrings[fontString] = nil
-	
+
 	-- Unregister it as using HC
 	for key, module in pairs(self.customEvents) do
 		if( fontString[key] ) then
@@ -283,7 +288,7 @@ function Tags:Unregister(fontString)
 			module:DisableTag(fontString.parent, fontString)
 		end
 	end
-	
+
 	-- Kill any tag data
 	cancelMonitorTimer(fontString)
 	fontString.parent:UnregisterAll(fontString)
@@ -294,8 +299,8 @@ function Tags:Unregister(fontString)
 	-- See if we need to unregister events
 	local parent = fontString.parent
 	local hasPowerFilter
-	for _, fontString in pairs(parent.fontStrings) do
-		if( fontString.powerFilters and fontString.powerFilters.CURRENT ) then
+	for _, f in pairs(parent.fontStrings) do
+		if( f.powerFilters and f.powerFilters.CURRENT ) then
 			hasPowerFilter = true
 			break
 		end
@@ -328,7 +333,7 @@ function ShadowUF:FormatLargeNumber(number)
 	elseif( number < 99999999 ) then
 		return string.format("%.2fm", number / 1000000)
 	end
-	
+
 	return string.format("%dm", number / 1000000)
 end
 
@@ -338,7 +343,7 @@ function ShadowUF:SmartFormatNumber(number)
 	elseif( number < 99999999 ) then
 		return string.format("%.2fm", number / 1000000)
 	end
-	
+
 	return string.format("%dm", number / 1000000)
 end
 
@@ -346,7 +351,7 @@ function ShadowUF:GetClassColor(unit)
 	if( not UnitIsPlayer(unit) ) then
 		return nil
 	end
-	
+
 	local class = select(2, UnitClass(unit))
 	return class and ShadowUF:Hex(ShadowUF.db.profile.classColors[class])
 end
@@ -399,7 +404,7 @@ Tags.defaultTags = {
 	end]],
 	["short:druidform"] = [[function(unit, unitOwner)
 		if( select(2, UnitClass(unit)) ~= "DRUID" ) then return nil end
-		
+
 		local Druid = ShadowUF.Druid
 		if( ShadowUF.UnitAuraBySpell(unit, Druid.CatForm) ) then
 			return ShadowUF.L["C"]
@@ -419,7 +424,7 @@ Tags.defaultTags = {
 	end]],
 	["druidform"] = [[function(unit, unitOwner)
 		if( select(2, UnitClass(unit)) ~= "DRUID" ) then return nil end
-		
+
 		local Druid = ShadowUF.Druid
 		if( ShadowUF.UnitAuraBySpell(unit, Druid.CatForm) ) then
 			return ShadowUF.L["Cat"]
@@ -466,22 +471,22 @@ Tags.defaultTags = {
 	end]],
 	["unit:color:sit"] = [[function(unit, unitOwner)
 		local state = UnitThreatSituation(unit)
-		
+
 		return state and state > 0 and ShadowUF:Hex(GetThreatStatusColor(state))
 	end]],
 	["unit:color:aggro"] = [[function(unit, unitOwner)
 		local state = UnitThreatSituation(unit)
-		
+
 		return state and state >= 3 and ShadowUF:Hex(GetThreatStatusColor(state))
 	end]],
 	["color:sit"] = [[function(unit, unitOwner)
 		local state = UnitThreatSituation("player", "target")
-		
+
 		return state and state > 0 and ShadowUF:Hex(GetThreatStatusColor(state))
 	end]],
 	["color:aggro"] = [[function(unit, unitOwner)
 		local state = UnitThreatSituation("player", "target")
-		
+
 		return state and state >= 3 and ShadowUF:Hex(GetThreatStatusColor(state))
 	end]],
 	--["unit:scaled:threat"] = [[function(unit, unitOwner, fontString)
@@ -504,7 +509,7 @@ Tags.defaultTags = {
 	end]],
 	["color:gensit"] = [[function(unit, unitOwner)
 		local state = UnitThreatSituation("player")
-		
+
 		return state and state > 0 and ShadowUF:Hex(GetThreatStatusColor(state))
 	end]],
 	["status:time"] = [[function(unit, unitOwner)
@@ -513,26 +518,26 @@ Tags.defaultTags = {
 			offlineStatus[unitOwner] = offlineStatus[unitOwner] or GetTime()
 			return string.format(ShadowUF.L["Off:%s"], ShadowUF:FormatShortTime(GetTime() - offlineStatus[unitOwner]))
 		end
-		
+
 		offlineStatus[unitOwner] = nil
 	end]],
 	["afk:time"] = [[function(unit, unitOwner)
 		if( not UnitIsConnected(unitOwner) ) then return end
-		
+
 		local afkStatus = ShadowUF.Tags.afkStatus
 		local status = UnitIsAFK(unitOwner) and ShadowUF.L["AFK:%s"] or UnitIsDND(unitOwner) and ShadowUF.L["DND:%s"]
 		if( status ) then
 			afkStatus[unitOwner] = afkStatus[unitOwner] or GetTime()
 			return string.format(status, ShadowUF:FormatShortTime(GetTime() - afkStatus[unitOwner]))
 		end
-		
+
 		afkStatus[unitOwner] = nil
 	end]],
 	["pvp:time"] = [[function(unit, unitOwner)
 		if( GetPVPTimer() >= 300000 ) then
 			return nil
 		end
-		
+
 		return string.format(ShadowUF.L["PVP:%s"], ShadowUF:FormatShortTime(GetPVPTimer() / 1000))
 	end]],
 	["afk"] = [[function(unit, unitOwner, fontString)
@@ -560,7 +565,7 @@ Tags.defaultTags = {
 				color = ShadowUF.db.profile.healthColors.hostile
 			end
 		end
-		
+
 		return color and ShadowUF:Hex(color)
 	end]],
 	["class"] = [[function(unit, unitOwner)
@@ -585,16 +590,16 @@ Tags.defaultTags = {
 		if( not color ) then
 			return name
 		end
-	
+
 		return string.format("%s%s|r", color, name)
 	end]],
-	["curpp"] = [[function(unit, unitOwner) 
+	["curpp"] = [[function(unit, unitOwner)
 		if( UnitPowerMax(unit) <= 0 ) then
 			return nil
 		elseif( UnitIsDeadOrGhost(unit) ) then
 			return 0
 		end
-		
+
 		return ShadowUF:FormatLargeNumber(UnitPower(unit))
 	end]],
 	["curmaxhp"] = [[function(unit, unitOwner)
@@ -605,7 +610,7 @@ Tags.defaultTags = {
 		elseif( not UnitIsConnected(unit) ) then
 			return ShadowUF.L["Offline"]
 		end
-		
+
 		return string.format("%s/%s", ShadowUF:FormatLargeNumber(UnitHealth(unit)), ShadowUF:FormatLargeNumber(UnitHealthMax(unit)))
 	end]],
 	["smart:curmaxhp"] = [[function(unit, unitOwner)
@@ -616,7 +621,7 @@ Tags.defaultTags = {
 		elseif( not UnitIsConnected(unit) ) then
 			return ShadowUF.L["Offline"]
 		end
-		
+
 		return string.format("%s/%s", ShadowUF:SmartFormatNumber(UnitHealth(unit)), ShadowUF:SmartFormatNumber(UnitHealthMax(unit)))
 	end]],
 	["absolutehp"] = [[function(unit, unitOwner)
@@ -627,7 +632,7 @@ Tags.defaultTags = {
 		elseif( not UnitIsConnected(unit) ) then
 			return ShadowUF.L["Offline"]
 		end
-		
+
 		return string.format("%s/%s", UnitHealth(unit), UnitHealthMax(unit))
 	end]],
 	["abscurhp"] = [[function(unit, unitOwner)
@@ -638,7 +643,7 @@ Tags.defaultTags = {
 		elseif( not UnitIsConnected(unit) ) then
 			return ShadowUF.L["Offline"]
 		end
-		
+
 		return UnitHealth(unit)
 	end]],
 	["absmaxhp"] = [[function(unit, unitOwner) return UnitHealthMax(unit) end]],
@@ -647,8 +652,8 @@ Tags.defaultTags = {
 			return nil
 		elseif( UnitIsDeadOrGhost(unit) ) then
 			return 0
-		end	
-	
+		end
+
 		return UnitPower(unit)
 	end]],
 	["absmaxpp"] = [[function(unit, unitOwner)
@@ -663,7 +668,7 @@ Tags.defaultTags = {
 		elseif( maxPower <= 0 ) then
 			return nil
 		end
-		
+
 		return string.format("%s/%s", power, maxPower)
 	end]],
 	["curmaxpp"] = [[function(unit, unitOwner)
@@ -674,7 +679,7 @@ Tags.defaultTags = {
 		elseif( maxPower <= 0 ) then
 			return nil
 		end
-		
+
 		return string.format("%s/%s", ShadowUF:FormatLargeNumber(power), ShadowUF:FormatLargeNumber(maxPower))
 	end]],
 	["smart:curmaxpp"] = [[function(unit, unitOwner)
@@ -685,7 +690,7 @@ Tags.defaultTags = {
 		elseif( maxPower <= 0 ) then
 			return nil
 		end
-		
+
 		return string.format("%s/%s", ShadowUF:SmartFormatNumber(power), ShadowUF:SmartFormatNumber(maxPower))
 	end]],
 	["levelcolor"] = [[function(unit, unitOwner)
@@ -697,13 +702,13 @@ Tags.defaultTags = {
 		if( level < 0 and UnitClassification(unit) == "worldboss" ) then
 			return nil
 		end
-		
+
 		if( UnitCanAttack("player", unit) ) then
 			local color = ShadowUF:Hex(GetQuestDifficultyColor(level > 0 and level or 99))
 			if( not color ) then
 				return level > 0 and level or "??"
 			end
-			
+
 			return color .. (level > 0 and level or "??") .. "|r"
 		else
 			return level > 0 and level or "??"
@@ -726,7 +731,7 @@ Tags.defaultTags = {
 		elseif( UnitIsDeadOrGhost(unit) ) then
 			return 0
 		end
-		
+
 		return ShadowUF:FormatLargeNumber(power)
 	end]],
 	["missinghp"] = [[function(unit, unitOwner)
@@ -740,7 +745,7 @@ Tags.defaultTags = {
 
 		local missing = UnitHealthMax(unit) - UnitHealth(unit)
 		if( missing <= 0 ) then return nil end
-		return "-" .. ShadowUF:FormatLargeNumber(missing) 
+		return "-" .. ShadowUF:FormatLargeNumber(missing)
 	end]],
 	["missingpp"] = [[function(unit, unitOwner)
 		local power = UnitPowerMax(unit)
@@ -755,7 +760,7 @@ Tags.defaultTags = {
 	["def:name"] = [[function(unit, unitOwner)
 		local deficit = ShadowUF.tagFunc.missinghp(unit, unitOwner)
 		if( deficit ) then return deficit end
-		
+
 		return ShadowUF.tagFunc.name(unit, unitOwner)
 	end]],
 	["name"] = [[function(unit, unitOwner) return UnitName(unitOwner) or UNKNOWN end]],
@@ -772,7 +777,7 @@ Tags.defaultTags = {
 		if( max <= 0 or UnitIsDead(unit) or UnitIsGhost(unit) or not UnitIsConnected(unit) ) then
 			return "0%"
 		end
-		
+
 		return math.floor(UnitHealth(unit) / max * 100 + 0.5) .. "%"
 	end]],
 	["perpp"] = [[function(unit, unitOwner)
@@ -782,7 +787,7 @@ Tags.defaultTags = {
 		elseif( UnitIsDeadOrGhost(unit) or not UnitIsConnected(unit) ) then
 			return "0%"
 		end
-		
+
 		return string.format("%d%%", math.floor(UnitPower(unit) / maxPower * 100 + 0.5))
 	end]],
 	["plus"] = [[function(unit, unitOwner) local classif = UnitClassification(unit) return (classif == "elite" or classif == "rareelite") and "+" end]],
@@ -842,7 +847,7 @@ Tags.defaultTags = {
 		if( maxHealth <= 0 ) then
 			return "0.0%"
 		end
-		
+
 		return string.format("%.1f%%", (UnitHealth(unit) / maxHealth) * 100)
 	end]],
 	["classification"] = [[function(unit, unitOwner)
@@ -858,7 +863,7 @@ Tags.defaultTags = {
 		elseif( classif == "minus" ) then
 			return ShadowUF.L["Minion"]
 		end
-		
+
 		return nil
 	end]],
 	["shortclassification"] = [[function(unit, unitOwner)
@@ -871,14 +876,14 @@ Tags.defaultTags = {
 		if( server and server ~= "" ) then
 			name = string.format("%s-%s", name, server)
 		end
-		
+
 		for i=1, GetNumGroupMembers() do
 			local raidName, _, group = GetRaidRosterInfo(i)
 			if( raidName == name ) then
 				return group
 			end
 		end
-		
+
 		return nil
 	end]],
 	["druid:curpp"] = [[function(unit, unitOwner)
@@ -897,7 +902,7 @@ Tags.defaultTags = {
 		if( select(2, UnitClass(unit)) ~= "DRUID" ) then return nil end
 		local powerType = UnitPowerType(unit)
 		if( powerType ~= Enum.PowerType.Rage and powerType ~= Enum.PowerType.Energy and powerType ~= Enum.PowerType.LunarPower ) then return nil end
-		
+
 		local maxPower = UnitPowerMax(unit, Enum.PowerType.Mana)
 		local power = UnitPower(unit, Enum.PowerType.Mana)
 		if( UnitIsDeadOrGhost(unit) ) then
@@ -905,7 +910,7 @@ Tags.defaultTags = {
 		elseif( maxPower == 0 and power == 0 ) then
 			return nil
 		end
-		
+
 		return string.format("%s/%s", ShadowUF:FormatLargeNumber(power), ShadowUF:FormatLargeNumber(maxPower))
 	end]],
 	["druid:absolutepp"] = [[function(unit, unitOwner)
@@ -987,7 +992,7 @@ Tags.defaultTags = {
 		return heal and heal > 0 and maxHealth > 0 and string.format("%d%%", (heal / maxHealth) * 100)
 	end]],
 	["abs:incheal"] = [[function(unit, unitOwner, fontString)
-	    local heal = UnitGetIncomingHeals(unit) 
+	    local heal = UnitGetIncomingHeals(unit)
 		return heal and heal > 0 and string.format("%d", heal)
 	end]],
 	["incheal"] = [[function(unit, unitOwner, fontString)
@@ -1007,7 +1012,7 @@ Tags.defaultTags = {
 		return stagger and stagger > 0 and ShadowUF:FormatLargeNumber(stagger)
 	end]],
 	["abs:incabsorb"] = [[function(unit, unitOwner, fontString)
-	    local absorb = UnitGetTotalAbsorbs(unit) 
+	    local absorb = UnitGetTotalAbsorbs(unit)
 		return absorb and absorb > 0 and absorb
 	end]],
 	["incabsorb"] = [[function(unit, unitOwner, fontString)
@@ -1019,7 +1024,7 @@ Tags.defaultTags = {
 		return absorb and absorb > 0 and string.format("+%d", absorb) or ShadowUF.tagFunc.name(unit, unitOwner, fontString)
 	end]],
 	["abs:healabsorb"] = [[function(unit, unitOwner, fontString)
-	    local absorb = UnitGetTotalHealAbsorbs(unit) 
+	    local absorb = UnitGetTotalHealAbsorbs(unit)
 		return absorb and absorb > 0 and absorb
 	end]],
 	["healabsorb"] = [[function(unit, unitOwner, fontString)
@@ -1030,28 +1035,28 @@ Tags.defaultTags = {
 		if( GetNumGroupMembers() == 0 ) then return nil end
 		local guid = UnitGUID(unit)
 		if( not guid ) then return "0" end
-		
+
 		local total = 0
 		for i=1, GetNumGroupMembers() do
 			local unit = ShadowUF.raidUnits[i]
 			if( UnitGUID(ShadowUF.unitTarget[unit]) == guid ) then
 				total = total + 1
 			end
-		end		
+		end
 		return total
 	end]],
 	["unit:raid:assist"] = [[function(unit, unitOwner, fontString)
 		if( GetNumGroupMembers() == 0 ) then return nil end
 		local guid = UnitGUID(ShadowUF.unitTarget[unit])
 		if( not guid ) then return "--" end
-		
+
 		local total = 0
 		for i=1, GetNumGroupMembers() do
 			local unit = ShadowUF.raidUnits[i]
 			if( UnitGUID(ShadowUF.unitTarget[unit]) == guid ) then
 				total = total + 1
 			end
-		end		
+		end
 		return total
 	end]],
 }
@@ -1060,7 +1065,7 @@ Tags.defaultTags = {
 Tags.defaultEvents = {
 	["totem:timer"]				= "SUF_TOTEM_TIMER",
 	["rune:timer"]				= "SUF_RUNE_TIMER",
-	["hp:color"]				= "UNIT_HEALTH UNIT_HEALTH_FREQUENT UNIT_MAXHEALTH",
+	["hp:color"]				= "UNIT_HEALTH UNIT_MAXHEALTH",
 	["short:druidform"]			= "UNIT_AURA",
 	["druidform"]				= "UNIT_AURA",
 	["guild"]					= "UNIT_NAME_UPDATE",
@@ -1080,11 +1085,11 @@ Tags.defaultEvents = {
 	["afk:time"]				= "PLAYER_FLAGS_CHANGED UNIT_CONNECTION",
 	["status:time"]				= "UNIT_POWER_FREQUENT UNIT_CONNECTION",
 	["pvp:time"]				= "PLAYER_FLAGS_CHANGED",
-	["curhp"]               	= "UNIT_HEALTH UNIT_HEALTH_FREQUENT UNIT_CONNECTION",
-	["abscurhp"]				= "UNIT_HEALTH UNIT_HEALTH_FREQUENT UNIT_CONNECTION",
-	["curmaxhp"]				= "UNIT_HEALTH UNIT_HEALTH_FREQUENT UNIT_MAXHEALTH UNIT_CONNECTION",
-	["absolutehp"]				= "UNIT_HEALTH UNIT_HEALTH_FREQUENT UNIT_MAXHEALTH UNIT_CONNECTION",
-	["smart:curmaxhp"]			= "UNIT_HEALTH UNIT_HEALTH_FREQUENT UNIT_MAXHEALTH UNIT_CONNECTION",
+	["curhp"]               	= "UNIT_HEALTH UNIT_CONNECTION",
+	["abscurhp"]				= "UNIT_HEALTH UNIT_CONNECTION",
+	["curmaxhp"]				= "UNIT_HEALTH UNIT_MAXHEALTH UNIT_CONNECTION",
+	["absolutehp"]				= "UNIT_HEALTH UNIT_MAXHEALTH UNIT_CONNECTION",
+	["smart:curmaxhp"]			= "UNIT_HEALTH UNIT_MAXHEALTH UNIT_CONNECTION",
 	["curpp"]               	= "SUF_POWERTYPE:CURRENT UNIT_POWER_FREQUENT",
 	["abscurpp"]            	= "SUF_POWERTYPE:CURRENT UNIT_POWER_FREQUENT UNIT_MAXPOWER",
 	["curmaxpp"]				= "SUF_POWERTYPE:CURRENT UNIT_POWER_FREQUENT UNIT_MAXPOWER",
@@ -1103,25 +1108,25 @@ Tags.defaultEvents = {
 	["level"]               	= "UNIT_LEVEL UNIT_FACTION PLAYER_LEVEL_UP",
 	["levelcolor"]				= "UNIT_LEVEL UNIT_FACTION PLAYER_LEVEL_UP",
 	["maxhp"]               	= "UNIT_MAXHEALTH",
-	["def:name"]				= "UNIT_NAME_UPDATE UNIT_MAXHEALTH UNIT_HEALTH UNIT_HEALTH_FREQUENT",
+	["def:name"]				= "UNIT_NAME_UPDATE UNIT_MAXHEALTH UNIT_HEALTH",
 	["absmaxhp"]				= "UNIT_MAXHEALTH",
 	["maxpp"]               	= "SUF_POWERTYPE:CURRENT UNIT_MAXPOWER",
 	["absmaxpp"]				= "SUF_POWERTYPE:CURRENT UNIT_MAXPOWER",
-	["missinghp"]           	= "UNIT_HEALTH UNIT_HEALTH_FREQUENT UNIT_MAXHEALTH UNIT_CONNECTION",
+	["missinghp"]           	= "UNIT_HEALTH UNIT_MAXHEALTH UNIT_CONNECTION",
 	["missingpp"]           	= "SUF_POWERTYPE:CURRENT UNIT_POWER_FREQUENT UNIT_MAXPOWER",
 	["name"]                	= "UNIT_NAME_UPDATE",
 	["abbrev:name"]				= "UNIT_NAME_UPDATE",
 	["server"]					= "UNIT_NAME_UPDATE",
 	["colorname"]				= "UNIT_NAME_UPDATE",
-	["perhp"]               	= "UNIT_HEALTH UNIT_HEALTH_FREQUENT UNIT_MAXHEALTH UNIT_CONNECTION",
+	["perhp"]               	= "UNIT_HEALTH UNIT_MAXHEALTH UNIT_CONNECTION",
 	["perpp"]               	= "SUF_POWERTYPE:CURRENT UNIT_POWER_FREQUENT UNIT_MAXPOWER UNIT_CONNECTION",
-	["status"]              	= "UNIT_HEALTH UNIT_HEALTH_FREQUENT PLAYER_UPDATE_RESTING UNIT_CONNECTION",
+	["status"]              	= "UNIT_HEALTH PLAYER_UPDATE_RESTING UNIT_CONNECTION",
 	["smartlevel"]          	= "UNIT_LEVEL PLAYER_LEVEL_UP UNIT_CLASSIFICATION_CHANGED",
 	["cpoints"]             	= "UNIT_POWER_FREQUENT PLAYER_TARGET_CHANGED",
 	["rare"]                	= "UNIT_CLASSIFICATION_CHANGED",
 	["classification"]      	= "UNIT_CLASSIFICATION_CHANGED",
 	["shortclassification"] 	= "UNIT_CLASSIFICATION_CHANGED",
-	["dechp"]					= "UNIT_HEALTH UNIT_HEALTH_FREQUENT UNIT_MAXHEALTH",
+	["dechp"]					= "UNIT_HEALTH UNIT_MAXHEALTH",
 	["group"]					= "GROUP_ROSTER_UPDATE",
 	["unit:color:aggro"]		= "UNIT_THREAT_SITUATION_UPDATE",
 	["color:aggro"]				= "UNIT_THREAT_SITUATION_UPDATE",
@@ -1135,7 +1140,7 @@ Tags.defaultEvents = {
 	["unit:situation"]			= "UNIT_THREAT_SITUATION_UPDATE",
 	["monk:chipoints"]			= "SUF_POWERTYPE:LIGHT_FORCE UNIT_POWER_FREQUENT",
 }
-	
+
 -- Default update frequencies for tag updating, used if it's needed to override the update speed
 -- or it can't be purely event based
 Tags.defaultFrequents = {
@@ -1240,7 +1245,7 @@ Tags.defaultCategories = {
 	["monk:stagger"]			= "classspec",
 	["monk:abs:stagger"]		= "classspec"
 }
-	
+
 -- Default tag help
 Tags.defaultHelp = {
 	["totem:timer"]				= L["How many seconds a totem has left before disappearing."],
@@ -1429,7 +1434,6 @@ Tags.eventType = {
 	["UNIT_POWER_FREQUENT"] = "power",
 	["UNIT_MAXPOWER"] = "power",
 	["UNIT_ABSORB_AMOUNT_CHANGED"] = "health",
-	["UNIT_HEALTH_FREQUENT"] = "health",
 	["UNIT_HEALTH"] = "health",
 	["UNIT_MAXHEALTH"] = "health",
 	["GROUP_ROSTER_UPDATE"] = "unitless",
@@ -1460,7 +1464,7 @@ Tags.unitBlacklist = {
 
 -- Single tags that can only be used on a single unit
 Tags.unitRestrictions = {
-	["pvp:time"] = "player",	
+	["pvp:time"] = "player",
 	["totem:timer"] = "player",
 	["rune:timer"] = "player"
 }
@@ -1480,14 +1484,14 @@ local function loadAPIEvents()
 		["UnitName"]				= "UNIT_NAME_UPDATE",
 		["UnitClassification"]		= "UNIT_CLASSIFICATION_CHANGED",
 		["UnitFactionGroup"]		= "UNIT_FACTION PLAYER_FLAGS_CHANGED",
-		["UnitHealth%("]			= "UNIT_HEALTH UNIT_HEALTH_FREQUENT",
+		["UnitHealth%("]			= "UNIT_HEALTH",
 		["UnitHealthMax"]			= "UNIT_MAXHEALTH",
 		["UnitPower%("]				= "UNIT_POWER_FREQUENT",
 		["UnitPowerMax"]			= "UNIT_MAXPOWER",
 		["UnitPowerType"]			= "UNIT_DISPLAYPOWER",
-		["UnitIsDead"]				= "UNIT_HEALTH UNIT_HEALTH_FREQUENT",
-		["UnitIsGhost"]				= "UNIT_HEALTH UNIT_HEALTH_FREQUENT",
-		["UnitIsConnected"]			= "UNIT_HEALTH UNIT_HEALTH_FREQUENT UNIT_CONNECTION",
+		["UnitIsDead"]				= "UNIT_HEALTH",
+		["UnitIsGhost"]				= "UNIT_HEALTH",
+		["UnitIsConnected"]			= "UNIT_HEALTH UNIT_CONNECTION",
 		["UnitIsAFK"]				= "PLAYER_FLAGS_CHANGED",
 		["UnitIsDND"]				= "PLAYER_FLAGS_CHANGED",
 		["UnitIsPVP"]				= "PLAYER_FLAGS_CHANGED UNIT_FACTION",
@@ -1518,7 +1522,7 @@ local function loadAPIEvents()
 		["UnitDetailedThreatSituation"] = "UNIT_THREAT_SITUATION_UPDATE",
 	}
 end
-		
+
 -- Scan the actual tag code to find the events it uses
 local alreadyScanned = {}
 function Tags:IdentifyEvents(code, parentTag)
@@ -1532,41 +1536,41 @@ function Tags:IdentifyEvents(code, parentTag)
 		for k in pairs(alreadyScanned) do alreadyScanned[k] = nil end
 		loadAPIEvents()
 	end
-			
+
 	-- Scan our function list to see what APIs are used
 	local eventList = ""
 	for func, events in pairs(self.APIEvents) do
 		if( string.match(code, func) ) then
-			eventList = eventList .. events .. " " 
+			eventList = eventList .. events .. " "
 		end
 	end
-	
+
 	-- Scan if they use any tags, if so we need to check them as well to see what content is used
-	for tag in string.gmatch(code, "tagFunc\.(%w+)%(") do
-		local code = ShadowUF.Tags.defaultTags[tag] or ShadowUF.db.profile.tags[tag] and ShadowUF.db.profile.tags[tag].func
-		eventList = eventList .. " " .. self:IdentifyEvents(code, tag)
+	for tag in string.gmatch(code, "tagFunc%.(%w+)%(") do
+		local c = ShadowUF.Tags.defaultTags[tag] or ShadowUF.db.profile.tags[tag] and ShadowUF.db.profile.tags[tag].func
+		eventList = eventList .. " " .. self:IdentifyEvents(c, tag)
 	end
-	
+
 	-- Remove any duplicate events
 	if( not parentTag ) then
 		local tagEvents = {}
 		for event in string.gmatch(string.trim(eventList), "%S+") do
 			tagEvents[event] = true
 		end
-		
+
 		eventList = ""
 		for event in pairs(tagEvents) do
 			eventList = eventList .. event .. " "
 		end
 	end
-		
+
 	-- And give them our nicely outputted data
 	return string.trim(eventList or "")
 end
 
 
 -- Checker function, makes sure tags are all happy
---[===[@debug@
+--[==[@debug@
 function Tags:Verify()
 	local fine = true
 	for tag, events in pairs(self.defaultEvents) do
@@ -1575,28 +1579,28 @@ function Tags:Verify()
 			fine = nil
 		end
 	end
-	
+
 	for tag, data in pairs(self.defaultTags) do
 		if( not self.defaultTags[tag] ) then
 			print(string.format("Found tag for %s, but no event associated with it.", tag))
 			fine = nil
 		end
-		
+
 		if( not self.defaultHelp[tag] ) then
 			print(string.format("Found tag for %s, but no help text associated with it.", tag))
 			fine = nil
 		end
-		
+
 		if( not self.defaultNames[tag] ) then
 			print(string.format("Found tag for %s, but no name associated with it.", tag))
 			fine = nil
 		end
-		
+
 		if( not self.defaultCategories[tag] ) then
 			print(string.format("Found tag for %s, but no category associated with it.", tag))
 			fine = nil
 		end
-		
+
 		local funct, msg = loadstring("return " .. data)
 		if( not funct and msg ) then
 			print(string.format("Failed to load tag %s.", tag))
@@ -1606,9 +1610,9 @@ function Tags:Verify()
 			funct("player")
 		end
 	end
-		
+
 	if( fine ) then
 		print("Verified tags, everything is fine.")
 	end
 end
---@end-debug@]===]
+--@end-debug@]==]

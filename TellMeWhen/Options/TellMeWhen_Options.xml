@@ -1452,7 +1452,7 @@
 					<OnClick>
 						TMW.IE.db.global.ConfigWarning = false
 						self:GetParent():Hide()
-						TMW.wIE:Load(1)
+						TMW.IE:Load(1)
 					</OnClick>
 				</Scripts>
 			</Button>
@@ -1691,7 +1691,7 @@
 			</Frame>
 
 			<!-- border dummy-->
-			<Frame>
+			<Frame inherits="BackdropTemplate">
 				<Anchors>
 					<Anchor point="TOPLEFT" relativeTo="$parentScrollContainerScrollFrame" x="-5" y="5"/>
 					<Anchor point="BOTTOMRIGHT" relativeTo="$parentScrollContainerScrollFrame" x="5" y="-5"/>

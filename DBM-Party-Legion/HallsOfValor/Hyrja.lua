@@ -1,10 +1,9 @@
 local mod	= DBM:NewMod(1486, "DBM-Party-Legion", 4, 721)
 local L		= mod:GetLocalizedStrings()
 
-mod:SetRevision(("$Revision: 2 $"):sub(12, -3))
+mod:SetRevision("20210905144759")
 mod:SetCreatureID(95833)
 mod:SetEncounterID(1806)
-mod:SetZone()
 
 mod:RegisterCombat("combat")
 mod:SetWipeTime(120)
@@ -30,20 +29,16 @@ local specWarnExpelLight			= mod:NewSpecialWarningMoveAway(192048, nil, nil, nil
 local yellExpelLight				= mod:NewYell(192048)
 local specWarnSearingLight			= mod:NewSpecialWarningInterrupt(192288, "HasInterrupt", nil, nil, 1, 2)
 
-local timerShieldOfLightCD			= mod:NewCDTimer(28, 192018, nil, "Tank", nil, 5, nil, DBM_CORE_TANK_ICON)--28-34
-local timerSpecialCD				= mod:NewNextTimer(30, 200736, nil, nil, nil, 2, 200901, DBM_CORE_DEADLY_ICON)--Shared timer by eye of storm and Sanctify
+local timerShieldOfLightCD			= mod:NewCDTimer(28, 192018, nil, "Tank", nil, 5, nil, DBM_CORE_L.TANK_ICON, nil, mod:IsTank() and 2, 4)--28-34
+local timerSpecialCD				= mod:NewNextTimer(30, 200736, nil, nil, nil, 2, 200901, DBM_CORE_L.DEADLY_ICON, nil, 1, 4)--Shared timer by eye of storm and Sanctify
 --local timerExpelLightCD			= mod:NewCDTimer(24, 192048, nil, nil, nil, 3)--More review 24-30
-
-local countdownSpecial				= mod:NewCountdown(30, 200736)
-local countdownShieldOfLight		= mod:NewCountdown("Alt28", 192018, "Tank")
 
 mod:AddRangeFrameOption(8, 192048)
 
 local eyeShortName = DBM:GetSpellInfo(91320)--Inner Eye
-mod.vb.phase = 1
 
 function mod:OnCombatStart(delay)
-	self.vb.phase = 1
+	self:SetStage(1)
 end
 
 function mod:OnCombatEnd()
@@ -82,21 +77,16 @@ function mod:SPELL_CAST_START(args)
 		specWarnSanctify:Play("watchorb")
 		if spellId == 192307 then
 			timerSpecialCD:Start()
-			countdownSpecial:Cancel()
-			countdownSpecial:Start()
 		end
 	elseif spellId == 192018 then
 		specWarnShieldOfLight:Show()
 		specWarnShieldOfLight:Play("defensive")
 		timerShieldOfLightCD:Start()
-		countdownShieldOfLight:Start()
 	elseif spellId == 200901 then
 		specWarnEyeofStorm:Show(eyeShortName)
 		specWarnEyeofStorm:Play("findshelter")
 		if self.vb.phase == 2 then
 			timerSpecialCD:Start()
-			countdownSpecial:Cancel()
-			countdownSpecial:Start()
 		end
 	elseif spellId == 192288 and self:CheckInterruptFilter(args.sourceGUID, false, true) then
 		specWarnSearingLight:Show(args.sourceName)
@@ -104,15 +94,12 @@ function mod:SPELL_CAST_START(args)
 	end
 end
 
-function mod:UNIT_SPELLCAST_SUCCEEDED(uId, _, bfaSpellId, _, legacySpellId)
-	local spellId = legacySpellId or bfaSpellId
+function mod:UNIT_SPELLCAST_SUCCEEDED(uId, _, spellId)
 	if spellId == 192130 then
-		self.vb.phase = 2
+		self:SetStage(2)
 		warnPhase2:Show()
 		warnPhase2:Play("ptwo")
 		timerSpecialCD:Start(8.5)
-		countdownSpecial:Start(8.5)
 		timerShieldOfLightCD:Start(24)
-		countdownShieldOfLight:Start(24)
 	end
 end

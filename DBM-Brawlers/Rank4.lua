@@ -1,9 +1,8 @@
 local mod	= DBM:NewMod("BrawlRank4", "DBM-Brawlers")
 local L		= mod:GetLocalizedStrings()
 
-mod:SetRevision(("$Revision: 18466 $"):sub(12, -3))
+mod:SetRevision("20201102223314")
 --mod:SetModelID(28115)
-mod:SetZone()
 mod:SetUsedIcons(8)
 
 mod:RegisterEvents(
@@ -26,7 +25,7 @@ local specWarnDarkOutpour		= mod:NewSpecialWarningDodge(291394, nil, nil, nil, 2
 --local timerFirewallCD			= mod:NewCDTimer(17, 132666, nil, nil, nil, 3)--Sanoriak
 local timerDarkOutpourCD		= mod:NewCDTimer(43.5, 291394, nil, nil, nil, 3)--Ouroboros
 
-local brawlersMod = DBM:GetModByName("Brawlers")
+local brawlersMod = DBM:GetModByName("BrawlersGeneral")
 --local DominikaGUID = 0
 
 function mod:SPELL_CAST_START(args)
@@ -45,6 +44,7 @@ function mod:SPELL_CAST_START(args)
 			specWarnFireWall:Play("watchstep")
 		else
 			warnFireWall:Show()
+			--timerFirewallCD:SetSTFade(true)
 		end
 	elseif args.spellId == 291394 then
 		timerDarkOutpourCD:Start()
@@ -53,6 +53,7 @@ function mod:SPELL_CAST_START(args)
 			specWarnDarkOutpour:ScheduleVoice(1, "keepmove")
 		else
 			warnDarkOutpour:Show()
+			timerDarkOutpourCD:SetSTFade(true)
 		end
 	end
 end

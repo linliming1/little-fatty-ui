@@ -68,6 +68,7 @@ local HEARTHSTONE_IDNUM = 6948
 -- Populated as needed.
 local CURRENCY_NAMES
 local CURRENCY_MAX_COUNT = {}
+local CURRENCY_TOTAL_EARNED = {} --163ui
 local OPTION_ICONS = {}
 local BROKER_ICONS = {}
 
@@ -404,10 +405,10 @@ do
 					local size = char_db.iconSize
 
 					if count > 0 and char_db[key] then
---						local totalMax = CURRENCY_MAX_COUNT[currencyID]
+--						local maxQuantity = CURRENCY_MAX_COUNT[currencyID]
 
---						if totalMax then
---							concatList[#concatList + 1] = displayIcon:format(("%s/%s"):format(_G.BreakUpLargeNumbers(count), _G.BreakUpLargeNumbers(totalMax)), size, size)
+--						if maxQuantity then
+--							concatList[#concatList + 1] = displayIcon:format(("%s/%s"):format(_G.BreakUpLargeNumbers(count), _G.BreakUpLargeNumbers(maxQuantity)), size, size)
 --						else
 							concatList[#concatList + 1] = string.format(displayIcon, _G.BreakUpLargeNumbers(count), size, size)
 --						end
@@ -457,7 +458,10 @@ do
 --							concatList[#concatList + 1] = displayIcon:format(("%s/%s"):format((count), (totalMax)), size, size)
 --						else
 							--concatList[#concatList + 1] = string.format(displayIcon, _G.BreakUpLargeNumbers(count), size, size)
-							concatList[#concatList + 1] = string.format(displayIcon:sub(4) .. "%s ", size, size, (count)) --163ui
+							concatList[#concatList + 1] = string.format(displayIcon:sub(4) .. "%s ", size, size, (count)) --abyui
+                            if currencyID == CURRENCY_IDS_BY_NAME.PVP_CONQUER or currencyID == CURRENCY_IDS_BY_NAME.VALOR then
+                                concatList[#concatList] = concatList[#concatList]:sub(1, -2) .. "/" .. (count+totalMax-CURRENCY_TOTAL_EARNED[currencyID])
+                            end
 --						end
 						
 						concatList[#concatList + 1] = " "
@@ -482,7 +486,12 @@ do
 			return 0
 		end
 
-		return ITEM_CURRENCY_NAMES_BY_ID[idnum] and _G.GetItemCount(idnum, true) or select(2, _G.GetCurrencyInfo(idnum))
+        if ITEM_CURRENCY_NAMES_BY_ID[idnum] then
+            return _G.GetItemCount(idnum, true)
+        end
+        local info = _G.C_CurrencyInfo.GetCurrencyInfo(idnum)
+        CURRENCY_TOTAL_EARNED[idnum] = info.totalEarned
+        return info.quantity
 	end
 end
 
@@ -772,7 +781,11 @@ Broker_Currency.ldb = LDB:NewDataObject("Broker Currency", {
 	text = "Initializing...",
 	OnClick = function(_, button)
 		if button == "RightButton" then
-			_G.InterfaceOptionsFrame_OpenToCategory(Broker_Currency.menu)
+            if InCombatLockdown() and not (IsControlKeyDown() and IsAltKeyDown()) then
+                U1Message("战斗中请按住CTRL+ALT点击右键进行设置")
+            else
+			    _G.InterfaceOptionsFrame_OpenToCategory(Broker_Currency.menu)
+            end
 		end
 	end,
 	OnEnter = OnEnter,
@@ -817,51 +830,39 @@ do
 			summaryGold = true,
 			["iconSize"] = 12,
 			["iconSizeGold"] = 12,
-			["show1220"] = false,  --职业大厅
-            ["show1226"] = false,  --虚空碎片
-            ["show1342"] = false, --物资
-			["show1155"] = false, --魔力
-			["show1273"] = false,  --破碎命运
-            ["show1508"] = false,  --暗淡水晶
-            ["show1533"] = false,  --觉醒精华
-            ["show1560"] = true,  --8.0物资
-            ["show1580"] = true,  --8.0印记
-            ["show1718"] = true,  --8.1泰坦
-            ["show1716"] = true,  --8.1PVP
-            ["show1717"] = true,  --8.1PVP
-			["summary1560"] = true,
-            ["summary1580"] = true,
-            ["summary1718"] = true,
-            ["summary1716"] = true,
-            ["summary1717"] = true,
 			summaryColorDark = { r = 0, g = 0, b = 0, a = 0 },
 			summaryColorLight = { r = 1, g = 1, b = 1, a = .3 },
-            update810 = true,
         }
 
-        if not Broker_CurrencyCharDB.update810 then
-            Broker_CurrencyCharDB.update810 = true
-            Broker_CurrencyCharDB.show1580 = true
-            Broker_CurrencyCharDB.show1560 = true
-            Broker_CurrencyCharDB.show1718 = true
-            Broker_CurrencyCharDB.show1716 = true
-            Broker_CurrencyCharDB.show1717 = true
-            Broker_CurrencyCharDB["summary1560"] = true
-            Broker_CurrencyCharDB["summary1580"] = true
-            Broker_CurrencyCharDB["summary1718"] = true
-            Broker_CurrencyCharDB["summary1716"] = true
-            Broker_CurrencyCharDB["summary1717"] = true
-
-            Broker_CurrencyCharDB.show1533 = false
-            Broker_CurrencyCharDB.summary1155 = false
-            Broker_CurrencyCharDB.summary1273 = false
-            Broker_CurrencyCharDB.summary1220 = false
+        if not Broker_CurrencyCharDB.update910 then
+            Mixin(Broker_CurrencyCharDB, {
+                update910 = true,
+                show1828 = true, summary1828 = true, --灰烬
+                show1191 = true, summary1191 = true, --勇气
+                show1977 = true, summary1977 = true, --冥河灰烬
+                show1906 = true, summary1906 = true, --灵魂薪尘
+                --[[show1931 = true,]] summary1931 = true, --编集研究
+                show1792 = true, summary1792 = true, --PVP荣誉
+                show1602 = true, summary1602 = true, --PVP征服
+                --[[show1767 = false,]] summary1767 = true, --冥殇
+                show1813 = false, summary1813 = false, --心能
+                ["show1560"] = false,  --8.0物资
+                ["show1580"] = false,  --8.0印记
+                ["show1716"] = false,  --8.1PVP
+                ["show1717"] = false,  --8.1PVP
+                ["show1755"] = false,  --8.3凝结幻象
+                ["summary1560"] = false,
+                ["summary1580"] = false,
+                ["summary1716"] = false,
+                ["summary1717"] = false,
+                ["summary1755"] = false,
+            })
         end
 
 		-- ----------------------------------------------------------------------------
 		-- Initialize the configuration options.
 		-- ----------------------------------------------------------------------------
-		local ICON_TOKEN = DISPLAY_ICON_STRING1 .. select(3, _G.GetCurrencyInfo(CURRENCY_IDS_BY_NAME.CURIOUS_COIN)) .. DISPLAY_ICON_STRING2
+		local ICON_TOKEN = DISPLAY_ICON_STRING1 .. _G.C_CurrencyInfo.GetCurrencyInfo(CURRENCY_IDS_BY_NAME.CURIOUS_COIN).iconFileID .. DISPLAY_ICON_STRING2
 
 		-- Provide settings options for non-money currencies
 		local function SetOptions(brokerArgs, summaryArgs, idnum, index)
@@ -1184,17 +1185,20 @@ do
 					BROKER_ICONS[currencyID] = DISPLAY_ICON_STRING1 .. iconFileDataID .. DISPLAY_ICON_STRING2
 				end
 			else
-				local currencyName, _, iconFileDataID, _, _, totalMax = _G.GetCurrencyInfo(currencyID)
+				local currencyInfo = _G.C_CurrencyInfo.GetCurrencyInfo(currencyID)
+				local currencyName = currencyInfo.name
+				local iconFileID = currencyInfo.iconFileID
+				local maxQuantity = currencyInfo.maxQuantity
 
-				if iconFileDataID and iconFileDataID ~= "" then
+				if iconFileID and iconFileID ~= "" then
 					CURRENCY_NAMES[currencyID] = currencyName
 
-					if totalMax > 0 then
-						CURRENCY_MAX_COUNT[currencyID] = totalMax
+					if maxQuantity > 0 then
+						CURRENCY_MAX_COUNT[currencyID] = maxQuantity
 					end
 
-					OPTION_ICONS[currencyID] = iconFileDataID
-					BROKER_ICONS[currencyID] = DISPLAY_ICON_STRING1 .. iconFileDataID .. DISPLAY_ICON_STRING2
+					OPTION_ICONS[currencyID] = iconFileID
+					BROKER_ICONS[currencyID] = DISPLAY_ICON_STRING1 .. iconFileID .. DISPLAY_ICON_STRING2
 				end
 			end
 		end

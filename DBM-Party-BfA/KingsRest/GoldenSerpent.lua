@@ -1,10 +1,9 @@
 local mod	= DBM:NewMod(2165, "DBM-Party-BfA", 3, 1041)
 local L		= mod:GetLocalizedStrings()
 
-mod:SetRevision(("$Revision: 18063 $"):sub(12, -3))
+mod:SetRevision("20201116014239")
 mod:SetCreatureID(135322)
 mod:SetEncounterID(2139)
-mod:SetZone()
 
 mod:RegisterCombat("combat")
 
@@ -28,24 +27,16 @@ local specWarnLucreCallTank			= mod:NewSpecialWarningMove(265923, nil, nil, nil,
 local specWarnSerpentine			= mod:NewSpecialWarningRun(265781, nil, nil, nil, 4, 2)
 local specWarnGTFO					= mod:NewSpecialWarningGTFO(265914, nil, nil, nil, 1, 8)
 
-local timerTailThrashCD				= mod:NewCDTimer(16.6, 265910, nil, nil, nil, 5, nil, DBM_CORE_TANK_ICON..DBM_CORE_DEADLY_ICON)
+local timerTailThrashCD				= mod:NewCDTimer(16.6, 265910, nil, nil, nil, 5, nil, DBM_CORE_L.TANK_ICON..DBM_CORE_L.DEADLY_ICON)
 local timerSpitGoldCD				= mod:NewCDTimer(10.9, 265773, nil, nil, nil, 3)
-local timerLucreCallCD				= mod:NewCDTimer(38.8, 265923, nil, nil, nil, 3)
+local timerLucreCallCD				= mod:NewCDTimer(37.6, 265923, nil, nil, nil, 3)
 local timerSerpentineCD				= mod:NewCDTimer(21.8, 265781, nil, nil, nil, 2)
-
---mod:AddRangeFrameOption(5, 194966)
 
 function mod:OnCombatStart(delay)
 	timerSpitGoldCD:Start(8.3-delay, 1)
 	timerSerpentineCD:Start(13.1-delay)
 	timerTailThrashCD:Start(16.8-delay)
 	timerLucreCallCD:Start(41.2-delay)
-end
-
-function mod:OnCombatEnd()
---	if self.Options.RangeFrame then
---		DBM.RangeCheck:Hide()
---	end
 end
 
 function mod:SPELL_AURA_APPLIED(args)
@@ -60,7 +51,6 @@ function mod:SPELL_AURA_APPLIED(args)
 		end
 	end
 end
---mod.SPELL_AURA_APPLIED_DOSE = mod.SPELL_AURA_APPLIED
 
 function mod:SPELL_AURA_REMOVED(args)
 	local spellId = args.spellId
@@ -84,10 +74,10 @@ function mod:SPELL_CAST_START(args)
 			specWarnLucreCallTank:Play("moveboss")
 		end
 		timerLucreCallCD:Start()--Probably wrong, didn't get to log this far, but guessed similar to pull on 3x gold rule
-		if timerSpitGoldCD:GetRemaining() < 6 then
+		if timerSpitGoldCD:GetRemaining() < 3.6 then
 			local elapsed, total = timerSpitGoldCD:GetTime()
-			local extend = 6 - (total-elapsed)
-			DBM:Debug("timerWaveofCorruptionCD extended by: "..extend, 2)
+			local extend = 3.6 - (total-elapsed)
+			DBM:Debug("timerSpitGoldCD extended by: "..extend, 2)
 			timerSpitGoldCD:Stop()
 			timerSpitGoldCD:Update(elapsed, total+extend)
 		end
@@ -111,17 +101,3 @@ function mod:SPELL_PERIODIC_DAMAGE(_, _, _, _, destGUID, _, _, _, spellId)
 	end
 end
 mod.SPELL_PERIODIC_MISSED = mod.SPELL_PERIODIC_DAMAGE
-
---[[
-function mod:UNIT_DIED(args)
-	local cid = self:GetCIDFromGUID(args.destGUID)
-	if cid == 124396 then
-		
-	end
-end
-
-function mod:UNIT_SPELLCAST_SUCCEEDED(uId, _, spellId)
-	if spellId == 257939 then
-	end
-end
---]]

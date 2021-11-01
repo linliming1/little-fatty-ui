@@ -1,44 +1,35 @@
+if not WeakAuras.IsCorrectVersion() then return end
+local AddonName, OptionsPrivate = ...
+
 local L = WeakAuras.L;
 
 local function createOptions(id, data)
   local options = {
     __title = L["Model Settings"],
     __order = 1,
-    model_path = {
-      type = "input",
-      width = WeakAuras.doubleWidth,
-      name = L["Model"],
-      order = 0.5
-    },
-    space2 = {
-      type = "execute",
-      width = WeakAuras.normalWidth,
-      name = "",
-      order = 1,
-      image = function() return "", 0, 0 end,
-      hidden = function() return data.modelIsUnit end
-    },
-    chooseModel = {
-      type = "execute",
-      width = WeakAuras.normalWidth,
-      name = L["Choose"],
-      order = 2,
-      func = function()
-        WeakAuras.OpenModelPicker(data, "model_path");
-      end,
-      hidden = function() return data.modelIsUnit end
-    },
     modelIsUnit = {
       type = "toggle",
       width = WeakAuras.normalWidth,
       name = L["Show model of unit "],
-      order = 3
+      order = 0.5,
+      hidden = function() return data.modelDisplayInfo and WeakAuras.BuildInfo > 80100 end
     },
-    portraitZoom = {
-      type = "toggle",
-      width = WeakAuras.normalWidth,
-      name = L["Portrait Zoom"],
-      order = 4,
+    -- Option for modelIsDisplayInfo added below
+
+    -- Option for path/id added below
+    chooseModel = {
+      type = "execute",
+      width = 0.15,
+      name = L["Choose"],
+      order = 2,
+      func = function()
+        OptionsPrivate.OpenModelPicker(data, {});
+      end,
+      disabled = function() return data.modelIsUnit or (WeakAuras.BuildInfo > 80100 and data.modelDisplayInfo) end,
+      imageWidth = 24,
+      imageHeight = 24,
+      control = "WeakAurasIcon",
+      image = "Interface\\AddOns\\WeakAuras\\Media\\Textures\\browse",
     },
     advance = {
       type = "toggle",
@@ -51,7 +42,7 @@ local function createOptions(id, data)
       width = WeakAuras.normalWidth,
       name = L["Animation Sequence"],
       min = 0,
-      max = 150,
+      softMax = 1499,
       step = 1,
       bigStep = 1,
       order = 6,
@@ -61,7 +52,13 @@ local function createOptions(id, data)
       type = "toggle",
       name = L["Use SetTransform"],
       order = 7,
-      width = WeakAuras.doubleWidth
+      width = WeakAuras.normalWidth
+    },
+    portraitZoom = {
+      type = "toggle",
+      width = WeakAuras.normalWidth,
+      name = L["Portrait Zoom"],
+      order = 8,
     },
     -- old settings
     model_z = {
@@ -186,17 +183,48 @@ local function createOptions(id, data)
       order = 26,
       hidden = function() return not data.api end
     },
+    endHeader = {
+      type = "header",
+      order = 100,
+      name = "",
+    },
   };
+
+  if WeakAuras.BuildInfo > 80100 then
+    options.modelDisplayInfo = {
+      type = "toggle",
+      width = WeakAuras.normalWidth,
+      name = L["Use Display Info Id"],
+      order = 0.6,
+      hidden = function() return data.modelIsUnit end
+    }
+    options.model_fileId = {
+      type = "input",
+      width = WeakAuras.doubleWidth - 0.15,
+      name = L["Model"],
+      order = 1
+    }
+  else
+    options.model_path = {
+      type = "input",
+      width = WeakAuras.doubleWidth - 0.15,
+      name = L["Model"],
+      order = 1
+    }
+  end
+
+  for k, v in pairs(OptionsPrivate.commonOptions.BorderOptions(id, data, nil, nil, 70)) do
+    options[k] = v
+  end
 
   return {
     model = options,
-    border = WeakAuras.BorderOptions(id, data);
-    position = WeakAuras.PositionOptions(id, data),
+    position = OptionsPrivate.commonOptions.PositionOptions(id, data, nil, nil, nil),
   };
 end
 
-local function createThumbnail(parent)
-  local borderframe = CreateFrame("FRAME", nil, parent);
+local function createThumbnail()
+  local borderframe = CreateFrame("FRAME", nil, UIParent);
   borderframe:SetWidth(32);
   borderframe:SetHeight(32);
 
@@ -205,42 +233,27 @@ local function createThumbnail(parent)
   border:SetTexture("Interface\\BUTTONS\\UI-Quickslot2.blp");
   border:SetTexCoord(0.2, 0.8, 0.2, 0.8);
 
-  local model = CreateFrame("PlayerModel", nil, WeakAuras.OptionsFrame() or UIParent);
+  local model = CreateFrame("PlayerModel", nil, borderframe);
   borderframe.model = model;
   model:SetFrameStrata("FULLSCREEN");
 
   return borderframe;
 end
 
-local function modifyThumbnail(parent, region, data, fullModify, size)
+local function modifyThumbnail(parent, region, data)
+  region:SetParent(parent)
+
   local model = region.model
-  model:SetParent(region);
+
   model:SetAllPoints(region);
   model:SetFrameStrata(region:GetParent():GetFrameStrata());
   model:SetWidth(region:GetWidth() - 2);
   model:SetHeight(region:GetHeight() - 2);
   model:SetPoint("center", region, "center");
-  if tonumber(data.model_path) then
-    model:SetDisplayInfo(tonumber(data.model_path))
-  else
-    if (data.modelIsUnit) then
-      model:SetUnit(data.model_path)
-    else
-      pcall(function() model:SetModel(data.model_path) end);
-    end
-  end
+  WeakAuras.SetModel(model, data.model_path, data.model_fileId, data.modelIsUnit, data.modelDisplayInfo)
   model:SetScript("OnShow", function()
-    if tonumber(data.model_path) then
-      model:SetDisplayInfo(tonumber(data.model_path))
-    else
-      if (data.modelIsUnit) then
-        model:SetUnit(data.model_path)
-      else
-        pcall(function() model:SetModel(data.model_path) end);
-      end
-      model:SetPortraitZoom(data.portraitZoom and 1 or 0);
-    end
-
+    WeakAuras.SetModel(model, data.model_path, data.model_fileId, data.modelIsUnit, data.modelDisplayInfo)
+    model:SetPortraitZoom(data.portraitZoom and 1 or 0)
     if (data.api) then
       model:SetTransform(data.model_st_tx / 1000, data.model_st_ty / 1000, data.model_st_tz / 1000,
         rad(data.model_st_rx), rad(data.model_st_ry), rad(data.model_st_rz),
@@ -264,7 +277,8 @@ end
 
 local function createIcon()
   local data = {
-    model_path = "Creature/Arthaslichking/arthaslichking.m2",
+    model_path = "spells/arcanepower_state_chest.m2", -- arthas is not a thing on classic
+    model_fileId = "122968", -- Creature/Arthaslichking/arthaslichking.m2
     modelIsUnit = false,
     model_x = 0,
     model_y = 0,
@@ -288,20 +302,24 @@ local templates = {
     title = L["Default"],
     data = {
     };
-  },
-  {
+  }
+}
+
+if WeakAuras.IsRetail() then
+  tinsert(templates, {
     title = L["Fire Orb"],
     description = "",
     data = {
       width = 100,
       height = 100,
       model_path = "spells/6fx_smallfire.m2",
+      model_fileId = "937416", -- spells/6fx_smallfire.m2
       model_x = 0,
       model_y = -0.5,
       model_z = -1.5
     },
-  },
-  {
+  })
+  tinsert(templates, {
     title = L["Blue Sparkle Orb"],
     description = "",
     data = {
@@ -310,12 +328,13 @@ local templates = {
       advance = true,
       sequence = 1,
       model_path = "spells/7fx_druid_halfmoon_missile.m2",
+      model_fileId = "1322288", -- spells/7fx_druid_halfmoon_missile.m2
       model_x = 0,
       model_y = 0.7,
       model_z = 1.5
     },
-  },
-  {
+  })
+  tinsert(templates, {
     title = L["Arcane Orb"],
     description = "",
     data = {
@@ -324,12 +343,13 @@ local templates = {
       advance = true,
       sequence = 1,
       model_path = "spells/proc_arcane_impact_low.m2",
+      model_fileId = "1042743", -- spells/proc_arcane_impact_low.m2
       model_x = 0,
       model_y = 0.8,
       model_z = 2
     },
-  },
-  {
+  })
+  tinsert(templates, {
     title = L["Orange Rune"],
     description = "",
     data = {
@@ -338,9 +358,10 @@ local templates = {
       advance = true,
       sequence = 1,
       model_path = "spells/7fx_godking_orangerune_state.m2",
+      model_fileId = "1307356", -- spells/7fx_godking_orangerune_state.m2
     },
-  },
-  {
+  })
+  tinsert(templates, {
     title = L["Blue Rune"],
     description = "",
     data = {
@@ -349,9 +370,10 @@ local templates = {
       advance = true,
       sequence = 1,
       model_path = "spells/7fx_godking_bluerune_state.m2",
+      model_fileId = "1307354", -- spells/7fx_godking_bluerune_state.m2
     }
-  },
-  {
+  })
+  tinsert(templates, {
     title = L["Yellow Rune"],
     description = "",
     data = {
@@ -360,9 +382,10 @@ local templates = {
       advance = true,
       sequence = 1,
       model_path = "spells/7fx_godking_yellowrune_state.m2",
+      model_fileId = "1307358", -- spells/7fx_godking_yellowrune_state.m2
     }
-  },
-  {
+  })
+  tinsert(templates, {
     title = L["Purple Rune"],
     description = "",
     data = {
@@ -371,9 +394,10 @@ local templates = {
       advance = true,
       sequence = 1,
       model_path = "spells/7fx_godking_purplerune_state.m2",
+      model_fileId = "1307355", -- spells/7fx_godking_purplerune_state.m2
     }
-  },
-  {
+  })
+  tinsert(templates, {
     title = L["Green Rune"],
     description = "",
     data = {
@@ -382,8 +406,9 @@ local templates = {
       advance = true,
       sequence = 1,
       model_path = "spells/7fx_godking_greenrune_state.m2",
+      model_fileId = "1307357", -- spells/7fx_godking_greenrune_state.m2
     }
-  },
-}
+  })
+end
 
 WeakAuras.RegisterRegionOptions("model", createOptions, createIcon, L["Model"], createThumbnail, modifyThumbnail, L["Shows a 3D model from the game files"], templates);

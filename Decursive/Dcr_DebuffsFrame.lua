@@ -1,14 +1,21 @@
 --[[
     This file is part of Decursive.
 
-    Decursive (v 2.7.6.2) add-on for World of Warcraft UI
-    Copyright (C) 2006-2018 John Wellesz (Decursive AT 2072productions.com) ( http://www.2072productions.com/to/decursive.php )
+    Decursive (v 2.7.8.3) add-on for World of Warcraft UI
+    Copyright (C) 2006-2019 John Wellesz (Decursive AT 2072productions.com) ( http://www.2072productions.com/to/decursive.php )
 
-    Starting from 2009-10-31 and until said otherwise by its author, Decursive
-    is no longer free software, all rights are reserved to its author (John Wellesz).
+    Decursive is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
 
-    The only official and allowed distribution means are www.2072productions.com, www.wowace.com and curse.com.
-    To distribute Decursive through other means a special authorization is required.
+    Decursive is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Decursive.  If not, see <https://www.gnu.org/licenses/>.
 
 
     Decursive is inspired from the original "Decursive v1.9.4" by Patrick Bohnet (Quu).
@@ -18,7 +25,7 @@
     but WITHOUT ANY WARRANTY.
 
 
-    This file was last updated on 2019-01-07T17:13:09Z
+    This file was last updated on 2021-02-21T13:26:58Z
 --]]
 -------------------------------------------------------------------------------
 
@@ -381,7 +388,7 @@ function MicroUnitF:MFsDisplay_Update () -- {{{
                 --D:Debug("|cFF88AA00Show schedule for MUF", Unit, "UnitShown:", self.UnitShown);
             end
         else
-            --D:errln("showhide: no muf for", Unit); -- call delay display up 
+            --D:errln("showhide: no muf for", Unit); -- call delay display up
             self:Delayed_MFsDisplay_Update ();
         end
 
@@ -595,7 +602,7 @@ do
             end
         end
 
-        -- y 
+        -- y
         if y_out_arrays[1] then
             if y_out_arrays[1] < 0 then
                 Handle_y_offset = -  y_out_arrays[1];
@@ -825,7 +832,7 @@ do
 
             elseif MF.Debuffs[1] and (Status == AFFLICTED or Status == AFFLICTED_NIR) then
                 local DebuffType = MF.Debuffs[1].Type;
-                StatusText = L["AFFLICTEDBY"]:format(D:ColorTextNA( L[DC.TypeNames[DebuffType]:upper()], DC.TypeColors[DebuffType]) );
+                StatusText = L["AFFLICTEDBY"]:format(D:ColorTextNA( L[DC.TypeNames[DebuffType]:upper()], D.profile.TypeColors[DebuffType]) );
 
             elseif Status == STEALTHED then
                 StatusText = L["STEALTHED"];
@@ -839,7 +846,7 @@ do
                 for i, Debuff in ipairs(MF.Debuffs) do
                     if Debuff.Type then
                         local DebuffApps = Debuff.Applications;
-                        MUFtoolTip:AddLine(D:ColorTextNA(Debuff.Name, DC.TypeColors[Debuff.Type]) .. (DebuffApps > 0 and (" (%d)"):format(DebuffApps) or ""));
+                        MUFtoolTip:AddLine(D:ColorTextNA(Debuff.Name, D.profile.TypeColors[Debuff.Type]) .. (DebuffApps > 0 and (" (%d)"):format(DebuffApps) or ""));
                     end
                 end
             end
@@ -851,7 +858,7 @@ do
             MUFtoolTip:Show();
 
             -- if the tooltip is at the top of the screen it means it's overlaping the MUF, let's move the tooltip beneath the first MUF.
-            if floor(MUFtoolTip:GetTop() + 0.5) >= floor(UIParent:GetTop() + 0.5) then -- if at top -- XXX attempt to perform arithmetic on a nil value, reported on 2018-08-16
+            if floor(MUFtoolTip:GetTop() + 0.5) >= floor(UIParent:GetTop() + 0.5) then -- if at top -- XXX attempt to perform arithmetic on a nil value, reported on 2018-08-16 and 2020-01-29
                 MUFtoolTip:ClearAllPoints();
                 MUFtoolTip:SetPoint(self:GetHelperAnchor(true));
             end
@@ -913,7 +920,7 @@ do
         end
 
         if D.profile.DebuffsFrameShowHelp then
-            D:DisplayLQTGameTooltip(keyHelp, frame);            
+            D:DisplayLQTGameTooltip(keyHelp, frame);
         end;
     end
 end
@@ -965,7 +972,7 @@ function MicroUnitF.OnPreClick(frame, Button) -- {{{
     elseif (frame.Object.UnitStatus == AFFLICTED and frame.Object.Debuffs[1]) then
         local NeededPrio = D:GiveSpellPrioNum(frame.Object.Debuffs[1].Type);
         local Unit = frame.Object.CurrUnit; -- shortcut
-        
+
 
         -- there is no spell for the requested prio ? (no spell registered to this modifier+mousebutton)
         if modifier and RequestedPrio and not D:tcheckforval(D.Status.CuringSpellsPrio, RequestedPrio) then
@@ -990,10 +997,10 @@ function MicroUnitF.OnPreClick(frame, Button) -- {{{
             D:errln(L["HLP_WRONGMBUTTON"]);
             if NeededPrio and MF_colors[NeededPrio] then
                 D:Println(L["HLP_USEXBUTTONTOCURE"], D:ColorText(DC.MouseButtonsReadable[ D.db.global.MouseButtons[NeededPrio] ], D:NumToHexColor(MF_colors[NeededPrio])));
-                --[===[@debug@
+                --[==[@debug@
             else
                 D:AddDebugText("Button wrong click info bug: NeededPrio:", NeededPrio, "Unit:", Unit, "RequestedPrio:", RequestedPrio, "Button clicked:", Button, "MF_colors:", unpack(MF_colors), "Debuff Type:", frame.Object.Debuffs[1].Type);
-                --@end-debug@]===]
+                --@end-debug@]==]
             end
         elseif RequestedPrio and D.Status.HasSpell then
             D.Status.ClickCastingWIP = true;
@@ -1003,7 +1010,7 @@ function MicroUnitF.OnPreClick(frame, Button) -- {{{
             local spell = D.Status.CuringSpells[frame.Object.Debuffs[1].Type];
 
             D.Status.ClickedMF.CastingSpell = "notyet";
-            D:Debuff_History_Add(frame.Object.Debuffs[1].Name, frame.Object.Debuffs[1].TypeName);
+            D:Debuff_History_Add(frame.Object.Debuffs[1].Name, frame.Object.Debuffs[1].TypeName, frame.Object.Debuffs[1].SpellID);
         end
     end
 end -- }}}
@@ -1150,9 +1157,9 @@ function MicroUnitF.prototype:Update(SkipSetColor, SkipDebuffs, CheckStealth)
         end
         -- if the guid changed we really need to rescan the unit!
         SkipSetColor = false; SkipDebuffs = false; CheckStealth = true;
-        --[===[@debug@
+        --[==[@debug@
         D:Debug("|cFF00CC00MUF:Update(): Guid change rescanning", Unit, "|r");
-        --@end-debug@]===]
+        --@end-debug@]==]
     end
 
     -- Update the frame attributes if necessary (Spells priority or unit id changes)
@@ -1459,13 +1466,13 @@ do
                     PrioChanged = true;
                 end
 
-                SpellID = Status.FoundSpells[Status.CuringSpells[DebuffType]][2];
 
                 -- Test if the spell we are going to use is in range
                 -- Some time can elaps between the instant the debuff is detected and the instant it is shown.
                 -- Between those instants, a reconfiguration can happen (pet dies or some spells become unavailable)
                 -- So we test before calling this api that we can still cure this debuff type
                 if Status.CuringSpells[DebuffType] then
+                    SpellID = Status.FoundSpells[Status.CuringSpells[DebuffType]][2];
                     RangeStatus = SpellID > 0 and IsSpellInRange(Status.CuringSpells[DebuffType], Unit) or D:isItemUsable(-1 * SpellID) and IsItemInRange(-1 * SpellID, Unit);
                 else
                     RangeStatus = false;
@@ -1611,7 +1618,7 @@ do
                     Status.SoundPlayed = false;
                 end
             end
-            
+
             if band(self.UnitStatus, AFFLICTED)~=0 then
                 MicroUnitF.UnitsDebuffedInRange =  MicroUnitF.UnitsDebuffedInRange + 1;
                 D:Debug("SetColor(): UnitsDebuffedInRange INCREASED:",  MicroUnitF.UnitsDebuffedInRange);
@@ -1623,15 +1630,15 @@ do
 
             if PrioChanged then PrioChanged = false; end
 
-            --[===[@debug@
+            --[==[@debug@
             D:Debug('Setting MUF texture color...');
-            --@end-debug@]===]
+            --@end-debug@]==]
             -- Set the main texture
             self.Texture:SetColorTexture(self.Color[1], self.Color[2], self.Color[3], Alpha); -- XXX reported to cause rare "script ran too long" errors" on 2016-09-25 and 2016-12-30
             --self.Texture:SetAlpha(Alpha);
-            --[===[@debug@
+            --[==[@debug@
             D:Debug('Setting MUF texture color... done');
-            --@end-debug@]===]
+            --@end-debug@]==]
 
 
 
@@ -1778,9 +1785,9 @@ do
                 -- test for GUID change and force a debuff update in this case
                 if UnitToGUID[MF.CurrUnit] ~= MF.UnitGUID then
                     MF.UpdateCountDown = 0; -- will force MF:Update() to be called
-                    --[===[@debug@
+                    --[==[@debug@
                     --D:Println("|cFFFFAA55GUID change detected while placing for |r", MicroFrameUpdateIndex, UnitToGUID[MF.CurrUnit], MF.UnitGUID );
-                    --@end-debug@]===]
+                    --@end-debug@]==]
                 end
 
                 ActionsDone = ActionsDone + 1;
@@ -1858,6 +1865,6 @@ local MF_Textures = { -- unused
 
 -- }}}
 
-T._LoadedFiles["Dcr_DebuffsFrame.lua"] = "2.7.6.2";
+T._LoadedFiles["Dcr_DebuffsFrame.lua"] = "2.7.8.3";
 
 -- Heresy

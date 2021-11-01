@@ -169,7 +169,7 @@ function UUI.Raise(raise)
         end
     else
         if GameMenuFrame:IsVisible() then
-            HideUIPanel(GameMenuFrame);
+            if not InCombatLockdown() then HideUIPanel(GameMenuFrame) end
         else
             main:SetFrameStrata("MEDIUM");
             main:Lower();
@@ -589,18 +589,18 @@ end
 function UUI.Top.Create(main)
     --左上角LOGO及文字
     main:CreateTexture():Key("logo"):SetTexture(UUI.Tex"UI2-logo"):TL(-18, 38):Size(87):un()
-    main:CreateTexture():Key("logof"):TL(-18, 38):Size(87):SetTexture("Interface\\UnitPowerBarAlt\\Atramedes_Circular_Flash"):SetBlendMode("ADD"):SetAlpha(0.5):up()
+    main:CreateTexture():Key("logof"):TL(-18-5, 38+1):Size(87):SetTexture("Interface\\UnitPowerBarAlt\\Atramedes_Circular_Flash"):SetBlendMode("ADD"):SetAlpha(0.5):up()
     main:Button():TL(-8, 48):Size(67):SetScript("OnClick", function() local f = U1DonatorsFrame or U1Donators:CreateFrame() CoreUIShowOrHide(f, not f:IsShown()) end):un()
     UICoreFrameFlash(main.logof, 1 , 1, -1, nil, 0, 0)
 
     main:Texture(nil, nil, UUI.Tex'UI2-text', 0,1,0,0.5):TL(74, -7):Size(256,32):un()
     local url = main:Button():Size(180, 32):TL(180, -11):Texture(nil, nil, UUI.Tex'UI2-text', 0,180/256,0.5,1):ALL():ToTexture("Normal"):up():un()
-    url:SetScript("OnClick", function() CoreUISetEditText(UUI.URL) end)
+    url:SetScript("OnClick", function() CoreUIChatEdit_Insert(UUI.URL, true) end)
     UUI.MakeMove(url)
 
     --右上角关闭按钮
     main.btnClose = main:Button(nil, "UIPanelCloseButton"):Size(30):TR(5, 5)
-    :SetScript("OnClick", function(self) HideUIPanel(self:GetParent()) end)
+    :SetScript("OnClick", function(self) self:GetParent():Hide() end)
     :un()
     --关闭按钮的边框
     main:Texture(nil, nil, "Interface\\Buttons\\UI-CheckBox-Up"):TL(main.btnClose,1,0):BR(main.btnClose,-1,-1):un()
@@ -628,14 +628,16 @@ function UUI.Top.Create(main)
 
     do
         --音量调整按钮
-        main.setting.soundPanel = WW:Frame(nil, UIParent):Size(60,175):TL(DropDownList1, "TR", -3, 0):SetFrameStrata("FULLSCREEN_DIALOG"):Hide()
+        main.setting.soundPanel = WW:Frame(nil, UIParent, ABY_BD_TPL):Size(60,175):TL(DropDownList1, "TR", -3, 0):SetFrameStrata("FULLSCREEN_DIALOG"):Hide()
         :Backdrop("Interface\\Tooltips\\UI-Tooltip-Background", "Interface\\Tooltips\\UI-Tooltip-Border", 16, {5,5,5,4}, 16)
         :SetBackdropBorderColor(TOOLTIP_DEFAULT_COLOR.r, TOOLTIP_DEFAULT_COLOR.g, TOOLTIP_DEFAULT_COLOR.b)
         :SetBackdropColor(TOOLTIP_DEFAULT_BACKGROUND_COLOR.r, TOOLTIP_DEFAULT_BACKGROUND_COLOR.g, TOOLTIP_DEFAULT_BACKGROUND_COLOR.b)
         :EnableMouse(true)
         :SetScript("OnEnter", UIDropDownMenu_StopCounting):SetScript("OnLeave", UIDropDownMenu_StartCounting)
         :un()
-        main.setting.soundPanel.parent = DropDownList1; --stopCounting
+        main.setting.soundPanel.HandlesGlobalMouseEvent = function(self, button, event)
+            return self:IsShown() and (self:IsMouseOver() or self:GetParent():IsMouseOver() or DropDownList1:IsMouseOver())
+        end
 
         local soundSlider = TplSlider(main.setting.soundPanel, nil, VOLUME, 1, "%d%%", 0, 100, 5):Size(12,128):TOP(-10, -35)
         :SetScript("OnEnter", UIDropDownMenu_StopCounting):SetScript("OnLeave", UIDropDownMenu_StartCounting)
@@ -644,6 +646,9 @@ function UUI.Top.Create(main)
         soundSlider.func = function(self, v) BlizzardOptionsPanel_SetCVarSafe("Sound_MasterVolume", v/100) PlaySound(SOUNDKIT.IG_MAINMENU_OPEN) end
         soundSlider.parent = DropDownList1; --StopCounting
         DropDownList1:HookScript("OnHide", function() main.setting.soundPanel:Hide() end)
+        soundSlider.HandlesGlobalMouseEvent = function(self, button, event)
+            return self:IsShown() and (self:IsMouseOver() or self:GetParent():IsMouseOver())
+        end
     end
 
     main.reload = TplPanelButton(main,nil, UUI.PANEL_BUTTON_HEIGHT):Set3Fonts(UUI.FONT_PANEL_BUTTON)
@@ -756,7 +761,7 @@ end
 中央区域
 ---------------------------------------------------------------]]
 function UUI.Center.Create(main)
-    local center = main:Frame():Key("center"):TL(UUI.LEFT_WIDTH+11, -(UUI.TOP_HEIGHT+10+24+10)):BR(-UUI.RIGHT_WIDTH-9, 12):Backdrop("Interface\\GLUES\\COMMON\\Glue-Tooltip-Background")
+    local center = main:Frame(nil,ABY_BD_TPL,"center"):TL(UUI.LEFT_WIDTH+11, -(UUI.TOP_HEIGHT+10+24+10)):BR(-UUI.RIGHT_WIDTH-9, 12):Backdrop("Interface\\GLUES\\COMMON\\Glue-Tooltip-Background")
     local tl = CoreUIDrawBorder(center, 1, "U1T_InnerBorder", 16, UUI.Tex'UI2-border-inner-corner', 16, true)
 
     local scroll = CoreUICreateHybridStep1(nil, center(), 9, nil, true, "LINE")
@@ -913,6 +918,7 @@ end
 
 function UUI.Center.ButtonUpdateTooltip(self)
     if not self.addonName then return end
+    GameTooltip:ClearAllPoints()
     GameTooltip_SetDefaultAnchor(GameTooltip, self)
     UUI.SetAddonTooltip(self.addonName, GameTooltip);
     GameTooltip:Show();
@@ -1227,7 +1233,7 @@ end
 右侧区域
 ---------------------------------------------------------------]]
 function UUI.Right.Create(main)
-    local right = main:Frame():Key("right"):TL(main,"TR", -UUI.RIGHT_WIDTH, -(UUI.TOP_HEIGHT+10+24+10)):BR(-12, 12):Backdrop("Interface\\GLUES\\COMMON\\Glue-Tooltip-Background")
+    local right = main:Frame(nil,ABY_BD_TPL,"right"):TL(main,"TR", -UUI.RIGHT_WIDTH, -(UUI.TOP_HEIGHT+10+24+10)):BR(-12, 12):Backdrop("Interface\\GLUES\\COMMON\\Glue-Tooltip-Background")
     local l = right:Texture(nil, "BORDER", UUI.Tex'UI2-chain-end'):Size(16,16):TL(-10,0)
     local r = right:Texture(nil, "BORDER", UUI.Tex'UI2-chain-end'):Size(16,16):BL(-10,0):SetTexRotate("V")
     right:CreateTexture(nil, "BORDER", 'U1T_ChainMid'):Size(16,1):TL(l, "BL"):BR(r, "TR"):up()
@@ -1303,9 +1309,9 @@ function UUI.Right.CreatePageDesc(right)
     :CreateTexture():Key("tex"):ALL():up()
     :CreateFontString():Key("caption"):SetFontObject(U1FTextTinyOUTLINE):SetTextColor(1,.96,.63,0.5):TL(0,-3):up()
     --边框
-    local border = WW:Frame(nil, pageDesc.pics):Key("border"):TL(-2, 2):BR(2,-2):Backdrop(nil,UUI.Tex'TuiBlank',1):SetBackdropBorderColor(.3,.3,.3):un()
+    local border = WW:Frame(nil, pageDesc.pics, ABY_BD_TPL):Key("border"):TL(-2, 2):BR(2,-2):Backdrop(nil,UUI.Tex'TuiBlank',1):SetBackdropBorderColor(.3,.3,.3):un()
     --外边框
-    local outset = -2 WW:Frame(nil, border):TL(-3 - outset, 3 + outset):BR(3 + outset, -3 - outset):Backdrop(nil,UUI.Tex'TuiBlank',1):SetBackdropBorderColor(.3,.3,.3,.5):un()
+    local outset = -2 WW:Frame(nil, border, ABY_BD_TPL):TL(-3 - outset, 3 + outset):BR(3 + outset, -3 - outset):Backdrop(nil,UUI.Tex'TuiBlank',1):SetBackdropBorderColor(.3,.3,.3,.5):un()
 
     --图片翻页按钮
     local function pageButtonOnClick(self)
@@ -1430,7 +1436,7 @@ function UUI.Right.SetHTML(right, name)
 
         local text = "<HTML><BODY>%s%s%s"..format(UUI.Right.GetTitleFormat(), L["插件介绍"])..L["<P>　%s<br/></P>%s</BODY></HTML>"];
         local author, modifier, changes, tags = "", "", "", ""
-        if #info.tags > 0 then
+        if info.tags and #info.tags > 0 then
             for _, tag in ipairs(info.tags) do
                 if tag ~= TAG_GOOD then
                     tag = select(3, U1GetTagInfoByName(tag))
@@ -1669,12 +1675,16 @@ function UUI.OnUpdate(self, elapsed)
         end
     end
 
+    --[[ --only update when change option or show
     self.timer = self.timer + elapsed;
     if(self.timer > 3) then
         self.timer = 0;
-        UpdateAddOnMemoryUsage()
-        UUI.Center.Refresh();
+        if not U1DB.sortByName then
+            UpdateAddOnMemoryUsage()
+            UUI.Center.Refresh();
+        end
     end
+    ]]
 end
 
 function UUI.OnSizeChanged(self)
@@ -1683,7 +1693,9 @@ end
 
 function UUI.OnShow(self)
     --self:SetSize(840, 465)
-    UpdateAddOnMemoryUsage();
+    --打开就更新内存情况太卡，但是不更新又无法显示占用内存，所以等一秒
+    if not U1DB.sortByName then UpdateAddOnMemoryUsage(); end
+    CoreScheduleTimer(false, 1, UpdateAddOnMemoryUsage);
     self.left:SetWidth(UUI.LEFT_WIDTH); --没有这句就会出问题！
 
     U1UpdateTags(); --为什么要在这里UpdateTags? 因为除此之外只有一个事件在Update了
@@ -1745,7 +1757,7 @@ end
 
 function UUI.CreateUI()
     table.insert(UISpecialFrames, U1_FRAME_NAME)
-    local main = WW:Frame(U1_FRAME_NAME, UIParent):TR(-250, -160):Size(800,500) --TR(-350, -260)
+    local main = WW:Frame(U1_FRAME_NAME, UIParent, ABY_BD_TPL):TR(-250, -160):Size(800,500) --TR(-350, -260)
     :Hide():SetToplevel(1)
     CoreUIMakeMovable(main)
     CoreHookScript(main, "OnMouseDown", UUI.Raise)
@@ -1897,8 +1909,8 @@ function UUI.CreateUI()
     :SetScript("OnDragStop", function() GameMenuFrame:StopMovingOrSizing() end)
     :SetScript("OnEnter", function(self) UICoreFrameFlash(self:GetHighlightTexture(), 0.5 , 0.5, -1,nil, 0, 0) end)
     :SetScript("OnLeave", function(self) UICoreFrameFlashStop(self:GetHighlightTexture()) end)
-    :CreateTexture():SetTexture(UUI.Tex"UI2-logo"):Size(87):TL(-14, 18):up()
-    :CreateTexture():TL(-20,20):BR(20, -20):SetTexture("Interface\\UnitPowerBarAlt\\Atramedes_Circular_Flash"):SetAlpha(0.8):ToTexture("Highlight"):up()
+    :CreateTexture():SetTexture(UUI.Tex"UI2-logo"):Size(79):TL(-10, 14):up()
+    :CreateTexture():TL(-20-4,20+7):BR(20-4, -20+7):SetTexture("Interface\\UnitPowerBarAlt\\Atramedes_Circular_Flash"):SetAlpha(0.8):ToTexture("Highlight"):up()
     :un()
     CoreUIEnableTooltip(GameMenuFrame.btn163, L["爱不易"], L["点击爱不易标志开启插件控制中心\n \nCtrl点击小地图图标可以收集/还原"])
 
@@ -1911,7 +1923,6 @@ function U1_CreateMinimapButton()
         type = "launcher",
         label = L["爱不易"],
         icon = UUI.Tex'UI2-icon',
-        iconCoords = {0.04+0.05, 26/32-0.06+0.05, 0.06, 26/32-0.10},
         OnEnter = CoreUIShowTooltip,
         OnClick = function(self, button)
             GameTooltip:Hide();
@@ -1937,11 +1948,18 @@ function U1_CreateMinimapButton()
     U1DB.minimapPos = U1DB.minimapPos or 191
     LibStub("LibDBIcon-1.0"):Register("U1MMB", ldb, U1DB);
     CoreUICreateFlash(LibDBIcon10_U1MMB, "Interface\\UnitPowerBarAlt\\Generic1Party_Circular_Flash");
+
+    LibDBIcon10_U1MMB.icon:SetSize(20, 20)
+    LibDBIcon10_U1MMB.icon:SetPoint("TOPLEFT", 6, -5)
+    WW(LibDBIcon10_U1MMB):SetFixedFrameLevel(false):AddFrameLevel(1):SetFixedFrameLevel(true):un()
+    if LibDBIcon10_U1MMB.overlay then
+        LibDBIcon10_U1MMB.overlay:SetTexture("Interface\\AddOns\\!!!163UI!!!\\Textures\\UI2-minimap-btn")
+    end
     U1_CreateMinimapButton = nil
 end
 
 function UUI.ToggleUI(self, button)
-    if GameMenuFrame:IsVisible() then HideUIPanel(GameMenuFrame) end
+    if GameMenuFrame:IsVisible() then if not InCombatLockdown() then HideUIPanel(GameMenuFrame) end end
     if UUI():IsVisible() then UUI():Hide() else UUI():Show() end
 end
 

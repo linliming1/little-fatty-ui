@@ -86,8 +86,10 @@ local function BuildHubPanel(panel)
 
 	panel.StyleHeadlineLabel, F = CreateQuickItemLabel(nil, "强制标题模式:", AlignmentColumn, F, 0, 2)
 	panel.StyleHeadlineNeutral, F = CreateQuickCheckbutton(objectName.."StyleHeadlineNeutral", "中立单位", AlignmentColumn, F, 16, 2)
-	panel.StyleHeadlineOutOfCombat, F = CreateQuickCheckbutton(objectName.."StyleHeadlineOutOfCombat", "非战斗时", AlignmentColumn, F, 16, 0)
-	panel.StyleHeadlineMiniMobs, F = CreateQuickCheckbutton(objectName.."StyleHeadlineMiniMobs", "杂兵", AlignmentColumn, F, 16, 0)
+    panel.StyleHeadlineNeutralCombatOverride, F = CreateQuickCheckbutton(objectName.."StyleHeadlineNeutralCombatOverride", "在战斗时忽略", AlignmentColumn, F, 40, 0)
+    panel.StyleHeadlineNeutralCombatOverride:SetScale(.8)
+	panel.StyleHeadlineOutOfCombat, F = CreateQuickCheckbutton(objectName.."StyleHeadlineOutOfCombat", "战斗外强制标题模式", AlignmentColumn, F, 16, 0)
+	panel.StyleHeadlineMiniMobs, F = CreateQuickCheckbutton(objectName.."StyleHeadlineMiniMobs", "杂兵强制标题模式", AlignmentColumn, F, 16, 0)
 
 	------------------------------
     -- Health Bars
@@ -111,6 +113,7 @@ local function BuildHubPanel(panel)
 
 	-- Other
 	panel.TextShowLevel, F = CreateQuickCheckbutton(objectName.."TextShowLevel", "血条左上方固定显示等级", AlignmentColumn, F, 0, 2)
+    panel.TextShowPercent = CreateQuickCheckbutton(objectName.."TextShowPercent", "改为血量百分比", AlignmentColumn, F, 220, -13)
     panel.TextShowOnlyOnTargets, F = CreateQuickCheckbutton(objectName.."TextShowOnlyOnTargets", "血条上文字仅当前目标或鼠标指向时显示", AlignmentColumn, F, 0)
     panel.TextShowOnlyOnActive, F = CreateQuickCheckbutton(objectName.."TextShowOnlyOnActive", "血条上文字仅当单位在战斗或受伤时显示", AlignmentColumn, F, 0)
 
@@ -165,8 +168,9 @@ local function BuildHubPanel(panel)
     panel.WidgetsHostileBuff = CreateQuickCheckbutton(objectName.."WidgetsHostileBuff", "包括敌对NPC的Buffs", AlignmentColumn, panel.WidgetsMyDebuff, 16)
     panel.WidgetsHostilePlayerBuff = CreateQuickCheckbutton(objectName.."WidgetsHostilePlayerBuff", "也显示敌对玩家的Buffs（会比较乱）", AlignmentColumn, panel.WidgetsHostileBuff, 32)
     panel.WidgetsHostileBuffStealableOnly2 = CreateQuickCheckbutton(objectName.."WidgetsHostileBuffStealableOnly2", "仅包括可进攻驱散或可偷取的", AlignmentColumn, panel.WidgetsHostilePlayerBuff, 32)
+    panel.WidgetsOnlyListDebuff = CreateQuickCheckbutton(objectName.."WidgetsOnlyListDebuff", "仅显示下面列出的Debuffs(白名单方式)", AlignmentColumn, panel.WidgetsHostileBuffStealableOnly2, 16)
 
-	panel.WidgetsDebuffListLabel = CreateQuickItemLabel(nil, "额外的光环:", AlignmentColumn, panel.WidgetsHostileBuffStealableOnly2, 16)
+	panel.WidgetsDebuffListLabel = CreateQuickItemLabel(nil, "额外的光环:", AlignmentColumn, panel.WidgetsOnlyListDebuff, 16)
 	panel.WidgetsDebuffTrackList = CreateQuickEditbox(objectName.."WidgetsDebuffTrackList", AlignmentColumn, panel.WidgetsDebuffListLabel, 16)
 
 	panel.WidgetsDebuffStyle =  CreateQuickDropdown(objectName.."WidgetsDebuffStyle", "图标样式:", DebuffStyles, 1, AlignmentColumn, panel.WidgetsDebuffTrackList, 16)
@@ -281,12 +285,11 @@ local function BuildHubPanel(panel)
 	panel.OpacityFilterFriendlyNPC, F = CreateQuickCheckbutton(objectName.."OpacityFilterFriendlyNPC", "过滤友方NPC", AlignmentColumn, F, 8)
 	panel.OpacityFilterUntitledFriendlyNPC, F = CreateQuickCheckbutton(objectName.."OpacityFilterUntitledFriendlyNPC", "过滤无头衔的友方NPC", AlignmentColumn, F, 8)	
 	--panel.OpacityFilterExcludeQuestMobs, F = CreateQuickCheckbutton(objectName.."OpacityFilterExcludeQuestMobs", "Bypass Filter for Quest Mobs", AlignmentColumn, F, 8)
-	
+
     panel.OpacityFilterPlayers = CreateQuickCheckbutton(objectName.."OpacityFilterPlayers", "过滤玩家", AlignmentColumn, panel.FilterScaleLock, OffsetColumnB, 4)
 	panel.OpacityFilterInactive = CreateQuickCheckbutton(objectName.."OpacityFilterInactive", "过滤未激活", AlignmentColumn, panel.OpacityFilterPlayers, OffsetColumnB)
     panel.OpacityFilterInactiveOnlyInCombat = CreateQuickCheckbutton(objectName.."OpacityFilterInactiveOnlyInCombat", "仅当玩家在战斗时才过滤", AlignmentColumn, panel.OpacityFilterInactive, OffsetColumnB + 20)
 	panel.OpacityFilterMini = CreateQuickCheckbutton(objectName.."OpacityFilterMini", "过滤杂兵", AlignmentColumn, panel.OpacityFilterInactiveOnlyInCombat, OffsetColumnB)
-
 
 	panel.OpacityCustomFilterLabel = CreateQuickItemLabel(nil, "过滤单位名字:", AlignmentColumn, F, 8, 4)
 	panel.OpacityFilterList, L = CreateQuickEditbox(objectName.."OpacityFilterList", AlignmentColumn, panel.OpacityCustomFilterLabel, 8)
@@ -344,9 +347,10 @@ local function BuildHubPanel(panel)
 
     -- Column 2
 	panel.EnableOffTankHighlight = CreateQuickCheckbutton(objectName.."EnableOffTankHighlight", "高亮正在攻击副坦的", AlignmentColumn, panel.ThreatLabel, OffsetColumnB)
-	panel.ColorAttackingOtherTank = CreateQuickColorbox(objectName.."ColorAttackingOtherTank", "正在攻击其他坦克", AlignmentColumn, panel.EnableOffTankHighlight , 16+OffsetColumnB)
+	panel.ColorAttackingOtherTank = CreateQuickColorbox(objectName.."ColorAttackingOtherTank", "正在攻击其他坦克", AlignmentColumn, panel.EnableOffTankHighlight , 14+OffsetColumnB)
+	panel.CountPetAsOtherTank = CreateQuickCheckbutton(objectName.."CountPetAsOtherTank", "将宠物视为副坦克", AlignmentColumn, panel.ColorAttackingOtherTank, 16+OffsetColumnB)
 
-	panel.ColorShowPartyAggro = CreateQuickCheckbutton(objectName.."ColorShowPartyAggro", "高亮团队成员的仇恨", AlignmentColumn, panel.ColorAttackingOtherTank, OffsetColumnB)
+	panel.ColorShowPartyAggro = CreateQuickCheckbutton(objectName.."ColorShowPartyAggro", "高亮团队成员的仇恨", AlignmentColumn, panel.CountPetAsOtherTank, OffsetColumnB)
 	panel.ColorPartyAggro = CreateQuickColorbox(objectName.."ColorPartyAggro", "团队成员的仇恨", AlignmentColumn, panel.ColorShowPartyAggro , 14+OffsetColumnB)
 	panel.ColorPartyAggroBar = CreateQuickCheckbutton(objectName.."ColorPartyAggroBar", "血条颜色", AlignmentColumn, panel.ColorPartyAggro, 16+OffsetColumnB)
 	panel.ColorPartyAggroGlow = CreateQuickCheckbutton(objectName.."ColorPartyAggroGlow", "边框或发光警告", AlignmentColumn, panel.ColorPartyAggroBar, 16+OffsetColumnB)
@@ -375,6 +379,19 @@ local function BuildHubPanel(panel)
 	panel.ColorNormalSpellCast, F = CreateQuickColorbox(objectName.."ColorNormalSpellCast", "可打断", AlignmentColumn, F , 16)
 	panel.ColorUnIntpellCast, F = CreateQuickColorbox(objectName.."ColorUnIntpellCast", "不可打断", AlignmentColumn, F , 16)
 
+	panel.SpellsCastAtPlayerLabel, F = CreateQuickItemLabel(nil, "Spells that target you:", AlignmentColumn, F, 0, 2)
+    panel.SpellsCastAtPlayerEnable, F = CreateQuickCheckbutton(objectName.."SpellsCastAtPlayerEnable", "Color spells cast at player", AlignmentColumn, F)
+	panel.ColorNormalSpellsCastAtPlayer, F = CreateQuickColorbox(objectName.."ColorNormalSpellsCastAtPlayer", "Normal", AlignmentColumn, F , 16)
+	panel.ColorUnIntSpellsCastAtPlayer, F = CreateQuickColorbox(objectName.."ColorUnIntSpellsCastAtPlayer", "Un-interruptible", AlignmentColumn, F , 16)
+	panel.SpellCastAtPlayerListLabel, F = CreateQuickItemLabel(nil, "Spells that will be checked:", AlignmentColumn, F, 0, 2)
+	panel.SpellCastAtPlayerList, F = CreateQuickEditbox(objectName.."SpellCastAtPlayerList", AlignmentColumn, F, 8)
+	panel.SpellCastAtPlayerList:SetWidth(250)
+
+	panel.SpellCastAtPlayerTip, F = CreateQuickItemLabel(nil, "Tip:|cffCCCCCC Not all spells are actually cast at the current target of a mob. TidyPlates only recolors spells listed here in order to make sure only spells where you know they get cast at the current target get recolored.\nSpells need to be listed with their exact spell ID or name. Each line needs to contain exactly one spell ID or name. Lines starting with # will be ignored. For example this would add Ice Lance (spell ID 30455), Frostbolt, but not Shadowbolt:\n\n30455\nFrostbolt\n# Shadowbolt", AlignmentColumn, panel.SpellsCastAtPlayerLabel, 300)
+	panel.SpellCastAtPlayerTip:SetHeight(300)
+	panel.SpellCastAtPlayerTip:SetWidth(200)
+	panel.SpellCastAtPlayerTip.Text:SetJustifyV("TOP")
+
 	--[[
 	------------------------------
 	-- Text
@@ -398,13 +415,13 @@ local function BuildHubPanel(panel)
 	------------------------------
 	--Widgets
 	------------------------------
-	panel.WidgetsLabel, F = CreateQuickHeadingLabel(nil, "其他部件", AlignmentColumn, F, 0, 5)
+	panel.WidgetsLabel, F = CreateQuickHeadingLabel(nil, "其他部件", AlignmentColumn, panel.SpellCastAtPlayerList, 0, 5)
 	panel.WidgetTargetHighlight = CreateQuickCheckbutton(objectName.."WidgetTargetHighlight", "目标高亮", AlignmentColumn, panel.WidgetsLabel)
 	panel.WidgetEliteIndicator = CreateQuickCheckbutton(objectName.."WidgetEliteIndicator", "显示精英图标", AlignmentColumn, panel.WidgetTargetHighlight)
 	panel.ClassEnemyIcon = CreateQuickCheckbutton(objectName.."ClassEnemyIcon", "显示敌对职业图标", AlignmentColumn, panel.WidgetEliteIndicator)
 	panel.ClassPartyIcon = CreateQuickCheckbutton(objectName.."ClassPartyIcon", "显示友好职业图标", AlignmentColumn, panel.ClassEnemyIcon)
 	panel.WidgetsTotemIcon = CreateQuickCheckbutton(objectName.."WidgetsTotemIcon", "显示图腾图标", AlignmentColumn, panel.ClassPartyIcon)
-	panel.WidgetsComboPoints = CreateQuickCheckbutton(objectName.."WidgetsComboPoints", "显示连击点", AlignmentColumn, panel.WidgetsTotemIcon)
+	panel.WidgetsComboPoints2 = CreateQuickCheckbutton(objectName.."WidgetsComboPoints2", "显示连击点（注意，选中会隐藏暴雪自带的连击点）", AlignmentColumn, panel.WidgetsTotemIcon)
 
 	--panel.WidgetsEnableExternal = CreateQuickCheckbutton(objectName.."WidgetsEnableExternal", "Enable External Widgets", AlignmentColumn, panel.WidgetsComboPoints)
 
@@ -415,7 +432,7 @@ local function BuildHubPanel(panel)
 	------------------------------
 	-- Advanced
 	------------------------------
-	panel.AdvancedLabel, F = CreateQuickHeadingLabel(nil, "高级设置", AlignmentColumn, panel.WidgetsComboPoints, 0, 5)
+	panel.AdvancedLabel, F = CreateQuickHeadingLabel(nil, "高级设置", AlignmentColumn, panel.WidgetsComboPoints2, 0, 5)
 	panel.TextUseBlizzardFont, F = CreateQuickCheckbutton(objectName.."TextUseBlizzardFont", "使用暴雪默认字体", AlignmentColumn, F, 0)
 	panel.FocusAsTarget, F = CreateQuickCheckbutton(objectName.."FocusAsTarget", "将焦点单位视为一个目标", AlignmentColumn, F, 0)
 	panel.AdvancedEnableUnitCache, F = CreateQuickCheckbutton(objectName.."AdvancedEnableUnitCache", "启用头衔缓存", AlignmentColumn, F)
@@ -485,7 +502,8 @@ local function BuildHubPanel(panel)
 		ConvertDebuffListTable(LocalVars.WidgetsDebuffTrackList, LocalVars.WidgetsDebuffLookup, LocalVars.WidgetsDebuffPriority)
 		-- Convert Unit Filter Strings
 		ConvertStringToTable(LocalVars.OpacityFilterList, LocalVars.OpacityFilterLookup)
-		ConvertStringToTable(LocalVars.UnitSpotlightList, LocalVars.UnitSpotlightLookup)
+        ConvertStringToTable(LocalVars.UnitSpotlightList, LocalVars.UnitSpotlightLookup)
+		ConvertStringToTable(LocalVars.SpellCastAtPlayerList, LocalVars.SpellCastAtPlayerLookup)
 	end
 
 	--panel:Hide()
@@ -559,7 +577,7 @@ SlashCmdList['HUB'] = SlashCommandHub
 --]]
 --end
 
---local HubHandler = CreateFrame("Frame")
+--local HubHandler = CreateFrame("Frame", nil, nil)
 --HubHandler:SetScript("OnEvent", OnLogin)
 --HubHandler:RegisterEvent("PLAYER_LOGIN")
 

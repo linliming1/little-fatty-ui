@@ -42,9 +42,9 @@ if TalentMicroButton then
             for i = 1, GetNumSpecializations() do
                 buttons[i] = CreateFrame("Button", "$parentSpecSwitch" .. i, TalentMicroButton, "UIPanelButtonTemplate") --"UIMenuButtonStretchTemplate")
                 buttons[i]:SetSize(60, 22)
-                buttons[i]:SetText((select(2, GetSpecializationInfo(i))))
+                    buttons[i]:SetText((select(2, GetSpecializationInfo(i))))
                 buttons[i]:SetFrameStrata("Tooltip")
-                buttons[i].spec = i
+                    buttons[i].spec = i
                 buttons[i]:SetScript("OnEnter", switchOnEnter)
                 buttons[i]:SetScript("OnLeave", switchOnLeave)
                 buttons[i]:SetScript("OnClick", switchOnClick)
@@ -100,6 +100,7 @@ if TalentMicroButton then
 
     SetOrHookScript(TalentMicroButton, "OnClick", function(self, button)
         if button == "RightButton" then
+            if InCombatLockdown() then return end
             if PlayerTalentFrame:IsVisible() then
                 HideUIPanel(PlayerTalentFrame)
             end

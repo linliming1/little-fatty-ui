@@ -144,7 +144,7 @@ local function SmartFilterMode(aura)
 	local AuraPriority = 30
 
 	-- My own Buffs and Debuffs
-	if (aura.caster == "player" or aura.caster == "pet") and aura.duration and aura.duration < 150 then
+	if not LocalVars.WidgetsOnlyListDebuff and (aura.caster == "player" or aura.caster == "pet") and aura.duration and aura.duration < 150 then
 		if false and LocalVars.WidgetsMyBuff and aura.effect == "HELPFUL" then
 			ShowThisAura = true
 		elseif LocalVars.WidgetsMyDebuff and aura.effect == "HARMFUL" then
@@ -271,7 +271,7 @@ local function OnInitializeWidgets(extended, configTable)
 
 	local EnableClassWidget = (LocalVars.ClassEnemyIcon or LocalVars.ClassPartyIcon)
 	local EnableTotemWidget = LocalVars.WidgetsTotemIcon
-	local EnableComboWidget = LocalVars.WidgetsComboPoints
+	local EnableComboWidget = LocalVars.WidgetsComboPoints2
 	local EnableThreatWidget = LocalVars.WidgetsThreatIndicator
 	local EnableAuraWidget = LocalVars.WidgetsDebuff
 
@@ -289,9 +289,10 @@ local function OnInitializeWidgets(extended, configTable)
 end
 
 local function OnContextUpdateDelegate(extended, unit)
+    if not extended then return end
 	local widgets = extended.widgets
 
-	if LocalVars.WidgetsComboPoints and widgets.ComboWidgetHub then
+	if LocalVars.WidgetsComboPoints2 and widgets.ComboWidgetHub then
 		widgets.ComboWidgetHub:UpdateContext(unit) end
 
 	if LocalVars.WidgetsThreatIndicator and widgets.ThreatWidgetHub then
@@ -302,6 +303,7 @@ local function OnContextUpdateDelegate(extended, unit)
 end
 
 local function OnUpdateDelegate(extended, unit)
+    if not extended then return end
 	local widgets = extended.widgets
 
 	if widgets.ClassWidgetHub and ( (LocalVars.ClassEnemyIcon and unit.reaction ~= "FRIENDLY") or (LocalVars.ClassPartyIcon and unit.reaction == "FRIENDLY")) then

@@ -19,6 +19,7 @@ privateTable.L = setmetatable({
     ["questTypeExceptDaily"] = "除日常外的全部",
     ["TrivialQuests"]="接受低等级任务",
 	["ShareQuestsLabel"] = "自动与队友分享任务",
+    ["AcceptSharedQuestsLabel"] = "自动接受队友分享的任务",
     ["CompleteOnly"] = "只自动交任务(不自动接)",
 
 	["lootTypeLabel"]="有奖励的任务",
@@ -36,6 +37,10 @@ privateTable.L = setmetatable({
 	["DarkmoonAutoLabel"]="暗月：开始游戏",
 	["Darkmoon Island"]="Darkmoon Island",
 	["Darkmoon Faire Mystic Mage"]="Darkmoon Faire Mystic Mage",
+
+    ["ReviveBattlePetLabel"]="宠物训练师自动治疗（暂不支持）", --todo abyui
+   	["ReviveBattlePetQ"]="I'd like to heal and revive my battle pets.",
+   	["ReviveBattlePetA"]="A small fee for supplies is required.",
 	
 	["The Jade Forest"]="The Jade Forest",
     ["Scared Pandaren Cub"]="Scared Pandaren Cub",
@@ -56,6 +61,10 @@ privateTable.L = setmetatable({
 	["stopitemfound"]="There is %s in rewards. Choose and equip an item yourself.",
 	["relictoggle"]="禁用神器奖励",
 	["artifactpowertoggle"]="禁用神器能量奖励的自动完成.",
+	["ivechosen"]="已经为你选择了第一个选项.",
+	["norewardsettings"]="没有设置，自动装备功能禁用.",
+	["ignorenpc"]="忽略这个NPC",
+	["cantstopignore"]="无法停止忽略这个NPC",
 	},
 	{__index = function(table, index) return index end})
 	

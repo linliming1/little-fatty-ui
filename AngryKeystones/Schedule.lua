@@ -5,22 +5,25 @@ local rowCount = 3
 
 local requestPartyKeystones
 
--- 1: Overflowing, 2: Skittish, 3: Volcanic, 4: Necrotic, 5: Teeming, 6: Raging, 7: Bolstering, 8: Sanguine, 9: Tyrannical, 10: Fortified, 11: Bursting, 12: Grievous, 13: Explosive, 14: Quaking
--- 1溢出 2无常 3火山 4死疽 5繁盛 6暴怒 7激励 8血池 9残暴 10坚韧 11崩裂 12重伤 13易爆 14震荡 15冷酷
+-- 1:Overflowing, 2:Skittish, 3:Volcanic, 4:Necrotic, 5:Teeming, 6:Raging, 7:Bolstering, 8:Sanguine, 9:Tyrannical, 10:Fortified, 11:Bursting, 12:Grievous, 13:Explosive, 14:Quaking, 16:Infested, 117: Reaping, 119:Beguiling 120:Awakened, 121:Prideful, 122:Inspiring, 123:Spiteful, 124:Storming
+-- 1溢出 2无常 3火山 4死疽 5繁盛 6暴怒 7激励 8血池 9残暴 10坚韧 11崩裂 12重伤 13易爆 14震荡 16寄生 117 收割 119 迷醉 120 觉醒 121 傲慢 122 鼓舞 123怨毒 124 风雷
 local affixSchedule = {
-	{ 10, 8, 4 },
-	{ 9, 11, 2 },
-	{ 10, 5, 14 },
-	{ 9, 6, 4 },
-	{ 10, 7, 2 },
-	{ 9, 5, 3 },
-	{ 10, 8, 12 },
-	{ 9, 7, 13 },
-	{ 10, 11, 14 },
-	{ 9, 6, 3 },
-	{ 10, 5, 13 },
-	{ 9, 7, 12 },
+	-- Shadowlands Season 2
+	[1] =  {[1]=11, [2]=124,[3]=10}, -- 1 Bursting Storming Fortified
+	[2] =  {[1]=6,  [2]=3,  [3]=9},  -- 2 Raging Volcanic Tyrannical
+	[3] =  {[1]=122,[2]=12, [3]=10}, -- 3 Inspiring Grievous Fortified
+	[4] =  {[1]=123,[2]=4,  [3]=9},  -- 4 Spiteful Necrotic Tyrannical
+	[5] =  {[1]=7,  [2]=14, [3]=10}, -- 5 Bolstering Quaking Fortified
+	[6] =  {[1]=8,  [2]=124,[3]=9},  -- 6 Sanguine Storming Tyrannical
+	[7] =  {[1]=6,  [2]=13, [3]=10}, -- 7 Raging Explosive Fortified
+	[8] =  {[1]=11, [2]=3,  [3]=9},  -- 8 Bursting Volcanic Tyrannical
+	[9] =  {[1]=123,[2]=12, [3]=10}, -- 9 Spiteful Grievous Fortified
+	[10] = {[1]=122,[2]=14, [3]=9},  --10 Inspiring Quaking Tyrannical
+	[11] = {[1]=8,  [2]=4,  [3]=10}, --11 Sanguine Necrotic Fortified
+	[12] = {[1]=7,  [2]=13, [3]=9},  --12 Bolstering Explosive Tyrannical
 }
+
+local affixScheduleUnknown = false
 local currentWeek
 local currentKeystoneMapID
 local currentKeystoneLevel
@@ -34,14 +37,14 @@ local function GetNameForKeystone(keystoneMapID, keystoneLevel)
 end
 
 local function UpdatePartyKeystones()
-	Mod:CheckCurrentKeystone()
+	Mod:CheckCurrentKeystone(false)
 	if requestPartyKeystones then
 		Mod:SendPartyKeystonesRequest()
 	end
 
 	if not IsAddOnLoaded("Blizzard_ChallengesUI") then return end
 
-	local playerRealm = select(2, UnitFullName("player"))
+	local playerRealm = select(2, UnitFullName("player")) or ""
 
 	local e = 1
 	for i = 1, 4 do
@@ -70,6 +73,10 @@ local function UpdatePartyKeystones()
 					entry.Text:SetText(name)
 					entry.Text:SetTextColor(color:GetRGBA())
 
+					local _, suffix = strsplit("-", keystoneName)
+					if suffix then
+						keystoneName = suffix
+					end
 					entry.Text2:SetText(keystoneName)
 
 					e = e + 1
@@ -79,11 +86,11 @@ local function UpdatePartyKeystones()
 	end
 	if e == 1 then
 		Mod.AffixFrame:ClearAllPoints()
-		Mod.AffixFrame:SetPoint("LEFT", ChallengesFrame.WeeklyInfo.Child.WeeklyChest, "RIGHT", 30, 0)
+		Mod.AffixFrame:SetPoint("LEFT", ChallengesFrame.WeeklyInfo.Child.WeeklyChest, "RIGHT", 130, 0)
 		Mod.PartyFrame:Hide()
 	else
 		Mod.AffixFrame:ClearAllPoints()
-		Mod.AffixFrame:SetPoint("TOPLEFT", ChallengesFrame.WeeklyInfo.Child.WeeklyChest, "TOPRIGHT", 30, 30)
+		Mod.AffixFrame:SetPoint("TOPLEFT", ChallengesFrame.WeeklyInfo.Child.WeeklyChest, "TOPRIGHT", 130, 55)
 		Mod.PartyFrame:Show()
 	end
 	while e <= 4 do
@@ -98,15 +105,14 @@ local function UpdateFrame()
 	Mod.PartyFrame:Show()
 	Mod.KeystoneText:Show()
 
-	ChallengesFrame.WeeklyInfo.Child.WeeklyChest:ClearAllPoints()
-	ChallengesFrame.WeeklyInfo.Child.WeeklyChest:SetPoint("LEFT", 50, -30)
-	if false and ChallengesFrame.WeeklyInfo.Child.WeeklyChest:IsShown() then
-		ChallengesFrame.WeeklyInfo.Child.RunStatus:SetWidth(240)
-	else
-		ChallengesFrame.WeeklyInfo.Child.RunStatus:SetWidth(240)
-		ChallengesFrame.WeeklyInfo.Child.RunStatus:ClearAllPoints()
-		ChallengesFrame.WeeklyInfo.Child.RunStatus:SetPoint("TOP", ChallengesFrame.WeeklyInfo.Child.WeeklyChest, "TOP", -10, 35)
-	end
+	local weeklyChest = ChallengesFrame.WeeklyInfo.Child.WeeklyChest
+	weeklyChest:ClearAllPoints()
+	weeklyChest:SetPoint("LEFT", 120, -30) --abyui
+
+	local description = ChallengesFrame.WeeklyInfo.Child.Description
+	description:SetWidth(240)
+	description:ClearAllPoints()
+	description:SetPoint("TOP", weeklyChest, "TOP", 0, 75)
 
 	local currentKeystoneName = GetNameForKeystone(C_MythicPlus.GetOwnedKeystoneChallengeMapID(), C_MythicPlus.GetOwnedKeystoneLevel())
 	if currentKeystoneName then
@@ -116,7 +122,7 @@ local function UpdateFrame()
 		Mod.KeystoneText:Hide()
 	end
 
-	if currentWeek then
+	if currentWeek and not affixScheduleUnknown then
 		for i = 1, rowCount do
 			local entry = Mod.AffixFrame.Entries[i]
 			entry:Show()
@@ -162,7 +168,7 @@ end
 function Mod:Blizzard_ChallengesUI()
 	local frame = CreateFrame("Frame", nil, ChallengesFrame)
 	frame:SetSize(246, 92)
-	frame:SetPoint("TOPLEFT", ChallengesFrame.WeeklyInfo.Child.WeeklyChest, "TOPRIGHT", 30, 30)
+	frame:SetPoint("TOPLEFT", ChallengesFrame.WeeklyInfo.Child.WeeklyChest, "TOPRIGHT", -20, 30)
 	Mod.AffixFrame = frame
 
 	local bg = frame:CreateTexture(nil, "BACKGROUND")
@@ -223,7 +229,11 @@ function Mod:Blizzard_ChallengesUI()
 	label:SetJustifyV("MIDDLE")
 	label:SetHeight(72)
 	label:SetWordWrap(true)
-	label:SetText(Addon.Locale.scheduleMissingKeystone)
+	if affixScheduleUnknown then
+		label:SetText(Addon.Locale.scheduleUnknown)
+	else
+		label:SetText(Addon.Locale.scheduleMissingKeystone)
+	end
 	frame.Label = label
 
 	local frame2 = CreateFrame("Frame", nil, ChallengesFrame)
@@ -277,8 +287,8 @@ function Mod:Blizzard_ChallengesUI()
 	frame2.Entries = entries2
 
 	local keystoneText = ChallengesFrame.WeeklyInfo.Child:CreateFontString(nil, "ARTWORK", "GameFontNormalMed2")
-	keystoneText:SetPoint("BOTTOM", ChallengesFrame.WeeklyInfo.Child.WeeklyChest, "BOTTOM", 0, -25)
-	keystoneText:SetWidth(220)
+	keystoneText:SetPoint("TOP", ChallengesFrame.WeeklyInfo.Child, "TOP", 0, -113)
+	keystoneText:SetWidth(320)
 	Mod.KeystoneText = keystoneText
 
 	hooksecurefunc("ChallengesFrame_Update", UpdateFrame)
@@ -331,7 +341,7 @@ function Mod:CHAT_MSG_LOOT(...)
 	local lootString, _, _, _, unit = ...
 	if string.match(lootString, "|Hitem:158923:") then
 		if UnitName("player") == unit then
-			self:CheckCurrentKeystone()
+			self:CheckCurrentKeystone(false)
 		else
 			self:SetPartyKeystoneRequest()
 		end
@@ -356,11 +366,17 @@ function Mod:CheckCurrentKeystone(announce)
 	local keystoneMapID = C_MythicPlus.GetOwnedKeystoneChallengeMapID()
 	local keystoneLevel = C_MythicPlus.GetOwnedKeystoneLevel()
 
+    if not keystoneMapID or keystoneMapID <= 0 or not keystoneLevel or keystoneLevel <= 1 then return end
+
+
 	if keystoneMapID ~= currentKeystoneMapID or keystoneLevel ~= currentKeystoneLevel then
+        if currentKeystoneLevel and (currentKeystoneLevel < keystoneLevel - 1 or currentKeystoneLevel > keystoneLevel + 3) then return end
+        --if DEBUG_MODE then print("AngryKeystone", hadKeystone, keystoneMapID, keystoneLevel, currentKeystoneMapID, currentKeystoneLevel) end
 		currentKeystoneMapID = keystoneMapID
 		currentKeystoneLevel = keystoneLevel
 
 		if hadKeystone and announce ~= false and Addon.Config.announceKeystones then
+            if DEBUG_MODE then pdebug() end
 			local itemLink = self:GetInventoryKeystone()
 			if itemLink and IsInGroup(LE_PARTY_CATEGORY_HOME) then
 				SendChatMessage(string.format(Addon.Locale.newKeystoneAnnounce, itemLink), "PARTY")
@@ -439,7 +455,7 @@ function Mod:Startup()
 		C_MythicPlus.RequestRewards()
 	end)
 
-	C_Timer.NewTicker(60, function() self:CheckCurrentKeystone() end)
+	--C_Timer.NewTicker(60, function() self:CheckCurrentKeystone() end) --abyui
 	
 	requestPartyKeystones = true
 end

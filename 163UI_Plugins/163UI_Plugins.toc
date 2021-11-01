@@ -1,25 +1,27 @@
-## Interface: 80100
+## Interface: 90100
 ## Title: |cff880303[爱不易]|r AbyUI 小功能集合
+## SavedVariables: SimulationcraftAbyUIDB
 ## X-Vendor: AbyUI
 
 163UI_Plugins.lua
 163UI_Quest.lua
 AlreadyKnown.lua
 BattleField.lua
-CopyFriendList.lua
 ChatFrameAddMessage.lua
+CopyFriendList.lua
 ExtraActionButton.lua
+FiveCombo.lua
 FriendsGuildTab.lua
 GuildRosterButtons.lua
 MerchantFilterButtons.lua
 PingPing.lua
 ProfessionTabs.lua
 QuestFont.lua
-SlashCommands.lua
-Simc.xml
 Simc.lua
-FiveCombo.lua
+SlashCommands.lua
 8.0\ChallengesGuildBest.xml
+9.0\MawThreat.lua
+9.0\DominationShards.lua
 
 yClassColors\core.lua
 yClassColors\battlefield.lua
@@ -28,14 +30,13 @@ yClassColors\friends.lua
 yClassColors\lfr.lua
 yClassColors\who.lua
 
+7.0\BattlePetCurrentStats.lua
 7.0\CloudyTradeSkill.lua
 7.0\CompletedTip.lua
-7.0\FixArchievementUIFreeze.lua
-7.0\QuestWatchSort.lua
-7.0\SpecSwitchButtons.lua
-7.0\ReplaceTalentSpell.lua
-7.0\BattlePetCurrentStats.lua
-7.0\GarrisonMinimapButton.lua
 7.0\EncounterJournalPlus_InstanceInfo.lua
-7.0\HideQuickJoin.lua
 7.0\ExaltedPlus.lua
+7.0\GarrisonMinimapButton.lua
+7.0\HideQuickJoin.lua
+#7.0\QuestWatchSort.lua
+7.0\ReplaceTalentSpell.lua
+7.0\SpecSwitchButtons.lua

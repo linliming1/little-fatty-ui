@@ -14,17 +14,17 @@ local backdrop2 = {
 
 -- Create the main frame
 -- For jncl (Skinner), this frame is accessed by LibStub("AceAddon-3.0"):GetAddon("HandyNotes"):GetModule("HandyNotes").HNEditFrame
-local HNEditFrame = CreateFrame("Frame", "HNEditFrame", UIParent)
+local HNEditFrame = CreateFrame("Frame", "HNEditFrame", UIParent, BackdropTemplateMixin and "BackdropTemplate" or nil)
 HN.HNEditFrame = HNEditFrame
 HNEditFrame:Hide()
 HNEditFrame:SetWidth(350)
 HNEditFrame:SetHeight(235)
 HNEditFrame:SetPoint("BOTTOM", 0, 90)
-HNEditFrame:SetBackdrop({ 
+HNEditFrame:SetBackdrop({
 	bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
 	edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
 	tile = true, tileSize = 32, edgeSize = 32,
- 	insets = { left = 11, right = 12, top = 12, bottom = 11 },
+	insets = { left = 11, right = 12, top = 12, bottom = 11 },
 })
 --HNEditFrame:SetBackdropColor(0, 0, 0, 0.75)
 HNEditFrame:SetBackdropColor(0,0,0,1)
@@ -69,7 +69,7 @@ HNEditFrame.titletext:SetPoint("TOPLEFT", 25, -28)
 HNEditFrame.titletext:SetText(L["Title"])
 
 -- Create the Title Input Box and position it below the text
-HNEditFrame.titleinputframe = CreateFrame("Frame", nil, HNEditFrame)
+HNEditFrame.titleinputframe = CreateFrame("Frame", nil, HNEditFrame, BackdropTemplateMixin and "BackdropTemplate" or nil)
 HNEditFrame.titleinputframe:SetWidth(300)
 HNEditFrame.titleinputframe:SetHeight(24)
 HNEditFrame.titleinputframe:SetBackdrop(backdrop2)
@@ -91,7 +91,7 @@ HNEditFrame.desctext:SetPoint("TOPLEFT", HNEditFrame.titleinputframe, "BOTTOMLEF
 HNEditFrame.desctext:SetText(L["Description/Notes:"])
 
 -- Create the ScrollFrame for the Description Edit Box
-HNEditFrame.descframe = CreateFrame("Frame", nil, HNEditFrame)
+HNEditFrame.descframe = CreateFrame("Frame", nil, HNEditFrame, BackdropTemplateMixin and "BackdropTemplate" or nil)
 HNEditFrame.descframe:SetWidth(300)
 HNEditFrame.descframe:SetHeight(67)
 HNEditFrame.descframe:SetBackdrop(backdrop2)
@@ -144,9 +144,8 @@ HNEditFrame.icondropdown.texture = HNEditFrame.icondropdown:CreateTexture(nil, "
 HNEditFrame.icondropdown.texture:SetWidth(12)
 HNEditFrame.icondropdown.texture:SetHeight(12)
 HNEditFrame.icondropdown.texture:SetPoint("RIGHT", HNEditFrame.icondropdown, -41, 2)
-HNEditFrame.icondropdown.text = HandyNotes_IconDropDownText
-HNEditFrame.icondropdown.text:SetPoint("RIGHT", HNEditFrame.icondropdown.texture, "LEFT", -3, 0)
-HNEditFrame.icondropdown.text:SetWidth(HNEditFrame.icondropdown.text:GetWidth() - 9)
+HNEditFrame.icondropdown.Text:SetPoint("RIGHT", HNEditFrame.icondropdown.texture, "LEFT", -3, 0)
+HNEditFrame.icondropdown.Text:SetWidth(HNEditFrame.icondropdown.Text:GetWidth() - 9)
 HNEditFrame.icondropdown.OnClick = function(button, value)
 	local t = HN.icons[value]
 	HNEditFrame.icondropdown.selectedValue = value
@@ -156,12 +155,12 @@ HNEditFrame.icondropdown.OnClick = function(button, value)
 	else
 		HNEditFrame.icondropdown.texture:SetTexCoord(0, 1, 0, 1)
 	end
-	HNEditFrame.icondropdown.text:SetText(t.text)
+	HNEditFrame.icondropdown.Text:SetText(t.text)
 	local color = t.color
 	if color then
-		HNEditFrame.icondropdown.text:SetTextColor(color.r, color.g, color.b, color.a or 1)
+		HNEditFrame.icondropdown.Text:SetTextColor(color.r, color.g, color.b, color.a or 1)
 	else
-		HNEditFrame.icondropdown.text:SetTextColor(1, 1, 1, 1)
+		HNEditFrame.icondropdown.Text:SetTextColor(1, 1, 1, 1)
 	end
 end
 HNEditFrame.icondropdown.initialize = function(level)
@@ -251,10 +250,11 @@ HNEditFrame:SetScript("OnShow", function(self)
 	end
 	if WorldMapFrame:IsShown() then
 		self:SetParent(WorldMapFrame)
+		self:SetFrameLevel(WorldMapFrame:GetFrameLevel() + 20)
 	else
 		self:SetParent(UIParent)
-    end
-    self:SetFrameStrata("DIALOG")
+		self:SetFrameLevel(10) --self:SetFrameStrata("DIALOG")
+	end
 end)
 
 

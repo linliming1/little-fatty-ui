@@ -25,18 +25,6 @@ local ff = WorldQuestTrackerFinderFrame
 local rf = WorldQuestTrackerRareFrame
 
 local _
-local QuestMapFrame_IsQuestWorldQuest = QuestMapFrame_IsQuestWorldQuest or QuestUtils_IsQuestWorldQuest
-local GetNumQuestLogRewardCurrencies = GetNumQuestLogRewardCurrencies
-local GetQuestLogRewardInfo = GetQuestLogRewardInfo
-local GetQuestLogRewardCurrencyInfo = GetQuestLogRewardCurrencyInfo
-local GetQuestLogRewardMoney = GetQuestLogRewardMoney
-local GetQuestTagInfo = GetQuestTagInfo
-local GetNumQuestLogRewards = GetNumQuestLogRewards
-local GetQuestInfoByQuestID = C_TaskQuest.GetQuestInfoByQuestID
-
-local MapRangeClamped = DF.MapRangeClamped
-local FindLookAtRotation = DF.FindLookAtRotation
-local GetDistance_Point = DF.GetDistance_Point
 
 -- /run WorldQuestTrackerAddon.debug = true;
 
@@ -499,10 +487,12 @@ function rf.IsTargetARare()
 		
 			--> check if is a non registered rare
 			if (not WorldQuestTracker.MapData.RaresToScan [npcId]) then
-				if (WorldQuestTracker.IsArgusZone (WorldQuestTracker.GetCurrentMapAreaID())) then
+				if (WorldQuestTracker.IsNewEXPZone (WorldQuestTracker.GetCurrentMapAreaID())) then
 					local unitClassification = UnitClassification ("target")
 					if (unitClassification == "rareelite") then
-						print ("|cFFFF9900[WQT]|r " .. L["S_RAREFINDER_NPC_NOTREGISTERED"] .. ":", UnitName ("target"), "NpcID:", npcId)
+						WorldQuestTracker.db.profile.raredetected [npcId or 0] = true
+						WorldQuestTracker.MapData.RaresToScan [npcId] = true
+						--print ("|cFFFF9900[WQT]|r " .. L["S_RAREFINDER_NPC_NOTREGISTERED"] .. ":", UnitName ("target"), "NpcID:", npcId)
 					end
 				end
 			end
@@ -634,7 +624,7 @@ rf:SetScript ("OnEvent", function (self, event, ...)
 				end
 				
 				--> ask to leave the group
-				if (ff.QuestName2Text.text == alvo_name and IsInGroup()) then
+				if (ff.CurrentQuestName == alvo_name and IsInGroup()) then
 					ff.WorldQuestFinished (0, true)
 				end
 				
@@ -655,9 +645,31 @@ rf:SetScript ("OnEvent", function (self, event, ...)
 		rf.IsTargetARare()
 		
 	elseif (event == "VIGNETTES_UPDATED") then
-		--if (WorldQuestTracker.IsArgusZone (WorldQuestTracker.GetCurrentMapAreaID())) then
-			rf.ScanMinimapForRares()
-		--end
+
+		--track special events
+		for i, vignetteID in ipairs (C_VignetteInfo.GetVignettes()) do
+			local vignetteInfo = C_VignetteInfo.GetVignetteInfo (vignetteID)
+			
+			if (vignetteInfo) then
+				local serial = vignetteInfo.objectGUID
+	
+				if (serial) then
+					local name = vignetteInfo.name
+					local objectIcon = vignetteInfo.atlasName
+					
+					--naga event
+					if (objectIcon == "nazjatar-nagaevent") then
+						WorldQuestTracker.NagaEventCooldown = WorldQuestTracker.NagaEventCooldown or 0
+						if (WorldQuestTracker.NagaEventCooldown < time()) then
+							WorldQuestTracker:Msg("一个地图事件开始了，打开地图查看位置|r")
+							WorldQuestTracker.NagaEventCooldown = time() + 360 --6min
+						end
+					end
+				end
+			end
+		end
+
+		rf.ScanMinimapForRares()
 	end
 end)
 
@@ -766,7 +778,7 @@ function WorldQuestTracker.UpdateRareIcons (mapID)
 		
 			local questCompleted = false
 			local npcQuestCompletedID = WorldQuestTracker.MapData.RaresQuestIDs [npcId]
-			if (npcQuestCompletedID and IsQuestFlaggedCompleted (npcQuestCompletedID)) then
+			if (npcQuestCompletedID and C_QuestLog.IsQuestFlaggedCompleted (npcQuestCompletedID)) then
 				questCompleted = true
 			end
 

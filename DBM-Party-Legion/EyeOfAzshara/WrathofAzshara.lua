@@ -1,10 +1,9 @@
 local mod	= DBM:NewMod(1492, "DBM-Party-Legion", 3, 716)
 local L		= mod:GetLocalizedStrings()
 
-mod:SetRevision(("$Revision: 2 $"):sub(12, -3))
+mod:SetRevision("20210905144759")
 mod:SetCreatureID(96028)
 mod:SetEncounterID(1814)
-mod:SetZone()
 
 mod:RegisterCombat("combat")
 
@@ -24,31 +23,27 @@ local specWarnArcaneBomb			= mod:NewSpecialWarningMoveAway(192706, nil, nil, nil
 local yellArcaneBomb				= mod:NewYell(192706)
 
 local timerMythicTornadoCD			= mod:NewCDTimer(25, 192680, nil, nil, nil, 3)
-local timerMassiveDelugeCD			= mod:NewCDTimer(50, 192617, nil, "Tank", nil, 5, nil, DBM_CORE_TANK_ICON)
-local timerArcaneBomb				= mod:NewTargetTimer(15, 192706, nil, "Healer", nil, 5, nil, DBM_CORE_HEALER_ICON)--Magic dispel for healer to dispel at correct time
+local timerMassiveDelugeCD			= mod:NewCDTimer(50, 192617, nil, "Tank", nil, 5, nil, DBM_CORE_L.TANK_ICON)
+local timerArcaneBomb				= mod:NewTargetTimer(15, 192706, nil, "Healer", nil, 5, nil, DBM_CORE_L.HEALER_ICON)--Magic dispel for healer to dispel at correct time
 local timerArcaneBombCD				= mod:NewCDTimer(23, 192706, nil, nil, nil, 3)--23-37
 
 mod:AddRangeFrameOption(10, 192706)
 
-mod.vb.phase = 1
 local serpMod = DBM:GetModByName(1479)
 
-function mod:CheckPhase2()
-	return 
-end
-
 function mod:OnCombatStart(delay)
-	self.vb.phase = 1
+	self:SetStage(1)
 	timerMythicTornadoCD:Start(8.5-delay)
 	timerMassiveDelugeCD:Start(12-delay)
 	timerArcaneBombCD:Start(23-delay)
 end
 
 function mod:OnCombatEnd()
-	self.vb.phase = 1
 	if self.Options.RangeFrame then
 		DBM.RangeCheck:Hide()
 	end
+	if not serpMod then serpMod = DBM:GetModByName(1479) end
+	serpMod:UpdateWinds()--Defeating wrath should terminate all zonewide events
 end
 
 function mod:SPELL_AURA_APPLIED(args)
@@ -74,7 +69,7 @@ end
 function mod:SPELL_CAST_START(args)
 	local spellId = args.spellId
 	if spellId == 192985 then
-		self.vb.phase = 2
+		self:SetStage(2)
 		if not serpMod then serpMod = DBM:GetModByName(1479) end
 		serpMod:UpdateWinds()--At present it may not actually reset here. Just in case though
 	elseif spellId == 192617 then
@@ -102,8 +97,7 @@ function mod:CHAT_MSG_RAID_BOSS_EMOTE(msg, _, _, _, targetname)
 	end
 end
 
-function mod:UNIT_SPELLCAST_SUCCEEDED(uId, _, bfaSpellId, _, legacySpellId)
-	local spellId = legacySpellId or bfaSpellId
+function mod:UNIT_SPELLCAST_SUCCEEDED(uId, _, spellId)
 	if spellId == 192680 then--Mythic Tornado
 		warnMythicTornado:Show()
 		if self.vb.phase == 2 then

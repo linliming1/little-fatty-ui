@@ -40,16 +40,11 @@ local InstanceStatus = TidyPlatesUtility.InstanceStatus
 local IsEnemyTanked = TidyPlatesWidgets.IsEnemyTanked
 
 local function IsOffTanked(unit)
-
 	local unitid = unit.unitid
-	if unitid then
+	if unitid and LocalVars.EnableOffTankHighlight then
 		local targetOf = unitid.."target"
-		local targetIsTank = UnitIsUnit(targetOf, "pet") or ("TANK" ==  UnitGroupRolesAssigned(targetOf))
-
-		--if LocalVars.EnableOffTankHighlight and IsEnemyTanked(unit) then
-		if LocalVars.EnableOffTankHighlight and targetIsTank then
-			return true
-		end
+		return ("TANK" == UnitGroupRolesAssigned(targetOf))
+			or (LocalVars.CountPetAsOtherTank and UnitExists(targetOf) and not UnitIsPlayer(targetOf))
 	end
 end
 
@@ -218,7 +213,8 @@ end
 
 local function ApplyStyleCustomization(style, defaults)
 	if not style then return end
-	style.level.show = (LocalVars.TextShowLevel == true)
+    style.levelShowHealth = (LocalVars.TextShowPercent == true) --abyui
+	style.level.show = (LocalVars.TextShowLevel == true or LocalVars.TextShowPercent == true)
 	style.target.show = (LocalVars.WidgetTargetHighlight == true)
 	style.eliteicon.show = (LocalVars.WidgetEliteIndicator == true)
 

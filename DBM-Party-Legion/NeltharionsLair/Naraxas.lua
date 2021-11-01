@@ -1,10 +1,9 @@
 local mod	= DBM:NewMod(1673, "DBM-Party-Legion", 5, 767)
 local L		= mod:GetLocalizedStrings()
 
-mod:SetRevision(("$Revision: 2 $"):sub(12, -3))
+mod:SetRevision("20210905144759")
 mod:SetCreatureID(91005)
 mod:SetEncounterID(1792)
-mod:SetZone()
 
 mod:RegisterCombat("combat")
 
@@ -24,7 +23,7 @@ local specWarnFixate				= mod:NewSpecialWarningYou(209906)
 local specWarnSpikedTongue			= mod:NewSpecialWarningRun(199176, nil, nil, nil, 4, 2)
 --local specWarnRancidMaw			= mod:NewSpecialWarningMove(188494)--Needs confirmation this is pool damage and not constant fight aoe damage
 
-local timerSpikedTongueCD			= mod:NewNextTimer(55, 199176, nil, "Tank|Healer", nil, 5, nil, DBM_CORE_DEADLY_ICON..DBM_CORE_TANK_ICON)
+local timerSpikedTongueCD			= mod:NewNextTimer(55, 199176, nil, "Tank|Healer", nil, 5, nil, DBM_CORE_L.DEADLY_ICON..DBM_CORE_L.TANK_ICON)
 local timerAddsCD					= mod:NewCDTimer(65, 199817, nil, nil, nil, 1, 226361)
 local timerRancidMawCD				= mod:NewCDTimer(18, 205549, nil, false, nil, 3)--Needed?
 local timerToxicRetchCD				= mod:NewCDTimer(14.3, 210150, nil, false, nil, 3)--Needed?
@@ -34,12 +33,6 @@ function mod:OnCombatStart(delay)
 	timerRancidMawCD:Start(7.3-delay)
 	timerToxicRetchCD:Start(12.4-delay)
 	timerSpikedTongueCD:Start(50.5-delay)
-end
-
-function mod:OnCombatEnd()
---	if self.Options.RangeFrame then
---		DBM.RangeCheck:Hide()
---	end
 end
 
 function mod:SPELL_AURA_APPLIED(args)
@@ -76,8 +69,7 @@ end
 mod.SPELL_PERIODIC_MISSED = mod.SPELL_PERIODIC_DAMAGE
 --]]
 
-function mod:UNIT_SPELLCAST_SUCCEEDED(uId, _, bfaSpellId, _, legacySpellId)
-	local spellId = legacySpellId or bfaSpellId
+function mod:UNIT_SPELLCAST_SUCCEEDED(uId, _, spellId)
 	if spellId == 199817 then--Call Minions
 		specWarnAdds:Show()
 		specWarnAdds:Play("mobsoon")

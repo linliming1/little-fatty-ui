@@ -1,9 +1,8 @@
 local mod	= DBM:NewMod("WaycrestTrash", "DBM-Party-BfA", 10)
 local L		= mod:GetLocalizedStrings()
 
-mod:SetRevision(("$Revision: 17755 $"):sub(12, -3))
+mod:SetRevision("20201116014239")
 --mod:SetModelID(47785)
-mod:SetZone()
 
 mod.isTrashMod = true
 
@@ -55,10 +54,10 @@ function mod:SPELL_CAST_START(args)
 	elseif spellId == 265881 then
 		specWarnDecayingTouch:Show()
 		specWarnDecayingTouch:Play("defensive")
-	elseif spellId == 265759 and self:AntiSpam(3, 1) then
+	elseif spellId == 265759 and self:AntiSpam(5, 1) then
 		specWarnSplinterSpike:Show()
 		specWarnSplinterSpike:Play("watchstep")
-	elseif spellId == 264038 and self:AntiSpam(3, 1) then
+	elseif spellId == 264038 and self:AntiSpam(5, 1) then
 		specWarnUproot:Show()
 		specWarnUproot:Play("watchstep")
 	elseif spellId == 263905 and self:AntiSpam(2.5, 2) then
@@ -95,13 +94,3 @@ function mod:SPELL_AURA_APPLIED(args)
 		yellRunicMarkFades:Cancel()
 	end
 end
-
---[[
-function mod:SPELL_CAST_SUCCESS(args)
-	if not self.Options.Enabled then return end
-	local spellId = args.spellId
-	if spellId == 200343 then
-
-	end
-end
---]]

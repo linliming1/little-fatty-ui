@@ -3,8 +3,9 @@
 --------------------------------------------------------------------------
 --[[
 GTFO Fail List - Burning Crusade
-Author: Zensunim of Malygos
 ]]--
+
+if (not GTFO.ClassicMode) then
 
 -- *****************
 -- * Blood Furnace *
@@ -173,8 +174,58 @@ GTFO.SpellID["34190"] = {
 	applicationOnly = true;
 };
 
+GTFO.SpellID["37319"] = {
+  --desc = "Wing Buffet (Phoenix-Hawk Hatchling)";
+  sound = 3;
+  tankSound = 0;
+  test = true;
+};
+
+GTFO.SpellID["37317"] = {
+  --desc = "Knockback (Tempest Falconer)";
+  sound = 3;
+  tankSound = 0;
+  test = true;
+};
+
+-- ************************
+-- * Serpentshrine Cavern *
+-- ************************
+
+GTFO.SpellID["37478"] = {
+  --desc = "Geyser (The Lurker Below)";
+  sound = 3;
+  tankSound = 0;
+  test = true;
+};
+
+GTFO.SpellID["37433"] = {
+	--desc = "Spout (The Lurker Below)";
+	sound = 3;
+};
+
+GTFO.SpellID["38260"] = {
+  --desc = "Cleave (Coilfang Elite)";
+  sound = 3;
+  tankSound = 0;
+};
+
 
 -- ******************
+
+GTFO.SpellID["30926"] = {
+	--desc = "Cone of Fire (Nazan - Hellfire Ramparts - Normal)";
+	sound = 3;
+	tankSound = 0;
+	trivialLevel = 80;
+};
+
+GTFO.SpellID["36921"] = {
+	--desc = "Cone of Fire (Nazan - Hellfire Ramparts - Heroic)";
+	sound = 3;
+	tankSound = 0;
+	trivialLevel = 80;
+};
 
 GTFO.SpellID["35311"] = {
 	--desc = "Stream of Machine Fluid (Gatewatchers - Mechanar)";
@@ -232,12 +283,6 @@ GTFO.SpellID["40599"] = {
 	tankSound = 0;
 };
 
-GTFO.SpellID["37433"] = {
-	--desc = "Spout (Lurker - SSC)";
-	sound = 3;
-	tankSound = 0;
-};
-
 
 GTFO.SpellID["35152"] = {
 	--desc = "Nether Detonation (Mechano-Lord Capacitus - Mechanar)";
@@ -290,3 +335,5 @@ GTFO.SpellID["40904"] = {
   sound = 3;
   tankSound = 0;
 };
+
+end

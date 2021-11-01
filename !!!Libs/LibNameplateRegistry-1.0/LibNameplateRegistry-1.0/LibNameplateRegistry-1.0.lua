@@ -4,8 +4,8 @@
         An embeddable library providing an abstraction layer for tracking and
         querying Blizzard's Nameplate frames with ease and efficiency.
 
-        Copyright (c) 2013-2018 by John Wellesz (LibNameplateRegistry@2072productions.com)
-        
+        Copyright (c) 2013-2019 by John Wellesz (LibNameplateRegistry@2072productions.com)
+
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU Lesser Public License as published by
     the Free Software Foundation, either version 3 of the License, or
@@ -17,9 +17,9 @@
     GNU Lesser Public License for more details.
 
     You should have received a copy of the GNU Lesser Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-This file was last updated on 2018-07-18T1:05:43Z by John Wellesz
+This file was last updated on 2020-04-11T17:41:39Z by Archarodim
 
 --]]
 
@@ -138,11 +138,11 @@ local GetNamePlates         = _G.C_NamePlate.GetNamePlates
 --local GetNumNamePlateMotionTypes = C_NamePlate.GetNumNamePlateMotionTypes
 --local SetNamePlateSizes          = C_NamePlate.SetNamePlateSizes
 
---[===[@debug@
+--[==[@debug@
 local tostring              = _G.tostring;
 local assert                = _G.assert;
 local unpack                = _G.unpack;
---@end-debug@]===]
+--@end-debug@]==]
 -- }}}
 
 -- CONSTANTS and library local variables {{{
@@ -163,9 +163,9 @@ local ActivePlateFrames_per_unitToken =  {};
 local CurrentTarget             = false;
 local HasTarget                 = false;
 
---[===[@debug@
+--[==[@debug@
 local callbacks_consisistency_check = {};
---@end-debug@]===]
+--@end-debug@]==]
 --}}}
 
 -- Clever cache tables: Frame_Children_Cache, Frame_Regions_Cache, Plate_Parts_Cache {{{
@@ -189,9 +189,9 @@ function(t, frame)
                     error("CFCache: Child" .. childNum .. " not found.");
                 end
 
-                --[===[@debug@
+                --[==[@debug@
                 Debug(INFO, 'cached a new frame child', childNum);
-                --@end-debug@]===]
+                --@end-debug@]==]
                 return  t[childNum];
 
             end
@@ -214,15 +214,15 @@ function(t, frame)
 
                 if not t[regionNum] then
                     t[regionNum] = nil;
-                    --[===[@debug@
+                    --[==[@debug@
                     Debug(ERROR, 'CFCache', regionNum, 'not found, regions:', frame:GetName() );
-                    --@end-debug@]===]
+                    --@end-debug@]==]
                     error( "CFCache: Region" .. regionNum .. " not found.");
                 end
 
-                --[===[@debug@
+                --[==[@debug@
                 Debug(INFO, 'cached a new frame region', regionNum);
-                --@end-debug@]===]
+                --@end-debug@]==]
                 return t[regionNum];
 
             end
@@ -248,11 +248,11 @@ function (t, plateFrame)
             else
                 return false;
             end
-            --[===[@debug@
+            --[==[@debug@
             if DEBUG then
                 Debug(INFO, 'cached a new plateFrame part:', regionName, 'unit name is:', Frame_Children_Cache[plateFrame][1].name:GetText());
             end
-            --@end-debug@]===]
+            --@end-debug@]==]
             return t[regionName];
         end
     })
@@ -276,13 +276,13 @@ function LNR_Private:GetUnitTokenFromPlate (frame)
         error(".UnitFrame.unit empty");
     end
 
-    --[===[@debug@
+    --[==[@debug@
     if DEBUG then
         if frame ~= GetNamePlateForUnit(unitToken) then
             Debug(ERROR, 'INCONSISTENCY detected in .unitToken metadata');
         end
     end
-    --@end-debug@]===]
+    --@end-debug@]==]
 
     return unitToken;
 end
@@ -296,9 +296,9 @@ function LNR_Private:IsPlateTargeted (frame)
     end
 
     if CurrentTarget == frame then -- we already told you
-        --[===[@debug@
+        --[==[@debug@
         Debug(WARNING, 'CurrentTarget == frame');
-        --@end-debug@]===]
+        --@end-debug@]==]
         return true;
     elseif CurrentTarget then -- we know it's not that one
         return false;
@@ -310,9 +310,9 @@ function LNR_Private:IsPlateTargeted (frame)
 
     if UnitIsUnit(ActivePlates_per_frame[frame].unitToken, 'target') then
         CurrentTarget = frame;
-        --[===[@debug@
+        --[==[@debug@
         Debug(WARNING, 'had to redefined CurrentTarget');
-        --@end-debug@]===]
+        --@end-debug@]==]
         return true;
     else
         CurrentTarget = false;
@@ -405,7 +405,7 @@ end
 
 -- Diagnostics related methods {{{
 
---[===[@debug@
+--[==[@debug@
 do
     local ShownPlateCount = 0;
     function LNR_Private:DebugTests()
@@ -421,7 +421,7 @@ do
         end
     end
 end
---@end-debug@]===]
+--@end-debug@]==]
 
 -- }}}
 
@@ -474,7 +474,7 @@ do
             Insane = true;
         end
 
-        --[===[@debug@
+        --[==[@debug@
         if DEBUG then
             if not callbacks_consisistency_check[namePlateFrameBase] then
                 callbacks_consisistency_check[namePlateFrameBase] = 1;
@@ -486,12 +486,12 @@ do
                 Debug(ERROR, 'PlateADDED/REMOVED sync broken:', callbacks_consisistency_check[namePlateFrameBase]);
             end
         end
-        --@end-debug@]===]
+        --@end-debug@]==]
 
 
         PlateData = PlateRegistry_per_frame[namePlateFrameBase];
         ActivePlates_per_frame[namePlateFrameBase] = PlateData;
-        
+
         PlateData.unitToken = namePlateUnitToken;
         PlateData.name      = UnitName(namePlateUnitToken);
         -- if UnitName fails, store nothing and let the metaTable retry the query later
@@ -516,9 +516,9 @@ do
             self:Fire("LNR_ON_TARGET_PLATE_ON_SCREEN", namePlateFrameBase, PlateData);
         end
 
-        --[===[@debug@
+        --[==[@debug@
         --Debug(INFO, "Nameplate on screen:", PlateData.unitToken, PlateData.name, PlateData.reaction, PlateData.GUID);
-        --@end-debug@]===]
+        --@end-debug@]==]
 
         if Insane then
             Debug(ERROR, "REMOVED event missed");
@@ -535,7 +535,7 @@ do
             return;
         end
 
-        --[===[@debug@
+        --[==[@debug@
         if DEBUG then
             if not namePlateFrameBase:IsVisible() then
                 Debug(ERROR, 'nameplate was already hidden on NAME_PLATE_UNIT_REMOVED', namePlateUnitToken, namePlateFrameBase:GetName());
@@ -544,9 +544,9 @@ do
         end
 
         --Debug(INFO2, 'NAME_PLATE_UNIT_REMOVED', 'unitToken:', namePlateUnitToken, 'is visible?', namePlateFrameBase:IsVisible());
-        --@end-debug@]===]
+        --@end-debug@]==]
 
-        --[===[@debug@
+        --[==[@debug@
         if DEBUG then
             if not callbacks_consisistency_check[namePlateFrameBase] then
                 callbacks_consisistency_check[namePlateFrameBase] = 0;
@@ -554,7 +554,7 @@ do
                 callbacks_consisistency_check[namePlateFrameBase] = callbacks_consisistency_check[namePlateFrameBase] - 1;
             end
         end
-        --@end-debug@]===]
+        --@end-debug@]==]
 
         PlateData = PlateRegistry_per_frame[namePlateFrameBase];
 
@@ -617,11 +617,11 @@ function LNR_Private:UPDATE_MOUSEOVER_UNIT()
                 return;
             end
 
-            --[===[@debug@
+            --[==[@debug@
             if DEBUG then
                 Debug(INFO, "UPDATE_MOUSEOVER_UNIT", UnitReaction('mouseover', 'player'), UnitPlayerControlled('mouseover'), '*' ,LNR_Private.RawGetPlateType(mouseoverNameplate));
             end
-            --@end-debug@]===]
+            --@end-debug@]==]
 
             data = ActivePlates_per_frame[mouseoverNameplate]
 
@@ -631,9 +631,9 @@ function LNR_Private:UPDATE_MOUSEOVER_UNIT()
 
                 if unitName == data.name and self:ValidateCache(mouseoverNameplate, 'name') == 0 then
                     self:Fire("LNR_ON_GUID_FOUND", mouseoverNameplate, data.GUID, 'mouseover');
-                    --[===[@debug@
+                    --[==[@debug@
                     Debug(ERROR, 'Guid found for', data.name, 'mouseover'); -- should not happen in WoW 7
-                    --@end-debug@]===]
+                    --@end-debug@]==]
                 else
                     Debug(HighlightFailsReported and INFO2 or WARNING, 'bad cache on mouseover check:', "'"..unitName.."'", "V/S:", "'"..data.name.."'", 'mouseover', unitName == data.name, self:ValidateCache(mouseoverNameplate, 'name'));
                 end
@@ -650,16 +650,16 @@ end
 -- public methods: :GetPlateName(), :GetPlateReaction(), :GetPlateType(), :GetPlateGUID(), :GetPlateByGUID(), :GetPlateRegion(), :EachPlateByName() {{{
 
 --- ==LibNameplateRegistry-1.0 public API documentation\\\\
--- Check the [[http://www.wowace.com/addons/libnameplateregistry-1-0/pages/callbacks/|Callbacks' page]] if you want details about those.\\\\
+-- Check the [[https://www.wowace.com/projects/libnameplateregistry-1-0/pages/callbacks|Callbacks' page]] if you want details about those.\\\\
 --
 -- Here is a fully working little add-on as an example displaying nameplates' information as they become available.\\
--- You can download a ready to go archive of this example add-on [[http://www.j2072.teaser-hosting.com/dropbox/example.rar|here]]\\\\
+-- You can download a ready to go archive of this example add-on [[https://github.com/2072/LibNameplateRegistry-1.0/tree/master/example|from GitHub]]\\\\
 --
--- For a more advanced usage example you can take a look at the [[http://www.wowace.com/addons/healers-have-to-die/files/|latest version of Healers Have To Die]].\\
+-- For a more advanced usage example you can take a look at the [[https://www.wowace.com/projects/h-h-t-d/files|latest version of Healers Have To Die]].\\
 --
 -- @usage
 -- local ADDON_NAME, T = ...;
--- 
+--
 -- -- Create a new Add-on object using AceAddon
 -- T.Example = LibStub("AceAddon-3.0"):NewAddon("Example", "LibNameplateRegistry-1.0");
 --
@@ -669,7 +669,7 @@ end
 --
 --
 -- local Example = T.Example;
--- 
+--
 -- function Example:OnEnable()
 --     -- Subscribe to callbacks
 --     self:LNR_RegisterCallback("LNR_ON_NEW_PLATE"); -- registering this event will enable the library else it'll remain idle
@@ -677,38 +677,38 @@ end
 --     self:LNR_RegisterCallback("LNR_ON_GUID_FOUND");
 --     self:LNR_RegisterCallback("LNR_ERROR_FATAL_INCOMPATIBILITY");
 -- end
--- 
+--
 -- function Example:OnDisable()
 --     -- unregister all LibNameplateRegistry callbacks, which will disable it if
 --     -- your add-on was the only one to use it
 --     self:LNR_UnregisterAllCallbacks();
 -- end
--- 
--- 
+--
+--
 -- function Example:LNR_ON_NEW_PLATE(eventname, plateFrame, plateData)
 --     print(ADDON_NAME, ":", plateData.name, "'s nameplate appeared!");
 --     print(ADDON_NAME, ":", "It's a", plateData.type, "and", plateData.reaction,
 --           plateData.GUID and ("we know its GUID: " .. plateData.GUID) or "GUID not yet known");
 -- end
--- 
--- 
+--
+--
 -- function Example:LNR_ON_RECYCLE_PLATE(eventname, plateFrame, plateData)
 --     print(ADDON_NAME, ":", plateData.name, "'s nameplate disappeared!");
 -- end
--- 
--- 
+--
+--
 -- function Example:LNR_ON_GUID_FOUND(eventname, frame, GUID, findmethod)
 --     -- This is now rarely useful since WoW 7 since GUIDs are linked directly on nameplate appearance.
 --     -- Sometimes though some data about a unit may not be available right away due to heavy lag.
 --     print(ADDON_NAME, ":", "GUID found using", findmethod, "for", self:GetPlateName(frame), "'s nameplate:", GUID);
 -- end
--- 
--- 
+--
+--
 -- function Example:LNR_ERROR_FATAL_INCOMPATIBILITY(eventname, icompatibilityType)
 --     -- Here you want to check if your add-on and LibNameplateRegistry are not
 --     -- outdated (old TOC) and display a nice error message to your user.
 -- end
--- 
+--
 --
 -- @class file
 -- @name LibNameplateRegistry-1.0.lua
@@ -767,7 +767,7 @@ LNR_Private.GetPlateByGUID = LNR_Public.GetPlateByGUID;
 
 
 --- (DEPRECATED) Gets a platename's frame specific region using a normalized name.
--- 
+--
 -- Since WoW 7 nameplates can be linked to unit IDs to get
 -- the proper information directly using the standard WoW API thus
 -- GetPlateRegion should not be used anymore.
@@ -833,7 +833,7 @@ do
     -- -- code
     -- end
     --
-    -- @return iterator 
+    -- @return iterator
     function LNR_Public:EachPlateByName (name)
         CurrentPlate = nil;
         Name = name;
@@ -849,7 +849,7 @@ end -- }}}
 --
 -- @paramsig callbackName [, method] [, extraArg]
 --
--- @param callbackName name of a callback (see the [[http://www.wowace.com/addons/libnameplateregistry-1-0/pages/callbacks/|Callbacks' page]])
+-- @param callbackName name of a callback (see the [[https://www.wowace.com/projects/libnameplateregistry-1-0/pages/callbacks|Callbacks' page]])
 --
 -- @param method (optional) The method to call when the callback fires, if ommitted, addon:eventname is used
 --
@@ -901,14 +901,14 @@ function LNR_Private.Ticker()
     -- Check sanity every 100th tick
     TimerDivisor = TimerDivisor % 101 + 1;
 
-    --[===[@debug@
+    --[==[@debug@
     if DEBUG then
         if TimerDivisor % 10 == 0 then
             LNR_Private:DebugTests()
         end
     end
-    --@end-debug@]===]
-    
+    --@end-debug@]==]
+
     C_Timer.After(0.1, LNR_Private.Ticker);
 
 end -- }}}
@@ -924,7 +924,7 @@ function LNR_Private.callbacks:OnUsed(target, eventname)
         LNR_Private:Enable();
     end
 
-    
+
 end
 
 function LNR_Private.callbacks:OnUnused(target, eventname)
@@ -936,7 +936,7 @@ function LNR_Private.callbacks:OnUnused(target, eventname)
         LNR_Private:Disable();
     end
 
-    
+
 end
 
 function LNR_Private:Enable() -- {{{
@@ -945,7 +945,7 @@ function LNR_Private:Enable() -- {{{
     if InCombatLockdown() then
         Debug(WARNING, ":Enable(), InCombatLockdown, will retry later...");
         self.EventFrame:RegisterEvent("PLAYER_REGEN_ENABLED");
-        
+
         return
     end
 
@@ -964,7 +964,7 @@ function LNR_Private:Enable() -- {{{
 
 
 
-    --[===[@debug@
+    --[==[@debug@
     if DEBUG then
         -- Enable timer execution
         C_Timer.After(0.1, self.Ticker);
@@ -979,13 +979,13 @@ function LNR_Private:Enable() -- {{{
             end
 
             return count
-        end 
+        end
         -- assert that our state is clean
         assert(tCount(tCountTest) == 2, 'tCount test failure');
         assert(tCount(ActivePlates_per_frame) == tCount(ActivePlateFrames_per_unitToken), 'uncleaned state: count mismatch');
         assert(tCount(ActivePlates_per_frame) == 0, 'uncleaned state: old data exists: '..tCount(ActivePlates_per_frame));
-    end 
-    --@end-debug@]===]
+    end
+    --@end-debug@]==]
 
     local function findPlateUnitToken(plate, tokenID) -- only to be called on shown namePlates
         if GetNamePlateForUnit("nameplate"..tokenID) == plate then
@@ -1037,11 +1037,11 @@ function LNR_Private:Disable() -- {{{
         self:NAME_PLATE_UNIT_REMOVED(nil, unitToken);
     end
 
-    --[===[@debug@
+    --[==[@debug@
     if DEBUG then
         twipe(callbacks_consisistency_check);
     end
-    --@end-debug@]===]
+    --@end-debug@]==]
 
     self.EventFrame:UnregisterAllEvents();
 
@@ -1057,11 +1057,11 @@ end
 -- This is also called on catastrophic failure (incompatibility with WoW or other add-ons)
 function LNR_Public:Quit(reason)
 
-    --[===[@debug@
+    --[==[@debug@
     if DEBUG then
         print("|cFFFF0000", MAJOR, MINOR, "Quitting|r", "(", reason, ")");
     end
-    --@end-debug@]===]
+    --@end-debug@]==]
 
     Debug(WARNING, "Quit called", debugstack(1,2,0));
 
@@ -1083,9 +1083,9 @@ function LNR_Public:Quit(reason)
     HasTarget                 = nil;
     TimerDivisor              = nil;
 
-    --[===[@debug@
-    callbacks_consisistency_check = nil;    
-    --@end-debug@]===]
+    --[==[@debug@
+    callbacks_consisistency_check = nil;
+    --@end-debug@]==]
 
 
     -- clear all local methods

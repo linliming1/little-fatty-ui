@@ -7,12 +7,9 @@ end
 local mod	= DBM:NewMod(dungeonID, "DBM-ZuldazarRaid", 1, 1176)
 local L		= mod:GetLocalizedStrings()
 
-mod:SetRevision(("$Revision: 18403 $"):sub(12, -3))
+mod:SetRevision("20201116005403")
 mod:SetCreatureID(creatureID, creatureID2)
 mod:SetEncounterID(2266, 2285)--2266 horde, 2285 Alliance
---mod:DisableESCombatDetection()
-mod:SetZone()
---mod:SetBossHPInfoToHighest()
 mod:SetUsedIcons(1, 2, 3)
 --mod:SetHotfixNoticeRev(17775)
 --mod:SetMinSyncRevision(16950)
@@ -75,12 +72,12 @@ local specWarnFlashofPhoenixes			= mod:NewSpecialWarningSpell(284388, nil, nil, 
 
 --mod:AddTimerLine(DBM:EJ_GetSectionInfo(18527))
 --local timerDarkRevolationCD			= mod:NewCDCountTimer(55, 273365, nil, nil, nil, 3)
-local timerMultiSidedStrikeCD			= mod:NewCDTimer(55.5, 282030, nil, nil, 2, 5, nil, DBM_CORE_TANK_ICON)--35-60, cause variation is awesome
-local timerSpiritsofXuenCD				= mod:NewCDTimer(61.7, 285645, nil, nil, nil, 1, nil, DBM_CORE_HEROIC_ICON)
-local timerRollCD						= mod:NewCDTimer(40.1, 286427, nil, "Tank", nil, 5, nil, DBM_CORE_TANK_ICON)
+local timerMultiSidedStrikeCD			= mod:NewCDTimer(55.5, 282030, nil, nil, 2, 5, nil, DBM_CORE_L.TANK_ICON)--35-60, cause variation is awesome
+local timerSpiritsofXuenCD				= mod:NewCDTimer(61.7, 285645, nil, nil, nil, 1, nil, DBM_CORE_L.HEROIC_ICON)
+local timerRollCD						= mod:NewCDTimer(40.1, 286427, nil, "Tank", nil, 5, nil, DBM_CORE_L.TANK_ICON)
 --Mage
-local timerShieldCD						= mod:NewCDTimer(50.6, 286425, nil, nil, nil, 4, nil, DBM_CORE_DAMAGE_ICON..DBM_CORE_INTERRUPT_ICON)
-local timerSearingEmbersCD				= mod:NewCDTimer(51.0, 286988, nil, nil, nil, 3, nil, DBM_CORE_MAGIC_ICON..DBM_CORE_HEALER_ICON)--15.8-29.2?
+local timerShieldCD						= mod:NewCDTimer(50.6, 286425, nil, nil, nil, 4, nil, DBM_CORE_L.DAMAGE_ICON..DBM_CORE_L.INTERRUPT_ICON)
+local timerSearingEmbersCD				= mod:NewCDTimer(51.0, 286988, nil, nil, nil, 3, nil, DBM_CORE_L.MAGIC_ICON..DBM_CORE_L.HEALER_ICON)--15.8-29.2?
 --Combos
 local timerFirefromMistCD				= mod:NewCDTimer(51, 285428, nil, nil, nil, 6)
 local timerFlashofPhoenixesCD			= mod:NewCDTimer(133, 284388, nil, nil, nil, 6)
@@ -90,16 +87,11 @@ local timerMagmaTrapCD					= mod:NewCDCountTimer(55, 284374, nil, nil, nil, 5)--
 
 --local berserkTimer					= mod:NewBerserkTimer(600)
 
---local countdownCollapsingWorld			= mod:NewCountdown(50, 243983, true, 3, 3)
---local countdownRupturingBlood				= mod:NewCountdown("Alt12", 244016, false, 2, 3)
---local countdownFelstormBarrage			= mod:NewCountdown("AltTwo32", 244000, nil, nil, 3)
-
-mod:AddSetIconOption("SetIconEmbers", 286988, true)
+mod:AddSetIconOption("SetIconEmbers", 286988, true, false, {1, 2, 3})
 --mod:AddRangeFrameOption("8/10")
 mod:AddInfoFrameOption(281959, true)
 mod:AddNamePlateOption("NPAuraOnFixate", 268074)
 mod:AddNamePlateOption("NPAuraOnExplosion", 284399)
---mod:AddSetIconOption("SetIconDarkRev", 273365, true)
 
 mod.vb.shieldsActive = false
 mod.vb.embersIcon = 0
@@ -146,7 +138,7 @@ function mod:OnCombatStart(delay)
 		DBM:FireEvent("BossMod_EnableHostileNameplates")
 	end
 	if self.Options.InfoFrame then
-		DBM.InfoFrame:SetHeader(DBM_CORE_INFOFRAME_POWER)
+		DBM.InfoFrame:SetHeader(DBM_CORE_L.INFOFRAME_POWER)
 		DBM.InfoFrame:Show(4, "enemypower", 2)
 	end
 end
@@ -221,7 +213,7 @@ function mod:SPELL_AURA_APPLIED(args)
 					specWarnRisingFlames:Show(amount)
 					specWarnRisingFlames:Play("stackhigh")
 					yellRisingFlamesFades:Cancel()
-					yellRisingFlamesFades:Countdown(15)
+					yellRisingFlamesFades:Countdown(spellId)
 				else
 					if not UnitIsDeadOrGhost("player") and not DBM:UnitDebuff("player", spellId) then--Can't taunt less you've dropped yours off, period.
 						specWarnRisingFlamesOther:Show(args.destName)
@@ -304,7 +296,7 @@ function mod:SPELL_AURA_REMOVED(args)
 			specWarnPyroblast:Play("kickcast")
 		end
 		if self.Options.InfoFrame then
-			DBM.InfoFrame:SetHeader(DBM_CORE_INFOFRAME_POWER)
+			DBM.InfoFrame:SetHeader(DBM_CORE_L.INFOFRAME_POWER)
 			DBM.InfoFrame:Show(4, "enemypower", 2)
 		end
 	elseif spellId == 286988 then

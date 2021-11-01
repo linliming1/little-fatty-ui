@@ -39,20 +39,27 @@ local IsCaching
 
 SpellCache.CONST = {
 	-- A rough estimate of the highest spellID in the game. Doesn't have to be accurate at all - visual only.
-	MAX_SPELLID_GUESS = 280000,
+	MAX_SPELLID_GUESS = 350000,
 	
 	-- Maximum number of non-existant spellIDs that will be checked before the cache is declared complete.
 	MAX_FAILED_SPELLS = 2000,
 	
 	WHITELIST = {
 		-- A list of spells that will fail other filters, but are still desired
+		[8178] = true, -- Grounding Totem Effect
+		[255016] = true, -- Grounding Totem Effect
 		[228911] = true, -- Odyn's test
 		[227626] = true, -- Odyn's test
+		[275529] = true, -- Test of Might
+		[275531] = true, -- Test of Might
+		[275532] = true, -- Test of Might
+		[275540] = true, -- Test of Might
 	},
 
 	-- A list of spells that should be excluded from the cache
 	INVALID_SPELLS = {
 		[1852] = true, -- GM spell named silenced
+	  [250168] = true, -- Crashes the 9.0 PTR
 	},
 
 	BLACKLIST_TRADESKILL_TEXTURES = {
@@ -78,7 +85,6 @@ SpellCache.CONST = {
 		[134071] = true, -- JC
 		[134366] = true, -- Skinning
 		[134708] = true, -- Mining
-		[134071] = true, -- JC
 	},
 
 	-- Any spell that uses these textures should be excluded.

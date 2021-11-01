@@ -53,7 +53,7 @@ TMW:NewClass("Resizer_Generic"){
 		self.resizeButton:SetScript("OnMouseDown", self.StartSizing)
 		self.resizeButton:SetScript("OnMouseUp", self.OnMouseUp)
 		
-		-- A new function is requied for each resizeButton/parent combo because it has to be able to reference both.
+		-- A new function is required for each resizeButton/parent combo because it has to be able to reference both.
 		parent:HookScript("OnSizeChanged", function(parent)
 			local scale = 1.6 / parent:GetEffectiveScale()
 			scale = max(scale, 0.6)
@@ -119,7 +119,7 @@ TMW:NewClass("Resizer_Generic"){
 		-- This method is rather pointless (its just a wrapper),
 		-- but having consistency is nice so that I don't have to remember if the coords returned
 		-- are comparable to other Standardized coordinates/sizes
-		return GetCursorPosition()    
+		return GetCursorPosition()
 	end,
 	GetStandardizedSize = function(self)
 		local parent = self.parent
@@ -131,6 +131,7 @@ TMW:NewClass("Resizer_Generic"){
 	
 	StartSizing = function(resizeButton, button)
 		local self = resizeButton.module
+		if not self.resizeButton:IsVisible() then return end
 		local parent = self.parent
 		
 		self.std_oldLeft, self.std_oldRight, self.std_oldTop, self.std_oldBottom = self:GetStandardizedCoordinates()

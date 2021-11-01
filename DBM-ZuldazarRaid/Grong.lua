@@ -4,19 +4,15 @@ if UnitFactionGroup("player") == "Alliance" then
 	dungeonID, creatureID = 2340, 144638--Grong the Revenant
 	coreSpellId, energyAOESpellId, slamSpellId, addSpawnId, addCastId, addProjectileId, tankComboId = 286434, 282399, 282543, 282526, 282533, 282467, 286450
 else--Horde
-	dungeonID, creatureID = 2325, 147268--King Grong
+	dungeonID, creatureID = 2325, 144637--King Grong
 	coreSpellId, energyAOESpellId, slamSpellId, addSpawnId, addCastId, addProjectileId, tankComboId = 285659, 281936, 282179, 282247, 282243, 282190, 282082
 end
 local mod	= DBM:NewMod(dungeonID, "DBM-ZuldazarRaid", 1, 1176)
 local L		= mod:GetLocalizedStrings()
 
-mod:SetRevision(("$Revision: 18432 $"):sub(12, -3))
+mod:SetRevision("20201116005403")
 mod:SetCreatureID(creatureID)
 mod:SetEncounterID(2263, 2284)--2263 Alliance, 2284 Horde
---mod:DisableESCombatDetection()
-mod:SetZone()
---mod:SetBossHPInfoToHighest()
---mod:SetUsedIcons(1, 2, 8)
 mod:SetHotfixNoticeRev(18176)
 --mod:SetMinSyncRevision(16950)
 --mod.respawnTime = 35
@@ -25,12 +21,10 @@ mod:RegisterCombat("combat")
 
 mod:RegisterEventsInCombat(
 	"SPELL_CAST_START 282399 285994 282533 286435 282243 285660 281936 290574",
-	"SPELL_CAST_SUCCESS 282543 282526 286450 282179 282247 282082 289292 285875 282083 289307 282533 282243",
+	"SPELL_CAST_SUCCESS 282543 282526 286450 282179 282247 282082 289292 285875 282083 289307",
 	"SPELL_AURA_APPLIED 285671 285875 286434 285659",
 	"SPELL_AURA_APPLIED_DOSE 285875 285671",
 	"SPELL_AURA_REMOVED 286434 285659",
-	"SPELL_INTERRUPT",
---	"SPELL_ENERGIZE 282533 282243",
 	"UNIT_DIED",
 	"UNIT_SPELLCAST_SUCCEEDED boss1"
 )
@@ -65,30 +59,24 @@ local yellThrowTargetFades				= mod:NewShortFadesYell(289307)
 --local specWarnGTFO					= mod:NewSpecialWarningGTFO(238028, nil, nil, nil, 1, 8)
 
 --mod:AddTimerLine(DBM:EJ_GetSectionInfo(18527))
-mod:AddTimerLine(DBM_BOSS)
---local timerEnergyAOECD					= mod:NewCDCountTimer(100, energyAOESpellId, nil, nil, nil, 2)
-local timerTankComboCD					= mod:NewCDTimer(30.3, tankComboId, nil, "Tank", nil, 5, nil, DBM_CORE_TANK_ICON)
+mod:AddTimerLine(DBM_CORE_L.BOSS)
+--local timerEnergyAOECD				= mod:NewCDCountTimer(100, energyAOESpellId, nil, nil, nil, 2)
+local timerTankComboCD					= mod:NewCDTimer(30.3, tankComboId, nil, "Tank", nil, 5, nil, DBM_CORE_L.TANK_ICON, nil, 2, 4)
 local timerSlamCD						= mod:NewCDTimer(27, slamSpellId, nil, nil, nil, 3)
-local timerFerociousRoarCD				= mod:NewCDTimer(36.5, 285994, nil, nil, nil, 2)
-mod:AddTimerLine(DBM_ADDS)
-local timerAddCD						= mod:NewCDTimer(120, addSpawnId, nil, nil, nil, 1)
+local timerFerociousRoarCD				= mod:NewCDTimer(36.5, 285994, nil, nil, nil, 2, nil, nil, nil, 3, 3)
+mod:AddTimerLine(DBM_CORE_L.ADDS)
+local timerAddCD						= mod:NewCDTimer(120, addSpawnId, nil, nil, nil, 1, nil, nil, nil, 1, 5)
 local timerAddAttackCD					= mod:NewCDTimer(23.8, addProjectileId, nil, nil, nil, 3)--12-32
 
 --local berserkTimer					= mod:NewBerserkTimer(600)
 
-local countdownAdd						= mod:NewCountdown(120, addSpawnId, true, nil, 5)
-local countdownTankCombo				= mod:NewCountdown("Alt12", tankComboId, "Tank", nil, 4)
-local countdownFerociousRoar			= mod:NewCountdown("AltTwo32", 285994, nil, nil, 3)
-
 mod:AddRangeFrameOption(8, 285994)
-mod:AddNamePlateOption("NPAuraOnInterrupt", addCastId)
 mod:AddInfoFrameOption(energyAOESpellId, true)
 
 mod.vb.EnergyAOECount = 0
 mod.vb.comboCount = 0
 local coreTargets = {}
 local castsPerGUID = {}
-local interruptTextures = {[1] = 2178517, [2] = 2178510, [3] = 2178511, [4] = 2178512, [5] = 2178513, [6] = 2178514, [7] = 2178515, [8] = 2178516,}--Squalls Deck
 
 local updateInfoFrame
 do
@@ -131,13 +119,10 @@ function mod:OnCombatStart(delay)
 	table.wipe(castsPerGUID)
 	timerSlamCD:Start(15-delay)
 	timerAddCD:Start(16.5-delay)
-	countdownAdd:Start(16.5-delay)
 	timerTankComboCD:Start(22-delay)
-	countdownTankCombo:Start(22-delay)
 	if self:IsHard() then
 		timerAddAttackCD:Start(10.6-delay)
 		timerFerociousRoarCD:Start(35.5-delay)--First one can be between 35.5-39
-		countdownFerociousRoar:Start(35.5-delay)
 	end
 --	timerEnergyAOECD:Start(100-delay, 1)
 	if self.Options.RangeFrame then
@@ -147,9 +132,6 @@ function mod:OnCombatStart(delay)
 		DBM.InfoFrame:SetHeader(OVERVIEW)
 		DBM.InfoFrame:Show(8, "function", updateInfoFrame, false, false)
 	end
-	if self.Options.NPAuraOnInterrupt then
-		DBM:FireEvent("BossMod_EnableHostileNameplates")
-	end
 end
 
 function mod:OnCombatEnd()
@@ -158,9 +140,6 @@ function mod:OnCombatEnd()
 	end
 	if self.Options.InfoFrame then
 		DBM.InfoFrame:Hide()
-	end
-	if self.Options.NPAuraOnInterrupt then
-		DBM.Nameplate:Hide(true, nil, nil, nil, true, true)
 	end
 end
 
@@ -176,7 +155,6 @@ function mod:SPELL_CAST_START(args)
 		specWarnFerociousRoar:Show()
 		specWarnFerociousRoar:Play("fearsoon")
 		timerFerociousRoarCD:Start()
-		countdownFerociousRoar:Start(36.5)
 	elseif spellId == 282533 or spellId == 282243 then
 		if not castsPerGUID[args.sourceGUID] then
 			castsPerGUID[args.sourceGUID] = 0
@@ -199,9 +177,6 @@ function mod:SPELL_CAST_START(args)
 				specWarnAddInterrupt:Play("kickcast")
 			end
 		end
-		if self.Options.NPAuraOnInterrupt and count < 9 then
-			DBM.Nameplate:Show(true, args.sourceGUID, spellId, interruptTextures[count])
-		end
 	elseif spellId == 286435 or spellId == 285660 then
 		--timerEnergyAOECD:Stop()
 	end
@@ -218,15 +193,12 @@ function mod:SPELL_CAST_SUCCESS(args)
 		specWarnAdd:Play("killmob")
 		if self:IsMythic() then
 			timerAddCD:Start(120)--2 every 2 minutes
-			countdownAdd:Start(120)
 		else
 			timerAddCD:Start(60)--1 every 1 minute
-			countdownAdd:Start(60)
 		end
 	elseif spellId == 286450 or spellId == 282082 then--Necrotic Combo/Bestial Combo
 		self.vb.comboCount = 0
 		timerTankComboCD:Start()
-		countdownTankCombo:Start(30.3)
 	elseif spellId == 289292 then
 		if not args:IsPlayer() then
 			specWarnThrow:Show(args.destName)
@@ -241,13 +213,9 @@ function mod:SPELL_CAST_SUCCESS(args)
 			specWarnThrowTarget:Show()
 			specWarnThrowTarget:Play("runout")
 			yellThrowTarget:Yell()
-			yellThrowTargetFades:Countdown(6, 3)
+			yellThrowTargetFades:Countdown(spellId, 3)
 		else
 			warnThrowTarget:Show(args.destName)
-		end
-	elseif spellId == 282533 or spellId == 282243 then
-		if self.Options.NPAuraOnInterrupt then
-			DBM.Nameplate:Hide(true, args.sourceGUID)
 		end
 	end
 end
@@ -283,7 +251,7 @@ function mod:SPELL_AURA_APPLIED(args)
 					warnRendingBite:Show(args.destName, amount)
 				end
 			else
-				warnCrushed:Show(args.destName, amount)
+				warnRendingBite:Show(args.destName, amount)
 			end
 		end
 	elseif spellId == 286434 or spellId == 285659 then
@@ -302,47 +270,10 @@ function mod:SPELL_AURA_REMOVED(args)
 	end
 end
 
-function mod:SPELL_INTERRUPT(args)
-	if type(args.extraSpellId) == "number" and (args.extraSpellId == 282533 or args.extraSpellId == 282243) then
-		if self.Options.NPAuraOnInterrupt then
-			DBM.Nameplate:Hide(true, args.destGUID)
-		end
-	end
-end
-
---[[
-function mod:SPELL_PERIODIC_DAMAGE(_, _, _, _, destGUID, _, _, _, spellId, spellName)
-	if spellId == 228007 and destGUID == UnitGUID("player") and self:AntiSpam(2, 4) then
-		specWarnGTFO:Show(spellName)
-		specWarnGTFO:Play("watchfeet")
-	end
-end
-mod.SPELL_PERIODIC_MISSED = mod.SPELL_PERIODIC_DAMAGE
-
-function mod:SPELL_ENERGIZE(_, _, _, _, destGUID, _, _, _, spellId, _, _, amount)
-	if (spellId == 282533 or spellId == 282243) and destGUID == UnitGUID("boss1") then
-		DBM:Debug("SPELL_ENERGIZE fired on Boss. Amount: "..amount)
-		local elapsed, total = timerEnergyAOECD:GetTime(self.vb.EnergyAOECount+1)--Grab current timer
-		local adjustAmount = self:IsHard() and 10 or self:IsNormal() and 5 or 3
-		elapsed = elapsed + adjustAmount
-		local remaining = total-elapsed
-		--countdownRottingRegurg:Cancel()
-		timerEnergyAOECD:Stop()--Trash old timer
-		if remaining >= 3 then--It's worth showing updated timer
-			timerEnergyAOECD:Update(elapsed, total, self.vb.EnergyAOECount+1)--Construct new timer with adjustment
-			--countdownRottingRegurg:Start(remaining)
-		end
-	end
-end
---]]
-
 function mod:UNIT_DIED(args)
 	local cid = self:GetCIDFromGUID(args.destGUID)
 	if cid == 144998 or cid == 149617 or cid == 144876 or cid == 149611 then--Death Specter/Apetagonizer 3000
 		castsPerGUID[args.destGUID] = nil
-		if self.Options.NPAuraOnInterrupt then
-			DBM.Nameplate:Hide(true, args.destGUID)
-		end
 	end
 end
 
@@ -350,8 +281,5 @@ function mod:UNIT_SPELLCAST_SUCCEEDED(uId, _, spellId)
 	if spellId == 282467 or spellId == 282190 then
 		warnAddProjectile:Show()
 		timerAddAttackCD:Start()
-	--Backup add spawn triggers in case CLEU stuff gets purged
---	elseif spellId == 286450 or spellId == 282082 then
-
 	end
 end

@@ -44,7 +44,7 @@ function DEATH_ANNOUNCE_Init()
     local originSetHyperlink_Origin = ItemRefTooltip.SetHyperlink;
     ItemRefTooltip.SetHyperlink = function(self,link)
         if(strsub(link, 1, 11)=="u1_deathann") then
-            HideUIPanel(self);
+            self:Hide();
             return;
         end
         return originSetHyperlink_Origin(self,link);
@@ -186,12 +186,12 @@ function DEATH_ANNOUNCE_CLEU(...)
     if ( subevent == "SPELL_INTERRUPT" ) then
         if not IsRaidMemberFlag(sourceFlags) then return end
         if sourceGUID == playerGUID and U1GetCfgValue and U1GetCfgValue("deathannounce/yell") then
-            SendChatMessage(string.format("我已打断%s的%s", destName, GetSpellLink(param4)), "YELL")
+            if IsInInstance() then SendChatMessage(string.format("已断%s", GetSpellLink(param4)), "YELL") end
         elseif sourceName then
             if RaidAlerter_SET and RaidAlerter_SET.Break_Magic then return end
             --太刷屏了，加了个开关
             if sourceGUID == playerGUID or (U1GetCfgValue and U1GetCfgValue("deathannounce/othersir")) then
-                DEATH_ANNOUNCE_Print(string.format("%s 打断了%s的%s", sourceName, destName, GetSpellLink(param4)), false, true)
+                DEATH_ANNOUNCE_Print(string.format("%s 打断了%s", sourceName, GetSpellLink(param4)), false, true)
             end
         end
         return
@@ -208,7 +208,17 @@ function DEATH_ANNOUNCE_CLEU(...)
         if DEATH_ANNOUNCE_IMPORTANT_SPELLS[spellId] then
             if sourceGUID == playerGUID and U1GetCfgValue and U1GetCfgValue("deathannounce/yell_spell") then
                 if destGUID ~= playerGUID then
-                    SendChatMessage(string.format("%s -> %s", GetSpellLink(spellId), destName), "YELL")
+                    if IsInInstance() then
+                        local config = DEATH_ANNOUNCE_IMPORTANT_SPELLS[spellId]
+                        if config == "WHISPER" then config = 1 end
+                        if type(config) == "number" then
+                            for i=1, config do
+                                SendChatMessage(string.format("我给你%s了!", GetSpellLink(spellId)), "WHISPER", nil, destName)
+                            end
+                        else
+                            SendChatMessage(string.format("%s -> %s", GetSpellLink(spellId), destName), "YELL")
+                        end
+                    end
                 end
             else
                 if RaidAlerter_SET and RaidAlerter_SET.Paladin_Intervention then return end
@@ -224,7 +234,7 @@ function DEATH_ANNOUNCE_CLEU(...)
 
     if ( subevent == "UNIT_DIED" ) then
         if not UnitIsFeignDeath(destName) then
-            if DEBUG_MODE then print(DEATH_ANNOUNCE_OVK[destName], ...) end
+            --if DEBUG_MODE then print(DEATH_ANNOUNCE_OVK[destName], ...) end
             local h,n = DEATH_ANNOUNCE_GetBossHealth()
             DEATH_ANNOUNCE_OVK[destName] = (DEATH_ANNOUNCE_OVK[destName] or " "):sub(2)..(h and "@"..h or "")
             DEATH_ANNOUNCE_Print(destName ..DEATH_ANNOUNCE_LOCALE_DIE .. DEATH_ANNOUNCE_OVK[destName], "DEFAULT", true, destName);

@@ -3,7 +3,7 @@ H.H.T.D. World of Warcraft Add-on
 Copyright (c) 2009-2018 by John Wellesz (hhtd@2072productions.com)
 All rights reserved
 
-Version 2.4.9.1
+Version 2.4.9.9
 
 In World of Warcraft healers have to die. This is a cruel truth that you're
 taught very early in the game. This add-on helps you influence this unfortunate
@@ -181,7 +181,7 @@ do
                                 self:Debug(INFO, un, 'marked with mark #', self.db.global.MarkerChoice)
                                 return un .. " marked with mark with " .. getRTTStr(self.db.global.MarkerChoice)
                             else
-                                self:Debug(ERROR, L["OPT_TESTONTARGET_ENOTARGET"] );
+                                self:Print(L["OPT_TESTONTARGET_ENOTARGET"] );
                             end
                         end,
                         order = 5,
@@ -200,7 +200,7 @@ do
 
                                 self:Debug(INFO, un, 'mark cleared')
                             else
-                                self:Debug(ERROR, L["OPT_TESTONTARGET_ENOTARGET"] );
+                                self:Print(L["OPT_TESTONTARGET_ENOTARGET"] );
                             end
 
                         end,
@@ -385,7 +385,7 @@ do
                             self:UpdateTextures();
                         end,
                     },
-                    Header100 = {
+                    Header101 = {
                         type = 'header',
                         name = L["OPT_CM_MARKER_CUSTOMIZATION"],
                         order = 35,
@@ -469,7 +469,7 @@ function CM:OnEnable() -- {{{
 
     self:LNR_RegisterCallback("LNR_ERROR_FATAL_INCOMPATIBILITY");
 
- 
+
     for unitName, id in pairs(playerNamesToMark) do
         for plate, plateData in self:EachPlateByName(unitName) do
             self:AddMarkerToPlate(plate, self:GetPlateName(plate), false);
@@ -606,7 +606,7 @@ do
         texture:SetTexture("Interface\\TargetingFrame\\UI-RaidTargetingIcons");
         AdjustTexCoord(texture);
         SetTextureParams(texture);
-        
+
         PlateAdditions.texture = texture;
         PlateAdditions.texture:Show();
         PlateAdditions.IsShown = true; -- set it as soon as we show something
@@ -664,7 +664,7 @@ do
 
         self.DisplayedPlates_byFrameTID[plate] = plate; -- used later to update what was created above
 
-        
+
     end -- }}}
 
     function CM:UpdateTextures ()
@@ -683,7 +683,7 @@ do
 
         end
 
-       
+
     end
 
 
@@ -692,13 +692,13 @@ end
 
 function CM:HideMarkerFromPlate(plate, plateName, caller) -- {{{
 
-    --[===[@alpha@
+    --[=[@alpha@
     if not plate then
         self:Debug(ERROR, "HideMarkerFromPlate(), plate is not defined");
         error("'Plate' is not defined");
         return;
     end
-    --@end-alpha@]===]
+    --@end-alpha@]=]
 
     local plateAdditions = plate.HHTD and plate.HHTD.CM;
 

@@ -1,5 +1,5 @@
 --- Kaliel's Tracker
---- Copyright (c) 2012-2018, Marouan Sabbagh <mar.sabbagh@gmail.com>
+--- Copyright (c) 2012-2021, Marouan Sabbagh <mar.sabbagh@gmail.com>
 --- All Rights Reserved.
 ---
 --- This file is part of addon Kaliel's Tracker.
@@ -30,21 +30,23 @@ local OTFHeader = OTF.HeaderMenu
 local continents = KT.GetMapContinents()
 local achievCategory = GetCategoryList()
 local instanceQuestDifficulty = {
-	[DIFFICULTY_DUNGEON_NORMAL] = { Enum.QuestTag.Dungeon },
-	[DIFFICULTY_DUNGEON_HEROIC] = { Enum.QuestTag.Dungeon, Enum.QuestTag.Heroic },
-	[DIFFICULTY_RAID10_NORMAL] = { Enum.QuestTag.Raid, Enum.QuestTag.Raid10 },
-	[DIFFICULTY_RAID25_NORMAL] = { Enum.QuestTag.Raid, Enum.QuestTag.Raid25 },
-	[DIFFICULTY_RAID10_HEROIC] = { Enum.QuestTag.Raid, Enum.QuestTag.Raid10 },
-	[DIFFICULTY_RAID25_HEROIC] = { Enum.QuestTag.Raid, Enum.QuestTag.Raid25 },
-	[DIFFICULTY_RAID_LFR] = { Enum.QuestTag.Raid },
-	[DIFFICULTY_DUNGEON_CHALLENGE] = { Enum.QuestTag.Dungeon },
-	[DIFFICULTY_RAID40] = { Enum.QuestTag.Raid },
-	[DIFFICULTY_PRIMARYRAID_NORMAL] = { Enum.QuestTag.Raid },
-	[DIFFICULTY_PRIMARYRAID_HEROIC] = { Enum.QuestTag.Raid },
-	[DIFFICULTY_PRIMARYRAID_MYTHIC] = { Enum.QuestTag.Raid },
-	[DIFFICULTY_PRIMARYRAID_LFR] = { Enum.QuestTag.Raid },
+	[DifficultyUtil.ID.DungeonNormal] = { Enum.QuestTag.Dungeon },
+	[DifficultyUtil.ID.DungeonHeroic] = { Enum.QuestTag.Dungeon, Enum.QuestTag.Heroic },
+	[DifficultyUtil.ID.DungeonMythic] = { Enum.QuestTag.Dungeon },
+	[DifficultyUtil.ID.DungeonChallenge] = { Enum.QuestTag.Dungeon },
+	[DifficultyUtil.ID.DungeonTimewalker] = { Enum.QuestTag.Dungeon },
+	[DifficultyUtil.ID.Raid10Normal] = { Enum.QuestTag.Raid, Enum.QuestTag.Raid10 },
+	[DifficultyUtil.ID.Raid25Normal] = { Enum.QuestTag.Raid, Enum.QuestTag.Raid25 },
+	[DifficultyUtil.ID.Raid10Heroic] = { Enum.QuestTag.Raid, Enum.QuestTag.Raid10 },
+	[DifficultyUtil.ID.Raid25Heroic] = { Enum.QuestTag.Raid, Enum.QuestTag.Raid25 },
+	[DifficultyUtil.ID.Raid40] = { Enum.QuestTag.Raid },
+	[DifficultyUtil.ID.RaidLFR] = { Enum.QuestTag.Raid },
+	[DifficultyUtil.ID.RaidTimewalker] = { Enum.QuestTag.Raid },
+	[DifficultyUtil.ID.PrimaryRaidNormal] = { Enum.QuestTag.Raid },
+	[DifficultyUtil.ID.PrimaryRaidHeroic] = { Enum.QuestTag.Raid },
+	[DifficultyUtil.ID.PrimaryRaidMythic] = { Enum.QuestTag.Raid },
+	[DifficultyUtil.ID.PrimaryRaidLFR] = { Enum.QuestTag.Raid },
 }
-local factionColor = { ["Horde"] = "ff0000", ["Alliance"] = "007fff" }
 
 local eventFrame
 
@@ -52,12 +54,39 @@ local eventFrame
 -- Internal --
 --------------
 
+local function IsFavorite(type, id)
+	local result = false
+	for k, v in ipairs(dbChar[type].favorites) do
+		if v == id then
+			result = k
+			break
+		end
+	end
+	return result
+end
+
+local function ToggleFavorite(self, type, id)
+	local idx = IsFavorite(type, id)
+	if idx then
+		tremove(dbChar[type].favorites, idx)
+	else
+		tinsert(dbChar[type].favorites, id)
+	end
+end
+
+local function RemoveFavorite(type, id)
+	local idx = IsFavorite(type, id)
+	if idx then
+		tremove(dbChar[type].favorites, idx)
+	end
+end
+
 local function SetHooks()
 	local bck_ObjectiveTracker_OnEvent = OTF:GetScript("OnEvent")
 	OTF:SetScript("OnEvent", function(self, event, ...)
 		if event == "QUEST_ACCEPTED" then
-			local _, questID = ...
-			if not IsQuestBounty(questID) and not IsQuestTask(questID) and db.filterAuto[1] then
+			local questID = ...
+			if not C_QuestLog.IsQuestTask(questID) and not C_QuestLog.IsQuestBounty(questID) and db.filterAuto[1] then
 				return
 			end
 		end
@@ -78,6 +107,24 @@ local function SetHooks()
 			bck_QuestMapQuestOptions_TrackQuest(questID)
 		end
 	end
+
+	hooksecurefunc("QuestObjectiveTracker_OnOpenDropDown", function(self)
+		local block = self.activeFrame
+
+		local info = MSA_DropDownMenu_CreateInfo()
+		info.isNotRadio = true
+
+		MSA_DropDownMenu_AddSeparator(info)
+
+		info.text = "Favorite"
+		info.colorCode = "|cff009bff"
+		info.notCheckable = false
+		info.func = ToggleFavorite
+		info.arg1 = "quests"
+		info.arg2 = block.id
+		info.checked = (IsFavorite(info.arg1, info.arg2))
+		MSA_DropDownMenu_AddButton(info, MSA_DROPDOWN_MENU_LEVEL)
+	end)
 	
 	-- Achievements
 	local bck_AchievementObjectiveTracker_UntrackAchievement = AchievementObjectiveTracker_UntrackAchievement
@@ -86,7 +133,25 @@ local function SetHooks()
 			bck_AchievementObjectiveTracker_UntrackAchievement(dropDownButton, achievementID)
 		end
 	end
-	
+
+	hooksecurefunc("AchievementObjectiveTracker_OnOpenDropDown", function(self)
+		local block = self.activeFrame
+
+		local info = MSA_DropDownMenu_CreateInfo()
+		info.isNotRadio = true
+
+		MSA_DropDownMenu_AddSeparator(info)
+
+		info.text = "Favorite"
+		info.colorCode = "|cff009bff"
+		info.notCheckable = false
+		info.func = ToggleFavorite
+		info.arg1 = "achievements"
+		info.arg2 = block.id
+		info.checked = (IsFavorite(info.arg1, info.arg2))
+		MSA_DropDownMenu_AddButton(info, MSA_DROPDOWN_MENU_LEVEL)
+	end)
+
 	-- Quest Log
 	hooksecurefunc("QuestMapFrame_UpdateQuestDetailsButtons", function()
 		if db.filterAuto[1] then
@@ -101,7 +166,11 @@ local function SetHooks()
 	-- POI
 	local bck_QuestPOIButton_OnClick = QuestPOIButton_OnClick
 	QuestPOIButton_OnClick = function(self)
-		if not IsQuestWatched(GetQuestLogIndexByID(self.questID)) and db.filterAuto[1] then
+		if not QuestUtils_IsQuestWatched(self.questID) and db.filterAuto[1] then
+			C_SuperTrack.SetSuperTrackedQuestID(self.questID)
+			if self.pingWorldMap then
+				WorldMapPing_StartPingQuest(self.questID)
+			end
 			return
 		end
 		bck_QuestPOIButton_OnClick(self)
@@ -129,7 +198,7 @@ end
 
 local function GetActiveWorldEvents()
 	local eventsText = ""
-	local date = C_Calendar.GetDate()
+	local date = C_DateAndTime.GetCurrentCalendarTime()
 	C_Calendar.SetAbsMonth(date.month, date.year)
 	local numEvents = C_Calendar.GetNumDayEvents(0, date.monthDay)
 	for i=1, numEvents do
@@ -156,10 +225,10 @@ local function IsInstanceQuest(questID)
 	local _, _, difficulty, _ = GetInstanceInfo()
 	local difficultyTags = instanceQuestDifficulty[difficulty]
 	if difficultyTags then
-		local tagID, tagName = GetQuestTagInfo(questID)
+		local tagInfo = KT.GetQuestTagInfo(questID)
 		for _, tag in ipairs(difficultyTags) do
 			_DBG(difficulty.." ... "..tag, true)
-			if tag == tagID then
+			if tag == tagInfo.tagID then
 				return true
 			end
 		end
@@ -169,91 +238,115 @@ end
 
 local function Filter_Quests(self, spec, idx)
 	if not spec then return end
-	local numEntries, _ = GetNumQuestLogEntries()
+	local numEntries, _ = C_QuestLog.GetNumQuestLogEntries()
 
 	KT.stopUpdate = true
 	--KTF.Buttons.reanchor = (KTF.Buttons.num > 0)
-	if GetNumQuestWatches() > 0 then
-		for i=1, numEntries do
-			local _, _, _, isHeader, _, _, _, questID, _, _, _, _, isTask, isBounty = GetQuestLogTitle(i)
-			if not isHeader and not isTask and (not isBounty or IsQuestComplete(questID)) then
-				RemoveQuestWatch(i)
+	if C_QuestLog.GetNumQuestWatches() > 0 then
+		for i = 1, numEntries do
+			local questInfo = C_QuestLog.GetInfo(i)
+			if not questInfo.isHeader and not questInfo.isTask and (not questInfo.isBounty or C_QuestLog.IsComplete(questInfo.questID)) then
+				C_QuestLog.RemoveQuestWatch(questInfo.questID)
 			end
 		end
 	end
 
 	if spec == "all" then
-		for i=numEntries, 1, -1 do
-			local _, _, _, isHeader, _, _, _, questID, _, _, _, _, isTask, isBounty = GetQuestLogTitle(i)
-			if not isHeader and not isTask and (not isBounty or IsQuestComplete(questID)) then
-				AddQuestWatch(i, true)
+		for i = 1, numEntries do
+			local questInfo = C_QuestLog.GetInfo(i)
+			if not questInfo.isHidden and not questInfo.isHeader and not questInfo.isTask and (not questInfo.isBounty or C_QuestLog.IsComplete(questInfo.questID)) then
+				C_QuestLog.AddQuestWatch(questInfo.questID)
 			end
 		end
 	elseif spec == "group" then
-		for i=idx, 1, -1 do
-			local _, _, _, isHeader, _, _, _, questID, _, _, _, _, isTask, isBounty = GetQuestLogTitle(i)
-			if not isHeader and not isTask and (not isBounty or IsQuestComplete(questID)) then
-				AddQuestWatch(i, true)
-			else
-				break
+		for i = idx, numEntries do
+			local questInfo = C_QuestLog.GetInfo(i)
+			if not questInfo.isHidden then
+				if not questInfo.isHeader and not questInfo.isTask and (not questInfo.isBounty or C_QuestLog.IsComplete(questInfo.questID)) then
+					C_QuestLog.AddQuestWatch(questInfo.questID)
+				elseif questInfo.isHeader then
+					break
+				end
 			end
 		end
 		MSA_CloseDropDownMenus()
+	elseif spec == "favorites" then
+		for _, id in ipairs(dbChar.quests.favorites) do
+			C_QuestLog.AddQuestWatch(id)
+		end
 	elseif spec == "zone" then
 		local mapID = KT.GetCurrentMapAreaID()
-		if (C_Map.GetMapGroupID(mapID) and not KT.inInstance) or
-				mapID == 1165 then	-- BfA - Dazar'alor
-			local mapInfo = C_Map.GetMapInfo(mapID)
-			OpenQuestLog(mapInfo.parentMapID)
-		else
-			KT.SetMapToCurrentZone()
-		end
-		for i=numEntries, 1, -1 do
-			local _, _, _, isHeader, _, _, _, questID, _, _, isOnMap, _, isTask, isBounty = GetQuestLogTitle(i)
-			if not isHeader and not isTask and (not isBounty or IsQuestComplete(questID)) and isOnMap then
-				if KT.inInstance then
-					if IsInstanceQuest(questID) then
-						AddQuestWatch(i, true)
+		local zoneName = GetRealZoneText() or ""
+		local isOnMap = false
+		local isInZone = false
+		for i = 1, numEntries do
+			local questInfo = C_QuestLog.GetInfo(i)
+			if not questInfo.isHidden then
+				if questInfo.isHeader then
+					isInZone = (questInfo.isOnMap or questInfo.title == zoneName)
+					if mapID == 1473 then  -- BfA - Chamber of Heart
+						isInZone = (isInZone or
+								questInfo.title == "Heart of Azeroth" or  -- TODO: other languages
+								questInfo.title == "Visions of N'Zoth")   -- TODO: other languages
 					end
 				else
-					AddQuestWatch(i, true)
+					isOnMap = (questInfo.isOnMap or
+							KT.QuestsCache_GetProperty(questInfo.questID, "startMapID") == mapID)
+					if not questInfo.isTask and (not questInfo.isBounty or C_QuestLog.IsComplete(questInfo.questID)) and (KT.QuestsCache_GetProperty(questInfo.questID, "isCalling") or isOnMap or isInZone) then
+						if KT.inInstance then
+							if IsInstanceQuest(questInfo.questID) or isInZone then
+								C_QuestLog.AddQuestWatch(questInfo.questID)
+							end
+						else
+							C_QuestLog.AddQuestWatch(questInfo.questID)
+						end
+					end
 				end
 			end
 		end
-		HideUIPanel(WorldMapFrame)
 	elseif spec == "daily" then
-		for i=numEntries, 1, -1 do
-			local _, _, _, isHeader, _, _, frequency, questID, _, _, _, _, isTask, isBounty = GetQuestLogTitle(i)
-			if not isHeader and not isTask and (not isBounty or IsQuestComplete(questID)) and frequency >= 2 then
-				AddQuestWatch(i, true)
+		for i = 1, numEntries do
+			local questInfo = C_QuestLog.GetInfo(i)
+			if not questInfo.isHidden and not questInfo.isHeader and not questInfo.isTask and (not questInfo.isBounty or C_QuestLog.IsComplete(questInfo.questID)) and questInfo.frequency >= Enum.QuestFrequency.Daily then
+				C_QuestLog.AddQuestWatch(questInfo.questID)
 			end
 		end
 	elseif spec == "instance" then
-		for i=numEntries, 1, -1 do
-			local _, _, _, isHeader, _, _, _, questID, _, _, _, _, isTask, isBounty = GetQuestLogTitle(i)
-			if not isHeader and not isTask and (not isBounty or IsQuestComplete(questID)) then
-				local tagID, _ = GetQuestTagInfo(questID)
-				if tagID == Enum.QuestTag.Dungeon or
-					tagID == Enum.QuestTag.Heroic or
-					tagID == Enum.QuestTag.Raid or
-					tagID == Enum.QuestTag.Raid10 or
-					tagID == Enum.QuestTag.Raid25 then
-					AddQuestWatch(i, true)
+		for i = 1, numEntries do
+			local questInfo = C_QuestLog.GetInfo(i)
+			if not questInfo.isHidden and not questInfo.isHeader and not questInfo.isTask and (not questInfo.isBounty or C_QuestLog.IsComplete(questInfo.questID)) then
+				local tagInfo = KT.GetQuestTagInfo(questInfo.questID)
+				if tagInfo.tagID == Enum.QuestTag.Dungeon or
+						tagInfo.tagID == Enum.QuestTag.Heroic or
+						tagInfo.tagID == Enum.QuestTag.Raid or
+						tagInfo.tagID == Enum.QuestTag.Raid10 or
+						tagInfo.tagID == Enum.QuestTag.Raid25 then
+					C_QuestLog.AddQuestWatch(questInfo.questID)
 				end
 			end
 		end
+	elseif spec == "unfinished" then
+		for i = 1, numEntries do
+			local questInfo = C_QuestLog.GetInfo(i)
+			if not questInfo.isHidden and not questInfo.isHeader and not questInfo.isTask and not questInfo.isBounty and not C_QuestLog.IsComplete(questInfo.questID) then
+				C_QuestLog.AddQuestWatch(questInfo.questID)
+			end
+		end
 	elseif spec == "complete" then
-		for i=numEntries, 1, -1 do
-			local _, _, _, isHeader, _, _, _, questID, _, _, _, _, isTask, isBounty = GetQuestLogTitle(i)
-			if not isHeader and not isTask and (not isBounty or IsQuestComplete(questID)) and IsQuestComplete(questID) then
-				AddQuestWatch(i, true)
+		for i = 1, numEntries do
+			local questInfo = C_QuestLog.GetInfo(i)
+			if not questInfo.isHidden and not questInfo.isHeader and not questInfo.isTask and (not questInfo.isBounty or C_QuestLog.IsComplete(questInfo.questID)) and C_QuestLog.IsComplete(questInfo.questID) then
+				C_QuestLog.AddQuestWatch(questInfo.questID)
 			end
 		end
 	end
 	KT.stopUpdate = false
 
+	C_QuestLog.SortQuestWatches()
 	ObjectiveTracker_Update(OBJECTIVE_TRACKER_UPDATE_MODULE_QUEST)
-	QuestSuperTracking_ChooseClosestQuest()
+	if C_SuperTrack.GetSuperTrackedQuestID() == 0 then
+		QuestSuperTracking_ChooseClosestQuest()
+	end
 end
 
 local function Filter_Achievements(self, spec)
@@ -266,15 +359,26 @@ local function Filter_Achievements(self, spec)
 			RemoveTrackedAchievement(trackedAchievements[i])
 		end
 	end
-	
-	if spec == "zone" then
+
+	if spec == "favorites" then
+		for _, id in ipairs(dbChar.achievements.favorites) do
+			AddTrackedAchievement(id)
+			if GetNumTrackedAchievements() == MAX_TRACKED_ACHIEVEMENTS then
+				break
+			end
+		end
+	elseif spec == "zone" then
 		local continentName = KT.GetCurrentMapContinent().name
 		local zoneName = GetRealZoneText() or ""
 		local categoryName = continentName
 		if KT.GetCurrentMapContinent().mapID == 619 then
 			categoryName = EXPANSION_NAME6	-- Legion
-		elseif KT.GetCurrentMapContinent().mapID == 875 then
+		elseif KT.GetCurrentMapContinent().mapID == 875 or
+				KT.GetCurrentMapContinent().mapID == 876 or
+				KT.GetCurrentMapContinent().mapID == 1355 then
 			categoryName = EXPANSION_NAME7	-- Battle for Azeroth
+		elseif KT.GetCurrentMapContinent().mapID == 1550 then
+			categoryName = EXPANSION_NAME8	-- Shadowlands
 		end
 		local instance = KT.inInstance and 168 or nil
 		_DBG(zoneName.." ... "..KT.GetCurrentMapAreaID(), true)
@@ -470,7 +574,7 @@ local function GetInlineFactionIcon()
 end
 
 function DropDown_Initialize(self, level)
-	local numEntries, numQuests = GetNumQuestLogEntries()
+	local numEntries = C_QuestLog.GetNumQuestLogEntries()
 	local info = MSA_DropDownMenu_CreateInfo()
 	info.isNotRadio = true
 
@@ -486,7 +590,7 @@ function DropDown_Initialize(self, level)
 		info.disabled = (db.filterAuto[1])
 		info.func = Filter_Quests
 
-		info.text = L"All".." ("..numQuests..")"
+		info.text = L"All".." ("..dbChar.quests.num..")"
 		info.hasArrow = not (db.filterAuto[1])
 		info.value = 1
 		info.arg1 = "all"
@@ -494,11 +598,20 @@ function DropDown_Initialize(self, level)
 
 		info.hasArrow = false
 
+		info.text = L"Favorites"
+		info.colorCode = "|cff009bff"
+		info.arg1 = "favorites"
+		info.disabled = (db.filterAuto[1] or #dbChar.quests.favorites == 0)
+		MSA_DropDownMenu_AddButton(info)
+
+		info.colorCode = nil
+		info.disabled = (db.filterAuto[1])
+		
 		info.text = L"Zone"
 		info.arg1 = "zone"
 		MSA_DropDownMenu_AddButton(info)
 
-		info.text = L"Daily"
+		info.text = L"Daily / Weekly"
 		info.arg1 = "daily"
 		MSA_DropDownMenu_AddButton(info)
 
@@ -506,12 +619,16 @@ function DropDown_Initialize(self, level)
 		info.arg1 = "instance"
 		MSA_DropDownMenu_AddButton(info)
 
+		info.text = L"Unfinished"
+		info.arg1 = "unfinished"
+		MSA_DropDownMenu_AddButton(info)
+
 		info.text = L"Complete"
 		info.arg1 = "complete"
 		MSA_DropDownMenu_AddButton(info)
 
 		info.text = L"Untrack All"
-		info.disabled = (db.filterAuto[1] or GetNumQuestWatches() == 0)
+		info.disabled = (db.filterAuto[1] or C_QuestLog.GetNumQuestWatches() == 0)
 		info.arg1 = ""
 		MSA_DropDownMenu_AddButton(info)
 
@@ -543,8 +660,16 @@ function DropDown_Initialize(self, level)
 
 		info.keepShownOnClick = false
 		info.hasArrow = false
-		info.disabled = (db.filterAuto[2])
 		info.func = Filter_Achievements
+
+		info.text = L"Favorites"
+		info.colorCode = "|cff009bff"
+		info.arg1 = "favorites"
+		info.disabled = (db.filterAuto[2] or #dbChar.achievements.favorites == 0)
+		MSA_DropDownMenu_AddButton(info)
+
+		info.colorCode = nil
+		info.disabled = (db.filterAuto[2])
 
 		info.text = L"Zone"
 		info.arg1 = "zone"
@@ -580,21 +705,20 @@ function DropDown_Initialize(self, level)
 			info.disabled = false
 			info.notCheckable = false
 
-			info.text = PetTracker.Locals.TrackPets
-			info.checked = (not PetTracker.Sets.HideTracker)
+			info.text = KT.AddonPetTracker.Texts.TrackPets
+			info.checked = (PetTracker.sets.trackPets)
 			info.func = function()
-				PetTracker.Tracker.Toggle()
-				if dbChar.collapsed and not PetTracker.Sets.HideTracker then
+				PetTracker.Tracker:Toggle()
+				if dbChar.collapsed and PetTracker.sets.trackPets then
 					ObjectiveTracker_MinimizeButton_OnClick()
 				end
 			end
 			MSA_DropDownMenu_AddButton(info)
 
-			info.text = PetTracker.Locals.CapturedPets
-			info.checked = (PetTracker.Sets.CapturedPets)
+			info.text = KT.AddonPetTracker.Texts.CapturedPets
+			info.checked = (PetTracker.sets.capturedPets)
 			info.func = function()
-				PetTracker.Sets.CapturedPets = not PetTracker.Sets.CapturedPets
-				PetTracker:ForAllModules("TrackingChanged")
+				PetTracker.Tracker:ToggleCaptured()
 			end
 			MSA_DropDownMenu_AddButton(info)
 		end
@@ -606,32 +730,28 @@ function DropDown_Initialize(self, level)
 			info.func = Filter_Quests
 
 			if numEntries > 0 then
-				local headerTitle, headerOnMap, headerShown
-				local warCampaignID = C_CampaignInfo.GetCurrentCampaignID()
-				if warCampaignID then
-					local warCampaignInfo = C_CampaignInfo.GetCampaignInfo(warCampaignID)
-					headerTitle = "|cff"..factionColor[KT.playerFaction]..warCampaignInfo.name..GetInlineFactionIcon()
-				end
-				for i=1, numEntries do
-					local title, _, _, isHeader, _, _, _, questID, _, _, isOnMap, _, isTask, isBounty, _, isHidden = GetQuestLogTitle(i)
-					if isHeader then
-						if headerShown and i > 1 then
-							info.arg2 = i - 1
-							MSA_DropDownMenu_AddButton(info, level)
-						end
-						headerTitle = title
-						headerOnMap = isOnMap
-						headerShown = false
-					elseif not isTask and (not isBounty or IsQuestComplete(questID)) and not isHidden then
-						if not headerShown then
-							info.text = (headerOnMap and "|cff00ff00" or "")..headerTitle
-							headerShown = true
+				local headerTitle, headerOnMap, headerCampaign, headerShown
+
+				for i = 1, numEntries do
+					local questInfo = C_QuestLog.GetInfo(i)
+					if not questInfo.isHidden then
+						if questInfo.isHeader then
+							headerTitle = questInfo.title
+							headerOnMap = questInfo.isOnMap
+							headerCampaign = questInfo.campaignID ~= nil
+							headerShown = false
+						elseif not questInfo.isTask and (not questInfo.isBounty or C_QuestLog.IsComplete(questInfo.questID)) then
+							if not headerShown then
+								info.text = (headerOnMap and "|cff00ff00" or "")..headerTitle
+								if headerCampaign then
+									info.text = info.text.." ("..TRACKER_HEADER_CAMPAIGN_QUESTS..")"
+								end
+								info.arg2 = i
+								MSA_DropDownMenu_AddButton(info, level)
+								headerShown = true
+							end
 						end
 					end
-				end
-				if headerShown then
-					info.arg2 = numEntries
-					MSA_DropDownMenu_AddButton(info, level)
 				end
 			end
 		elseif MSA_DROPDOWNMENU_MENU_VALUE == 2 then
@@ -679,8 +799,8 @@ local function SetFrames()
 				SetHooks_AchievementUI()
 				self:UnregisterEvent(event)
 			elseif event == "QUEST_ACCEPTED" then
-				local questID = ...
-				if not IsQuestTask(questID) and (not IsQuestBounty(questID) or IsQuestComplete(questID)) and db.filterAuto[1] then
+				local questID = arg1
+				if not C_QuestLog.IsQuestTask(questID) and (not C_QuestLog.IsQuestBounty(questID) or C_QuestLog.IsComplete(questID)) and db.filterAuto[1] then
 					self:RegisterEvent("QUEST_POI_UPDATE")
 				end
 			elseif event == "QUEST_POI_UPDATE" then
@@ -688,18 +808,37 @@ local function SetFrames()
 				Filter_Quests(_, "zone")
 				KT.questStateStopUpdate = false
 				self:UnregisterEvent(event)
+			elseif event == "QUEST_COMPLETE" then
+				local questID = GetQuestID()
+				RemoveFavorite("quests", questID)
+			elseif event == "ACHIEVEMENT_EARNED" then
+				RemoveFavorite("achievements", arg1)
 			elseif event == "ZONE_CHANGED_NEW_AREA" then
-				if db.filterAuto[1] == "zone" then
-					Filter_Quests(_, "zone")
+				if not KT.IsInBetween() then
+					C_Timer.After(0, function()
+						if db.filterAuto[1] == "zone" then
+							Filter_Quests(_, "zone")
+						end
+						if db.filterAuto[2] == "zone" then
+							Filter_Achievements(_, "zone")
+						end
+					end)
 				end
-				if db.filterAuto[2] == "zone" then
-					Filter_Achievements(_, "zone")
+			elseif event == "ZONE_CHANGED" or event == "ZONE_CHANGED_INDOORS" then
+				if not KT.IsInBetween() then
+					if db.filterAuto[1] == "zone" then
+						Filter_Quests(_, "zone")
+					end
 				end
 			end
 		end)
 	end
 	eventFrame:RegisterEvent("ADDON_LOADED")
 	eventFrame:RegisterEvent("QUEST_ACCEPTED")
+	eventFrame:RegisterEvent("QUEST_COMPLETE")
+	eventFrame:RegisterEvent("ACHIEVEMENT_EARNED")
+	eventFrame:RegisterEvent("ZONE_CHANGED")
+	eventFrame:RegisterEvent("ZONE_CHANGED_INDOORS")
 	eventFrame:RegisterEvent("ZONE_CHANGED_NEW_AREA")
 
 	-- Filter button

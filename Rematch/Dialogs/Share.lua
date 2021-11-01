@@ -164,6 +164,7 @@ function rematch:ShowImportDialog()
 	dialog.TabPicker:SetPoint("TOP",dialog.MultiLine,"BOTTOM",0,-12)
 	dialog.TabPicker:Show()
 	dialog.Accept:Disable()
+	dialog.Other:Disable()
 
 	dialog.Other:SetScript("OnEnter",share.ShowImportLoadTooltip)
 	dialog.Other:SetScript("OnLeave",rematch.HideTooltip)
@@ -290,12 +291,24 @@ function share:AcceptImport()
 	elseif numTeams and numTeams>1 then -- multiline import
 		if not rematch:GetSidelineContext("plain") then -- importing string format
 			local teamStrings = {}
-			rematch:TestTextForStringTeams(rematch.Dialog.MultiLine.EditBox:GetText():trim(),teamStrings)
+			local tabMap = {}
+			rematch:TestTextForStringTeams(rematch.Dialog.MultiLine.EditBox:GetText():trim(),teamStrings,tabMap)
+			tabMap3 = tabMap
 			for _,line in ipairs(teamStrings) do
 				rematch:ConvertStringToSideline(line)
 				if not settings.ConflictOverwrite then
 					rematch:MakeSidelineUnique()
 				end
+
+				-- if ImportTeamTabsToo is set, then change sideline's tab to the tabMap entry for the line
+				if settings.ImportTeamTabsToo then
+					local tab = rematch:GetTabFromTabMap(tabMap,line)
+					if tab then -- only if a valid tab is returned (if tabs full or something weird; keep it in selected tab)
+						local sideline = rematch:GetSideline()
+						sideline.tab = tab
+					end
+				end
+
 				rematch:SetSidelineContext("receivedTeam",true)
 				rematch:PushSideline()
 			end
@@ -303,9 +316,27 @@ function share:AcceptImport()
 	end
 end
 
-
 function share:ExportTeamTab()
 	rematch:ShowExportDialog(nil,true)
+end
+
+function rematch:GetTabFromTabMap(tabMap,teamLine)
+	for mapName,mapLines in pairs(tabMap) do
+		for _,mapLine in ipairs(mapLines) do
+			if mapLine==teamLine then -- found the team in the NAMED tab mapName, need to find a tab with that name
+				for i=1,#settings.TeamGroups do
+					if settings.TeamGroups[i] and settings.TeamGroups[i][1]==mapName then
+						return i -- found an existing tab with this mapName, return it
+					end
+				end
+				-- no existing tab found, need to create a new team tab (without switching to it)
+				if #settings.TeamGroups < rematch.TeamTabs.MAX_TABS then
+					tinsert(settings.TeamGroups,{mapName,"Interface\\Icons\\PetJournalPortrait"})
+					return #settings.TeamGroups
+				end
+			end
+		end
+	end
 end
 
 --[[ Send ]]
@@ -368,9 +399,13 @@ function share:SendAccept()
 		-- first step is to figure out who to send this to: bnet or character
 		local bnetIDAccount = BNet_GetBNetIDAccount(recipient)
 		if bnetIDAccount then
-			local bnetIDGameAccount, client = select(6,BNGetFriendInfoByID(bnetIDAccount))
-			if bnetIDGameAccount and client=="WoW" then
-				rematch:SetSidelineContext("recipient",bnetIDGameAccount)
+			local bnInfo = C_BattleNet.GetAccountInfoByID(bnetIDAccount)
+			if bnInfo then
+				local bnetIDGameAccount = bnInfo.gameAccountInfo.gameAccountID
+				local client = bnInfo.gameAccountInfo.clientProgram
+				if bnetIDGameAccount and client=="WoW" then
+					rematch:SetSidelineContext("recipient",bnetIDGameAccount)
+				end
 			end
 		end
 		if not rematch:GetSidelineContext("recipient") then
@@ -520,7 +555,7 @@ function share:HandleReceivedMessage(message,sender)
 				share:SendMessage("ok",sender) -- message fully received
 				if rematch:ConvertStringToSideline(rxData) then
 					if type(sender)=="number" then -- for bnet-sent teams, sender is a numeric toonID
-						rematch:SetSidelineContext("sender",(select(2,BNGetGameAccountInfo(sender))))
+						rematch:SetSidelineContext("sender",(select(2,C_BattleNet.GetGameAccountInfoByID(sender))))
 					else -- for regularly sent teams, sender is the name
 						rematch:SetSidelineContext("sender",sender)
 					end

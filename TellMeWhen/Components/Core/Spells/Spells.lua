@@ -1,4 +1,4 @@
- -- --------------------
+-- --------------------
 -- TellMeWhen
 -- Originally by Nephthys of Hyjal <lieandswell@yahoo.com>
 
@@ -40,7 +40,9 @@ local _, pclass = UnitClass("player")
 
 
 local function splitSpellAndDuration(str)
-	local spell, duration = strmatch(str, "(.-):([%d:%s%.]*)$")
+	-- A space is optionally allowed before the semicolon 
+	-- to support French, which likes spaces around semicolons.
+	local spell, duration = strmatch(str, "(.-)%s?:([%d:%s%.]*)$")
 	if not spell then
 		return str, 0
 	end
@@ -50,7 +52,7 @@ local function splitSpellAndDuration(str)
 		duration = tonumber( TMW.toSeconds(duration:trim(" :;.")) )
 	end
 
-	return spell, duration
+	return spell:trim(" "), duration
 end
 
 local function parseSpellsString(setting, doLower, keepDurations)
@@ -140,7 +142,7 @@ local function parseSpellsString(setting, doLower, keepDurations)
 
 	return buffNames
 end
-parseSpellsString = TMW:MakeFunctionCached(parseSpellsString)
+parseSpellsString = TMW:MakeNArgFunctionCached(3, parseSpellsString)
 
 
 local function getSpellNames(setting, doLower, firstOnly, toname, hash, allowRenaming)
@@ -255,12 +257,6 @@ local __index_old = nil
 
 
 TMW:NewClass("SpellSet"){
-	instancesByName = {
-		-- Keyed here by allowRenaming
-		[true] = setmetatable({}, {__mode='kv'}),
-		[false] = setmetatable({}, {__mode='kv'}),
-	},
-
 	OnFirstInstance = function(self)
 		self:MakeInstancesWeak()
 
@@ -279,10 +275,6 @@ TMW:NewClass("SpellSet"){
 
 		self.Name = name
 		self.AllowRenaming = allowRenaming
-
-		if name then
-			self.instancesByName[allowRenaming][name] = self
-		end
 		
 		setmetatable(self, self.betterMeta)
 	end,
@@ -313,6 +305,8 @@ TMW:NewClass("SpellSet"){
 		end
 	end,
 }
+
+TMW:MakeNArgFunctionCached(2, TMW.C.SpellSet, "New")
 
 TMW:RegisterCallback("TMW_GLOBAL_UPDATE", function()
 	-- We need to wipe the stored objects/strings on every TMW_GLOBAL_UPDATE because of issues with
@@ -349,9 +343,12 @@ function TMW:GetSpells(spellString, allowRenaming)
 	-- Make sure that allowRenaming is a boolean.
 	allowRenaming = not not allowRenaming
 
-	return TMW.C.SpellSet.instancesByName[allowRenaming][spellString] or TMW.C.SpellSet:New(spellString, allowRenaming)
+	return TMW.C.SpellSet:New(spellString, allowRenaming)
 end
 
+-- Slightly redunant with the caching on SpellSet:New,
+-- but also makes things slightly faster by skipping a stack level or two.
+TMW:MakeNArgFunctionCached(2, TMW, "GetSpells")
 
 
 
@@ -502,6 +499,33 @@ TMW:MakeSingleArgFunctionCached(TMW, "EquivToTable")
 -- Constant spell data
 ---------------------------------
 
+local genericTotemSlots = {
+	{
+		hasVariableNames = true,
+		name = L["GENERICTOTEM"]:format(1),
+		texture = "Interface\\ICONS\\ability_shaman_tranquilmindtotem"
+	},
+	{
+		hasVariableNames = true,
+		name = L["GENERICTOTEM"]:format(2),
+		texture = "Interface\\ICONS\\ability_shaman_tranquilmindtotem"
+	},
+	{
+		hasVariableNames = true,
+		name = L["GENERICTOTEM"]:format(3),
+		texture = "Interface\\ICONS\\ability_shaman_tranquilmindtotem"
+	},
+	{
+		hasVariableNames = true,
+		name = L["GENERICTOTEM"]:format(4),
+		texture = "Interface\\ICONS\\ability_shaman_tranquilmindtotem"
+	},
+	{
+		hasVariableNames = true,
+		name = L["GENERICTOTEM"]:format(5),
+		texture = "Interface\\ICONS\\ability_shaman_tranquilmindtotem"
+	},
+}
 
 if pclass == "DRUID" then
 	TMW.COMMON.CurrentClassTotems = {
@@ -540,37 +564,28 @@ elseif pclass == "PALADIN" then
             texture = GetSpellTexture(114158)
         }
 	}
-elseif pclass == "MONK" then
-	TMW.COMMON.CurrentClassTotems = {
-		name = L["ICONMENU_STATUE"],
-		desc = L["ICONMENU_TOTEM_GENERIC_DESC"]:format(L["ICONMENU_STATUE"]),
-		{
-			hasVariableNames = false,
-			name = L["ICONMENU_STATUE"],
-			texture = function()
-				if GetSpecialization() == 1 then
-					return GetSpellTexture(163177) -- black ox
-				else
-					return GetSpellTexture(115313) -- jade serpent
-				end
-			end,
-		}
-	}
 elseif pclass == "DEATHKNIGHT" then
-	local cachedName = TMW:TryGetNPCName(27829)
-	local name = function()
-		if cachedName then return cachedName end
-		cachedName = TMW:TryGetNPCName(27829)
-		return cachedName
+	local npcName = function(npcID)
+		local cachedName = TMW:TryGetNPCName(npcID)
+		return function()
+			if cachedName then return cachedName end
+			cachedName = TMW:TryGetNPCName(npcID)
+			return cachedName
+		end
 	end
-
+	local name = GetSpellInfo(49206) .. " & " .. GetSpellInfo(288853)
 	TMW.COMMON.CurrentClassTotems = {
 		name = name,
-		desc = function() return L["ICONMENU_TOTEM_GENERIC_DESC"]:format(name()) end,
+		desc = function() return L["ICONMENU_TOTEM_GENERIC_DESC"]:format(name) end,
 		texture = GetSpellTexture(49206),
-		[3] = { -- wow blizzard, so nice. put the gargoyle in slot 3 why dontcha.
+		[1] = { -- Raise Abomination (pvp talent)
 			hasVariableNames = false,
-			name = name,
+			name = npcName(149555),
+			texture = GetSpellTexture(288853),
+		},
+		[3] = { -- Ebon Gargoyle
+			hasVariableNames = false,
+			name = npcName(27829),
 			texture = GetSpellTexture(49206),
 		}
 	}
@@ -579,30 +594,6 @@ else
 	TMW.COMMON.CurrentClassTotems = {
 		name = L["ICONMENU_TOTEM"],
 		desc = L["ICONMENU_TOTEM_DESC"],
-		{
-			hasVariableNames = true,
-			name = L["GENERICTOTEM"]:format(1),
-			texture = "Interface\\ICONS\\ability_shaman_tranquilmindtotem"
-		},
-		{
-			hasVariableNames = true,
-			name = L["GENERICTOTEM"]:format(2),
-			texture = "Interface\\ICONS\\ability_shaman_tranquilmindtotem"
-		},
-		{
-			hasVariableNames = true,
-			name = L["GENERICTOTEM"]:format(3),
-			texture = "Interface\\ICONS\\ability_shaman_tranquilmindtotem"
-		},
-		{
-			hasVariableNames = true,
-			name = L["GENERICTOTEM"]:format(4),
-			texture = "Interface\\ICONS\\ability_shaman_tranquilmindtotem"
-		},
-		{
-			hasVariableNames = true,
-			name = L["GENERICTOTEM"]:format(5),
-			texture = "Interface\\ICONS\\ability_shaman_tranquilmindtotem"
-		},
 	}
+	TMW:CopyTableInPlaceUsingDestinationMeta(genericTotemSlots, TMW.COMMON.CurrentClassTotems, true)
 end

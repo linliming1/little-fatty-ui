@@ -3,9 +3,11 @@ local Jostle = ChocolateBar.Jostle
 local bottomFrames = {}
 local topFrames = {}
 Jostle.hooks = {}
-local Debug = ChocolateBar.Debug
+local debug = ChocolateBar and ChocolateBar.Debug or function() end
 local JostleUpdate = CreateFrame("Frame")
 local _G, pairs = _G, pairs
+local UnitInVehicle = UnitInVehicle and UnitInVehicle or function() end
+local UnitHasVehicleUI = UnitHasVehicleUI and UnitHasVehicleUI or function() end
 
 local blizzardFrames = {
 	'PlayerFrame',
@@ -32,6 +34,7 @@ local blizzardFrames = {
 	'CastingBarFrame',
 	'OrderHallCommandBar',
 	'MicroButtonAndBagsBar',
+	'OverrideActionBar',
 }
 
 local blizzardFramesData = {}
@@ -52,7 +55,7 @@ JostleFrame:SetScript("OnUpdate", function(this, elapsed)
 		this:SetScript("OnUpdate", function(this, elapsed)
 			if GetTime() >= nextTime then
 				Jostle:Refresh()
-				this:Hide()
+				--this:Hide()
 			end
 		end)
 	end
@@ -72,8 +75,11 @@ JostleFrame:RegisterEvent("PLAYER_REGEN_DISABLED")
 JostleFrame:RegisterEvent("PLAYER_REGEN_ENABLED")
 JostleFrame:RegisterEvent("PLAYER_CONTROL_GAINED")
 JostleFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
-JostleFrame:RegisterEvent("UNIT_ENTERING_VEHICLE")
-JostleFrame:RegisterEvent("UNIT_EXITED_VEHICLE")
+
+if ChocolateBar:IsRetail() then
+	JostleFrame:RegisterEvent("UNIT_EXITING_VEHICLE")
+	JostleFrame:RegisterEvent("UNIT_EXITED_VEHICLE")
+end
 
 if not Jostle.hooks.WorldMapFrame_Hide then
 	Jostle.hooks.WorldMapFrame_Hide = true
@@ -143,31 +149,50 @@ function Jostle:PlayerFrame_SequenceFinished()
 	self:Refresh(PlayerFrame)
 end
 
-function Jostle:UNIT_ENTERING_VEHICLE()
+local function LockMainMenuBar()
+	if not InCombatLockdown() and not UnitInVehicle("Player") then
+		MainMenuBar:SetMovable(true)
+		MainMenuBar:SetUserPlaced(true)
+		ChocolateBar:Debug("LockMainMenuBar")
+		MainMenuBar:SetMovable(false)
+	end
+end
+
+function Jostle:UNIT_EXITING_VEHICLE()
+	ChocolateBar:Debug("UNIT_EXITING_VEHICLE")
 	MainMenuBar:SetMovable(true)
 	MainMenuBar:SetUserPlaced(false)
+	ChocolateBar:Debug("SetUserPlaced(false)")
+	MainMenuBar:SetMovable(false)
 end
 
 function Jostle:UNIT_EXITED_VEHICLE()
-	self:Refresh(MainMenuBar)
+	ChocolateBar:Debug("UNIT_EXITED_VEHICLE")
+	self:Refresh(MainMenuBar, PlayerFrame)
 end
 
 function Jostle:PLAYER_ENTERING_WORLD()
-	self:Refresh(BuffFrame, PlayerFrame, TargetFrame)
+	self:Refresh(BuffFrame, PlayerFrame, TargetFrame, MainMenuBar)
+end
+
+function Jostle:PLAYER_REGEN_ENABLED()
+	ChocolateBar:Debug("PLAYER_REGEN_ENABLED")
+	self:Refresh(MainMenuBar, PlayerFrame)
+	LockMainMenuBar()
+end
+
+function Jostle:PLAYER_REGEN_DISABLED()
+	ChocolateBar:Debug("PLAYER_REGEN_DISABLED")
+	inCombat = true
 end
 
 function Jostle:WorldMapFrame_Hide()
 	--JostleFrame:Schedule()
 end
 
-function Jostle:UIParent_ManageFramePositions()
-	--self:Refresh(MainMenuBar, GroupLootFrame1, TutorialFrameParent, FramerateLabel, DurabilityFrame)
-end
-
 local function GetScreenTop()
 	local bottom = GetScreenHeight()
 	for _,frame in pairs(topFrames) do
-    Debug(frame)
 		if frame.IsShown and frame:IsShown() and frame.GetBottom and frame:GetBottom() and frame:GetBottom() < bottom then
 			bottom = frame:GetBottom()
 		end
@@ -206,7 +231,6 @@ function Jostle:RegisterBottom(frame)
 end
 
 function Jostle:RegisterTop(frame)
-  Debug("RegisterTop")
 	if frame and not topFrames[frame] then
 		topFrames[frame] = frame
 		JostleFrame:Schedule()
@@ -235,15 +259,6 @@ function Jostle:ProcessQueue()
 end
 function Jostle:PLAYER_CONTROL_GAINED()
 	self:ProcessQueue()
-end
-
-function Jostle:PLAYER_REGEN_ENABLED()
-	inCombat = false
-	self:ProcessQueue()
-end
-
-function Jostle:PLAYER_REGEN_DISABLED()
-	inCombat = true
 end
 
 local function isClose(alpha, bravo)
@@ -420,16 +435,14 @@ function Jostle:Refresh(...)
 						anchorFrame = WorldFrame
 					end
 
-					frame:ClearAllPoints()
-					frame:SetPoint(anchor, anchorFrame, anchorAlt or anchor, x, y + offset)
-					blizzardFramesData[frame].lastX = frame:GetLeft()
-					blizzardFramesData[frame].lastY = frame:GetTop()
-					blizzardFramesData[frame].lastScale = framescale
-
-					if frame == MainMenuBar then
-						MainMenuBar:SetMovable(true)
-						MainMenuBar:SetUserPlaced(true)
+					if not InCombatLockdown() then
+						frame:ClearAllPoints()
+						frame:SetPoint(anchor, anchorFrame, anchorAlt or anchor, x, y + offset)
+						blizzardFramesData[frame].lastX = frame:GetLeft()
+						blizzardFramesData[frame].lastY = frame:GetTop()
+						blizzardFramesData[frame].lastScale = framescale
 					end
+
 					if frame == OrderHallCommandBar then
 						frame:SetPoint("RIGHT", "UIParent" ,"RIGHT",0, 0);
 					end

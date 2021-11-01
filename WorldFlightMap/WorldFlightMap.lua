@@ -278,6 +278,15 @@ function WorldFlightMapProvider:AddFlightNode(taxiNodeData)
 				--pin:SetIgnoreGlobalPinScale(true)
 				
 				pin:SetShown(taxiNodeData.state ~= Enum.FlightPathState.Unreachable); -- Only show if part of a route, handled in the route building functions
+
+				for poiPin in self:GetMap():EnumeratePinsByTemplate("FlightPointPinTemplate") do
+					if poiPin.name == taxiNodeData.name and playAnim then
+						poiPin:Hide()
+					else
+						poiPin:ClearNudgeSettings()
+						poiPin:ApplyCurrentPosition()
+					end
+				end
 			end
 		end
 	end
@@ -342,6 +351,14 @@ end
 
 function WorldFlightMapProvider:SetTaxiState(state)
 	self.taxiOpen = state
+end
+
+function WorldMapFrame:ResetTitleAndPortraitIcon()
+	-- Placeholder for missing mixin method that gets called when the map is opened
+end
+
+function WorldMapFrame:UpdateTitleAndPortraitIcon()
+	-- Called when map is opened to a zone with a bastion node on it
 end
 
 WorldMapFrame:AddDataProvider(WorldFlightMapProvider)

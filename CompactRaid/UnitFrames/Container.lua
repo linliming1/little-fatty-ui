@@ -53,7 +53,7 @@ container:SetFrameStrata("BACKGROUND")
 
 local backdrop = { bgFile = addon:GetMedia("background"), edgeFile = addon:GetMedia("border"), edgeSize = 16, insets = { left = 5, right = 5, top = 5, bottom = 5 } }
 
-local containerBorder = CreateFrame("Frame", container:GetName().."Border", container)
+local containerBorder = CreateFrameAby("Frame", container:GetName().."Border", container)
 containerBorder:SetBackdrop(backdrop)
 containerBorder:SetFrameStrata("BACKGROUND")
 containerBorder:SetPoint("TOPLEFT", -12, 12)
@@ -125,6 +125,7 @@ function addon:UpdateContainerSize()
 end
 
 container:SetScript("OnUpdate", function(self, elapsed)
+    if not addon.db.spacing then return end
 	updateElapsed = (updateElapsed or 0) + elapsed
 	if updateElapsed < 0.2 then
 		return

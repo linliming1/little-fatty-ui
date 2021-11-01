@@ -1,0 +1,19 @@
+## Interface: 90100
+## Version: 1.6.1
+## X-Date: 2021-07-05T20:55:15Z
+## X-Website: https://www.wowace.com/projects/broker-lootspec
+## X-License: MIT License
+## X-Category: Boss Encounters, Loot, Gear, Data-Broker
+
+## Title: Broker: LootSpec
+## Notes: Simple loot specialisation display with selection in tooltip.
+## Author: Timmeh
+## OptionalDeps: LibStub, Ace3, LibPubSub-1.0, LibQTip-1.0
+
+core.lua
+modules\databroker.lua
+modules\tooltip.lua
+modules\click.lua
+
+## Title-zhCN: |cff880303[爱不易]|r Broker 拾取专精模块
+## X-Vendor: AbyUI

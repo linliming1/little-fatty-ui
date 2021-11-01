@@ -2,8 +2,17 @@ local AceLocale = LibStub:GetLibrary("AceLocale-3.0")
 local L = AceLocale:NewLocale("ChocolateBar", "enUS", true)
 if not L then return end
 
+L["Label color"] = true
+L["Default label color of a plugin."] = true
+
+L["Custom Label"] = true
+L["Change the label of this plugin."] = true
+L["Show Label"] = true
 L["Colorized Dragging"] = true
 L["Colorize frames during drag & drop."] = true
+
+L["Delete Placeholders"] = true
+L["Removes all placeholders"] = true
 
 L["Modules"] = true
 

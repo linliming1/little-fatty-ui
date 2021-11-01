@@ -1,6 +1,10 @@
 local addonName, addon = ...
 local hbd = LibStub("HereBeDragons-2.0")
 
+if (not addon.WOW_MAINLINE) then
+    return
+end
+
 local enableClicks = true       -- True if waypoint-clicking is enabled to set points
 local enableClosest = true      -- True if 'Automatic' quest waypoints are enabled
 local modifier                  -- A string representing click-modifiers "CAS", etc.
@@ -18,8 +22,11 @@ local L = TomTomLocals
 local lastWaypoint
 local scanning          -- This function is not re-entrant, stop that
 
-local function getQIDFromIndex(questIndex)
-	return (select(8, GetQuestLogTitle(questIndex)))
+
+local function GetQuestIndexForWatch(questWatchIndex)
+    local questID = C_QuestLog.GetQuestIDForQuestWatchIndex(questWatchIndex)
+    local questIndex = questID and C_QuestLog.GetLogIndexForQuestID(questID)
+    return questIndex
 end
 
 local function ObjectivesChanged()
@@ -64,7 +71,7 @@ local function ObjectivesChanged()
     local closestdist = math.huge
 
     -- This function relies on the above CVar being set, and updates the icon
-    -- position information so it can be queries via the API
+    -- position information so it can be queried via the API
     QuestPOIUpdateIcons()
 
     -- Scan through every quest that is tracked, and find the closest one
@@ -76,12 +83,15 @@ local function ObjectivesChanged()
             break
         end
 
-        local qid = getQIDFromIndex(questIndex)
+        local qid = C_QuestLog.GetQuestIDForQuestWatchIndex(watchIndex)
+        C_QuestLog.SetSelectedQuest(qid)
+        C_QuestLog.GetNextWaypoint(qid)
         local completed, x, y, objective = QuestPOIGetIconInfo(qid)
+        local qmap = GetQuestUiMapID(qid)
 
         if x and y then
-            local dist = hbd:GetZoneDistance(map, px, py, map, x, y)
-            if dist < closestdist then
+            local dist = hbd:GetZoneDistance(map, px, py, qmap, x, y)
+            if dist and (dist < closestdist) then
                 closest = watchIndex
                 closestdist = dist
             end
@@ -91,9 +101,10 @@ local function ObjectivesChanged()
 
     if closest then
         local questIndex = GetQuestIndexForWatch(closest)
-        local title = GetQuestLogTitle(questIndex)
-        local qid = getQIDFromIndex(questIndex)
+        local title = C_QuestLog.GetTitleForLogIndex(questIndex)
+        local qid = C_QuestLog.GetQuestIDForQuestWatchIndex(closest)
         local completed, x, y, objective = QuestPOIGetIconInfo(qid)
+        local map = GetQuestUiMapID(qid)
 
         if completed then
             title = "完成: " .. title
@@ -142,6 +153,7 @@ local eventFrame = CreateFrame("Frame")
 eventFrame:RegisterEvent("QUEST_POI_UPDATE")
 eventFrame:RegisterEvent("QUEST_LOG_UPDATE")
 
+
 eventFrame:SetScript("OnEvent", function(self, event, ...)
     if event == "QUEST_POI_UPDATE" then
         ObjectivesChanged()
@@ -176,24 +188,26 @@ local function poi_OnClick(self, button)
 
     QuestPOIUpdateIcons()
 
-    local questIndex = GetQuestLogIndexByID(self.questID)
+    local questIndex = C_QuestLog.GetLogIndexForQuestID(self.questID)
     local title, completed, x, y
 
     if questIndex and questIndex ~= 0 then
-        title = GetQuestLogTitle(questIndex)
+        title = C_QuestLog.GetTitleForLogIndex(questIndex)
         completed, x, y = QuestPOIGetIconInfo(self.questID)
-        -- If the WorldMap is open, use the map's MapID, else guess the current players' map
+        m = C_TaskQuest.GetQuestZoneID(self.questID)
+        -- If the WorldMap is open, maybe use the map's MapID, else maybe try the players' map
         if WorldMapFrame:IsShown() then
-            m = WorldMapFrame:GetMapID()
+            m = m or WorldMapFrame:GetMapID()
         else
-            m = C_Map.GetBestMapForUnit("player")
+            m = m or C_Map.GetBestMapForUnit("player")
         end
     else
         -- Must be a World Quest
         title = C_TaskQuest.GetQuestInfoByQuestID(self.questID)
         completed = false
         x, y = C_TaskQuest.GetQuestLocation(self.questID)
-        m = select(2, C_TaskQuest.GetQuestZoneID(self.questID)) or m
+        m = C_TaskQuest.GetQuestZoneID(self.questID)
+        m = m or C_Map.GetBestMapForUnit("player")
     end
 
     if completed then
@@ -203,7 +217,10 @@ local function poi_OnClick(self, button)
     if not x or not y then
         -- No coordinate information for this quest/objective
         local header = "|cFF33FF99TomTom|r"
-        print(L["%s: No coordinate information found for '%s' at this map level"]:format(header, title or self.questID))
+        if TomTom.profile.general.announce then
+            local msg = L["%s: No coordinate information found for '%s' at this map level"]:format(header, title or self.questID)
+            ChatFrame1:AddMessage(msg)
+        end
         return
     end
 
@@ -232,9 +249,11 @@ local function poi_OnClick(self, button)
     SetCVar("questPOI", cvar and 1 or 0)
 end
 
+
 hooksecurefunc("QuestPOIButton_OnClick", function(self, button)
     poi_OnClick(self, button)
 end)
+
 
 function TomTom:EnableDisablePOIIntegration()
     enableClicks= TomTom.profile.poi.enable

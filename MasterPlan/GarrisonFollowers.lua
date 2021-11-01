@@ -2,7 +2,9 @@ local _, T = ...
 if T.Mark ~= 50 then return end
 local G, L, EV = T.Garrison, T.L, T.Evie
 local countFreeFollowers = G.countFreeFollowers
-local GameTooltip = AltGameTooltip or GameTooltip
+
+local Nine = T.Nine or _G
+local C_Garrison = Nine.C_Garrison
 
 local function HookOnShow(self, OnShow)
 	self:HookScript("OnShow", OnShow)
@@ -84,8 +86,7 @@ local CreateMechanicButton, Mechanic_SetTrait do
 end
 
 floatingMechanics:SetFrameStrata("DIALOG")
-floatingMechanics:SetBackdrop({edgeFile="Interface/Tooltips/UI-Tooltip-Border", bgFile="Interface/DialogFrame/UI-DialogBox-Background-Dark", tile=true, edgeSize=16, tileSize=16, insets={left=4,right=4,bottom=4,top=4}})
-floatingMechanics:SetBackdropBorderColor(1, 0.85, 0.6)
+T.CreateEdge(floatingMechanics, {edgeFile="Interface/Tooltips/UI-Tooltip-Border", bgFile="Interface/DialogFrame/UI-DialogBox-Background-Dark", tile=true, edgeSize=16, tileSize=16, insets={left=4,right=4,bottom=4,top=4}}, nil, 0xffffd899)
 floatingMechanics.buttons = {}
 function floatingMechanics:SetOwner(owner, info)
 	self.owner, self.expire = owner
@@ -232,8 +233,7 @@ end
 
 local UpgradesFrame = CreateFrame("FRAME")
 UpgradesFrame:SetSize(237, 42)
-UpgradesFrame:SetBackdrop({edgeFile="Interface/Tooltips/UI-Tooltip-Border", bgFile="Interface/DialogFrame/UI-DialogBox-Background-Dark", tile=true, edgeSize=16, tileSize=16, insets={left=4,right=4,bottom=4,top=4}})
-UpgradesFrame:SetBackdropBorderColor(0.15, 1, 0.25)
+T.CreateEdge(UpgradesFrame, {edgeFile="Interface/Tooltips/UI-Tooltip-Border", bgFile="Interface/DialogFrame/UI-DialogBox-Background-Dark", tile=true, edgeSize=16, tileSize=16, insets={left=4,right=4,bottom=4,top=4}}, nil, 0xff26ff3f)
 UpgradesFrame:Hide()
 UpgradesFrame:SetScript("OnHide", function(self)
 	local so = self.owner
@@ -439,30 +439,32 @@ function EV:FXUI_GARRISON_FOLLOWER_LIST_SHOW_FOLLOWER(tab, followerID)
 	end
 	for i=1, #ab do
 		local button = ab[i]
-		local abid, isFree = button.IconButton.abilityID
-		if not (abid and abid > 0 and ct and at) then
-			if abid and abid > 0 then
-				button.Name:SetText(C_Garrison.GetFollowerAbilityName(abid))
-			end
-			button.IconButton.ValidSpellHighlight:SetVertexColor(1,1,1)
-		else
-			if C_Garrison.GetFollowerAbilityIsTrait(abid) then
-				isFree = ct[et[abid] or abid]
-			else
-				isFree = at[C_Garrison.GetFollowerAbilityCounterMechanicInfo(abid)]
-			end
-			if not isFree then
-				button.Name:SetText([[|TInterface\PetBattles\PetBattle-LockIcon:11:10:-2:1:32:32:4:28:2:30:255:120:100|t]]..C_Garrison.GetFollowerAbilityName(abid))
-				button.IconButton.ValidSpellHighlight:SetVertexColor(1,0.8,0.8)
-			elseif T.LockTraits[et[abid] or abid] or T.LockTraits[abid] then
-				button.Name:SetText([[|TInterface\PetBattles\PetBattle-LockIcon:11:10:-2:1:32:32:4:28:2:30:220:220:160|t]]..C_Garrison.GetFollowerAbilityName(abid))
-				button.IconButton.ValidSpellHighlight:SetVertexColor(1,1,1)
-			elseif isFree == "soft" then
-				button.Name:SetText([[|TInterface\PetBattles\PetBattle-LockIcon:11:10:-2:1:32:32:4:28:2:30:120:240:160|t]]..C_Garrison.GetFollowerAbilityName(abid))
+		if button.IconButton then
+			local abid, isFree = button.IconButton.abilityID
+			if not (abid and abid > 0 and ct and at) then
+				if abid and abid > 0 then
+					button.Name:SetText(C_Garrison.GetFollowerAbilityName(abid))
+				end
 				button.IconButton.ValidSpellHighlight:SetVertexColor(1,1,1)
 			else
-				button.Name:SetText([[|TInterface\Buttons\UI-RefreshButton:10:10:-2:2:16:16:16:0:16:0:120:255:0|t]]..C_Garrison.GetFollowerAbilityName(abid))
-				button.IconButton.ValidSpellHighlight:SetVertexColor(1,1,0)
+				if C_Garrison.GetFollowerAbilityIsTrait(abid) then
+					isFree = ct[et[abid] or abid]
+				else
+					isFree = at[C_Garrison.GetFollowerAbilityCounterMechanicInfo(abid)]
+				end
+				if not isFree then
+					button.Name:SetText([[|TInterface\PetBattles\PetBattle-LockIcon:11:10:-2:1:32:32:4:28:2:30:255:120:100|t]]..C_Garrison.GetFollowerAbilityName(abid))
+					button.IconButton.ValidSpellHighlight:SetVertexColor(1,0.8,0.8)
+				elseif T.LockTraits[et[abid] or abid] or T.LockTraits[abid] then
+					button.Name:SetText([[|TInterface\PetBattles\PetBattle-LockIcon:11:10:-2:1:32:32:4:28:2:30:220:220:160|t]]..C_Garrison.GetFollowerAbilityName(abid))
+					button.IconButton.ValidSpellHighlight:SetVertexColor(1,1,1)
+				elseif isFree == "soft" then
+					button.Name:SetText([[|TInterface\PetBattles\PetBattle-LockIcon:11:10:-2:1:32:32:4:28:2:30:120:240:160|t]]..C_Garrison.GetFollowerAbilityName(abid))
+					button.IconButton.ValidSpellHighlight:SetVertexColor(1,1,1)
+				else
+					button.Name:SetText([[|TInterface\Buttons\UI-RefreshButton:10:10:-2:2:16:16:16:0:16:0:120:255:0|t]]..C_Garrison.GetFollowerAbilityName(abid))
+					button.IconButton.ValidSpellHighlight:SetVertexColor(1,1,0)
+				end
 			end
 		end
 	end
@@ -601,7 +603,7 @@ local SpecAffinityFrame = CreateFrame("Frame") do
 		if owner.Class then
 			owner.Class:SetAlpha(0)
 		end
-		local best, job = fi.isCollected and fi.level == 100 and fi.quality >= 4
+		local best, job = fi.isCollected and fi.level == T.FOLLOWER_LEVEL_CAP and fi.quality >= 4
 		if best then
 			best, job = G.GetBestGroupInfo(1, fi.status == GARRISON_FOLLOWER_INACTIVE, true)
 		end
@@ -814,8 +816,11 @@ end
 function EV:FXUI_GARRISON_FOLLOWER_LIST_SHOW_FOLLOWER(followerTab)
 	local af = followerTab.AbilitiesFrame.Abilities
 	for i=1,#af do
-		af[i].IconButton:SetScript("OnEnter", FollowerPageAbility_OnEnter)
-		af[i].IconButton:SetScript("OnLeave", RecruitAbility_OnLeave)
+		local ib = af[i].IconButton
+		if ib then
+			ib:SetScript("OnEnter", FollowerPageAbility_OnEnter)
+			ib:SetScript("OnLeave", RecruitAbility_OnLeave)
+		end
 	end
 end
 
@@ -945,7 +950,7 @@ function _G.GarrisonFollowerList_SortFollowers(followerList)
 					if not upA then
 						upW, upA = G.GetUpgradeRange()
 					end
-					if f.level < 100 then
+					if f.level < T.FOLLOWER_LEVEL_CAP then
 						ok = false
 					else
 						local _weaponItemID, weaponItemLevel, _armorItemID, armorItemLevel = C_Garrison.GetFollowerItems(f.followerID)
@@ -1169,7 +1174,7 @@ do -- Weapon/Armor upgrades and rerolls
 		else
 			reroll:Show()
 		end
-		if C_Garrison.GetFollowerLevel(id) < 100 then
+		if C_Garrison.GetFollowerLevel(id) < T.FOLLOWER_LEVEL_CAP then
 			gear:Hide()
 			UpgradesFrame:Hide()
 		else
@@ -1323,7 +1328,7 @@ do -- Equipment
 			end
 			return
 		end
-		local pf, ef = CreateFrame("Button", nil, nil, "SecureActionButtonTemplate"), owner
+		local pf, ef = CreateFrame("Button", nil, nil, "InsecureActionButtonTemplate"), owner
 		pf:Hide()
 		pf:SetScript("PreClick", CP_PreClick)
 		pf:SetScript("PostClick", CP_PostClick)

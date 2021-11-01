@@ -29,7 +29,7 @@ function DataBroker:OnInitialize()
             local label = item and format(L['“%s”总数'], item.text) or L['活动总数']
             GameTooltip:AddDoubleLine(ICON2 .. label, self.activityCount or 0, 1, 1, 1, 1, 1, 1)
 
-            if App:HasApp() then
+            if App and App:HasApp() then
                 GameTooltip:AddDoubleLine(ICON3 .. L['关注请求'], self.followQueryCount or 0, 1, 1, 1, 1, 1, 1)
             end
 
@@ -50,7 +50,7 @@ function DataBroker:OnInitialize()
         end
     })
 
-    local BrokerPanel = LibStub('LibWindow-1.1'):Embed(CreateFrame('Button', nil, UIParent)) do
+    local BrokerPanel = LibStub('LibWindow-1.1'):Embed(CreateFrame('Button', nil, UIParent, 'BackdropTemplate')) do
         BrokerPanel:SetSize(160, 26)
         BrokerPanel:SetToplevel(true)
         BrokerPanel:SetFrameStrata('HIGH')
@@ -119,6 +119,7 @@ function DataBroker:OnInitialize()
     self:RegisterMessage('MEETINGSTONE_APP_NEW_FOLLOWER_STATUS_UPDATE', 'UpdateFlash')
     self:RegisterMessage('MEETINGSTONE_NEW_APPLICANT_STATUS_UPDATE')
     self:RegisterMessage('MEETINGSTONE_APP_READY')
+    self:RegisterMessage('MEETINGSTONE_ANNOUNCEMENT_UPDATED', 'UpdateFlash')
 end
 
 function DataBroker:MEETINGSTONE_SETTING_CHANGED(_, key, value, onUser)
@@ -217,9 +218,17 @@ local flashs = {
             return App:IsFirstLogin() or App:HasNewFollower()
         end,
         shown = function()
-            return AppFollowQueryPanel:IsVisible()
+            return AppFollowQueryPanel and AppFollowQueryPanel:IsVisible()
         end,
         panel = AppParent,
+    },
+    {
+        flash = function()
+            return DataCache:GetObject('AnnList'):IsNew()
+        end,
+        shown = function()
+            return MainPanel.AnnBlocker:IsVisible()
+        end,
     }
 }
 

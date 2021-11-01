@@ -1,11 +1,11 @@
-local mod	= DBM:NewMod(1885, "DBM-BrokenIsles", nil, 822)
+local mod	= DBM:NewMod(1885, "DBM-BrokenIsles", 1, 822)
 local L		= mod:GetLocalizedStrings()
 
-mod:SetRevision(("$Revision: 3 $"):sub(12, -3))
+mod:SetRevision("20210905144823")
 mod:SetCreatureID(117470)
 --mod:SetEncounterID(1880)--Bosses don't fire BOSS_KILL or have encounter IDs at time of this update
 mod:SetReCombatTime(20)
-mod:SetZone()
+mod:EnableWBEngageSync()--Enable syncing engage in outdoors
 
 mod:RegisterCombat("combat")
 
@@ -19,7 +19,6 @@ local warnSummonHonorGuard			= mod:NewSpellAnnounce(233968, 3)
 
 local specWarnTidalWave				= mod:NewSpecialWarningDodge(233996, nil, nil, nil, 2, 2)
 local specWarnSubmerge				= mod:NewSpecialWarningDodge(241433, nil, nil, nil, 1, 2)
-local yellSubmerge					= mod:NewYell(241433)
 local specWarnSubmergeNear			= mod:NewSpecialWarningClose(241433, nil, nil, nil, 1, 2)
 
 local timerTidalWaveCD				= mod:NewCDTimer(20.6, 233996, nil, nil, nil, 3)--20.6-24.7
@@ -33,7 +32,6 @@ function mod:SubmergeTarget(targetname, uId)
 	if targetname == UnitName("player") then
 		specWarnSubmerge:Show()
 		specWarnSubmerge:Play("runout")
-		yellSubmerge:Yell()
 	elseif self:CheckNearby(10, targetname) then
 		specWarnSubmergeNear:Show(targetname)
 		specWarnSubmergeNear:Play("watchstep")
@@ -57,8 +55,7 @@ function mod:SPELL_CAST_START(args)
 	end
 end
 
-function mod:UNIT_SPELLCAST_SUCCEEDED(uId, _, bfaSpellId, _, legacySpellId)
-	local spellId = legacySpellId or bfaSpellId
+function mod:UNIT_SPELLCAST_SUCCEEDED(uId, _, spellId)
 	if spellId == 233968 and self:AntiSpam(4, 1) then--Summon Honor Guard
 		warnSummonHonorGuard:Show()
 		timerSummonHonorGuardCD:Start()

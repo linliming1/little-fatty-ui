@@ -1,3 +1,5 @@
+if not _G.C_AzeriteItem then return end
+
 local Addon = select(2, ...)
 local Dominos = _G.Dominos
 local AzeriteBar = Dominos:CreateClass("Frame", Addon.ProgressBar)
@@ -24,15 +26,32 @@ function AzeriteBar:Update()
     end
 
     local azeriteItemLocation = C_AzeriteItem.FindActiveAzeriteItem()
-    local powerLevel = C_AzeriteItem.GetPowerLevel(azeriteItemLocation)
-    local value, max = C_AzeriteItem.GetAzeriteItemXPInfo(azeriteItemLocation)
+
+	Item:CreateFromItemLocation(azeriteItemLocation)
+
+    local value, max, powerLevel
+	if _G.AzeriteUtil.IsAzeriteItemLocationBankBag(azeriteItemLocation) then
+        value = 0
+        max = 1
+        powerLevel = 0
+	else
+		value, max = C_AzeriteItem.GetAzeriteItemXPInfo(azeriteItemLocation)
+		powerLevel = C_AzeriteItem.GetPowerLevel(azeriteItemLocation)
+    end
 
     self:SetValues(value, max)
     self:UpdateText(L.Azerite, value, max, powerLevel)
 end
 
 function AzeriteBar:IsModeActive()
-    return C_AzeriteItem.HasActiveAzeriteItem()
+    local location = C_AzeriteItem.FindActiveAzeriteItem()
+
+    if location then
+        Item:CreateFromItemLocation(location)
+        return not AzeriteUtil.IsAzeriteItemLocationBankBag(location) and not IsPlayerAtEffectiveMaxLevel()
+    end
+
+    return false
 end
 
 -- register this as a possible progress bar mode

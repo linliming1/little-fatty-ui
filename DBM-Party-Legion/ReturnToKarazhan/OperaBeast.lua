@@ -1,17 +1,16 @@
 local mod	= DBM:NewMod(1827, "DBM-Party-Legion", 11, 860)
 local L		= mod:GetLocalizedStrings()
 
-mod:SetRevision(("$Revision: 2 $"):sub(12, -3))
+mod.statTypes = "heroic,mythic,challenge"
+
+mod:SetRevision("20210905144759")
 mod:SetCreatureID(114329, 114522, 114330, 114328)
 mod:SetEncounterID(1957)--Shared (so not used for encounter START since it'd fire 3 mods)
 mod:DisableESCombatDetection()--However, with ES disabled, EncounterID can be used for BOSS_KILL/ENCOUNTER_END
-mod:SetZone()
 mod:SetUsedIcons(1)
 --mod:SetHotfixNoticeRev(14922)
 mod:SetBossHPInfoToHighest()
 --mod.respawnTime = 30
-
-mod.noNormal = true
 
 mod:RegisterCombat("combat")
 
@@ -44,27 +43,24 @@ local specWarnDentArmor				= mod:NewSpecialWarningDefensive(227985, nil, nil, ni
 local specWarnDinnerBell			= mod:NewSpecialWarningInterrupt(227987, "HasInterrupt", nil, nil, 1, 2)
 
 --Luminore
-local timerHeatWaveCD				= mod:NewCDTimer(26, 228025, nil, nil, nil, 4, nil, DBM_CORE_INTERRUPT_ICON)
+local timerHeatWaveCD				= mod:NewCDTimer(26, 228025, nil, nil, nil, 4, nil, DBM_CORE_L.INTERRUPT_ICON)
 --Mrs.Cauldrons
-local timerLeftoversCD				= mod:NewCDTimer(17, 228019, nil, nil, nil, 4, nil, DBM_CORE_INTERRUPT_ICON)
+local timerLeftoversCD				= mod:NewCDTimer(17, 228019, nil, nil, nil, 4, nil, DBM_CORE_L.INTERRUPT_ICON)
 --Babblet
 local timerSevereDustingCD			= mod:NewCDTimer(12, 228221, nil, nil, nil, 3)
 --Coggleston
 local timerDentArmorCD				= mod:NewCDTimer(20, 227985, nil, "Tank|Healer", nil, 5)
-local timerDinnerBellCD				= mod:NewCDTimer(10.9, 227987, nil, nil, nil, 4, nil, DBM_CORE_INTERRUPT_ICON)
+local timerDinnerBellCD				= mod:NewCDTimer(10.9, 227987, nil, nil, nil, 4, nil, DBM_CORE_L.INTERRUPT_ICON)
 
 --local berserkTimer				= mod:NewBerserkTimer(300)
 
---local countdownFocusedGazeCD		= mod:NewCountdown(40, 198006)
-
-mod:AddSetIconOption("SetIconOnDusting", 228221, true)
+mod:AddSetIconOption("SetIconOnDusting", 228221, true, false, {1})
 --mod:AddInfoFrameOption(198108, false)
 
-mod.vb.phase = 1
 local burningBlaze = DBM:GetSpellInfo(228193)
 
 function mod:OnCombatStart(delay)
-	self.vb.phase = 1
+	self:SetStage(1)
 	timerLeftoversCD:Start(7.3-delay)
 	timerHeatWaveCD:Start(31.6-delay)
 end
@@ -105,7 +101,7 @@ function mod:SPELL_AURA_APPLIED(args)
 			specWarnDrenched:Show(burningBlaze)
 		end
 	elseif spellId == 228221 then
-		timerSevereDustingCD:Start()
+		timerSevereDustingCD:Update(0, 12)
 		if args:IsPlayer() then
 			specWarnSevereDusting:Show()
 			specWarnSevereDusting:Play("justrun")
@@ -131,7 +127,7 @@ end
 function mod:SPELL_AURA_REMOVED(args)
 	local spellId = args.spellId
 	if spellId == 232156 then--Spectral Service
-		self.vb.phase = 2
+		self:SetStage(2)
 		timerDinnerBellCD:Start(8)
 		timerDentArmorCD:Start(15.5)
 	elseif spellId == 228221 and self.Options.SetIconOnDusting then
@@ -161,10 +157,9 @@ function mod:UNIT_DIED(args)
 end
 
 --[[
-function mod:UNIT_SPELLCAST_SUCCEEDED(uId, _, bfaSpellId, _, legacySpellId)
-	local spellId = legacySpellId or bfaSpellId
+function mod:UNIT_SPELLCAST_SUCCEEDED(uId, _, spellId)
 	if spellId == 206341 then
-	
+
 	end
 end
 --]]

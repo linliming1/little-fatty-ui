@@ -1,8 +1,10 @@
 --[[ a generic widget for holding stuff ]]--
 
-local Addon = select(2, ...)
+local AddonName, Addon = ...
 local Panel = Addon:CreateClass('Frame')
 local L = LibStub('AceLocale-3.0'):GetLocale('Dominos-Config')
+local ParentAddonName = GetAddOnDependencies(AddonName)
+local ParentAddon = _G[ParentAddonName]
 
 local max = math.max
 local round = function(v) return math.floor(v + 0.5) end
@@ -102,6 +104,28 @@ function Panel:NewSlider(options)
 	options.parent = self
 
 	local slider = Addon.Slider:New(options)
+
+	local prev = self.lastWidget
+	if prev then
+		slider:SetPoint('TOPLEFT', self.lastWidget, 'BOTTOMLEFT', 0, -(12 + slider.text:GetHeight()))
+	else
+		slider:SetPoint('TOPLEFT', 4, -(12 + slider.text:GetHeight()))
+	end
+
+	local width, height = slider:GetEffectiveSize()
+	self.height = self.height + (height + 12)
+	self.width = math.max(self.width, width)
+	self.lastWidget = slider
+
+	self:Render()
+
+	return slider
+end
+
+function Panel:NewLayerSlider(options)
+	options.parent = self
+
+	local slider = Addon.LayerSlider:New(options)
 
 	local prev = self.lastWidget
 	if prev then
@@ -247,6 +271,7 @@ function Panel:NewPaddingSlider()
 		name = L.Padding,
 		min = -16,
 		max = 32,
+		softLimits = true,
 
 		get = function()
 			return self.owner:GetPadding()
@@ -263,6 +288,7 @@ function Panel:NewSpacingSlider()
 		name = L.Spacing,
 		min = -16,
 		max = 32,
+		softLimits = true,
 
 		get = function()
 			return self.owner:GetSpacing()
@@ -293,6 +319,72 @@ function Panel:NewColumnsSlider()
 		end
 	}
 end
+
+local DISPLAY_LAYER_OPTIONS = {"BACKGROUND", "LOW", "MEDIUM", "HIGH"}
+
+function Panel:NewDisplayLayerSlider(options)
+	local slider = self:NewSlider{
+		name = L.FrameStrata,
+
+		min = 1,
+
+		max = function()
+			return #DISPLAY_LAYER_OPTIONS
+		end,
+
+		get = function()
+			local value = self.owner:GetDisplayLayer()
+
+			for i, layer in pairs(DISPLAY_LAYER_OPTIONS) do
+				if layer == value then
+					return i
+				end
+			end
+
+			return 1
+		end,
+
+		set = function(_, value)
+			self.owner:SetDisplayLayer(DISPLAY_LAYER_OPTIONS[value])
+		end,
+
+		format = function(_, value)
+			local layer = DISPLAY_LAYER_OPTIONS[value]
+			return L["FrameStrata_" .. layer]
+		end
+	}
+
+	slider.valText:SetScript("OnTextChanged", nil)
+	slider.valText:SetScript("OnEditFocusGained", nil)
+	slider.valText:SetScript("OnEditFocusLost", nil)
+	slider.valText:SetScript("OnEscapePressed", nil)
+	slider.valText:SetScript("OnEnterPressed", nil)
+	slider.valText:SetScript("OnTabPressed", nil)
+	slider.valText:SetWidth(slider.valText:GetWidth() + 64)
+	slider.valText:Disable()
+
+	return slider
+end
+
+
+function Panel:NewDisplayLevelSlider(options)
+	return self:NewSlider{
+		name = L.FrameLevel,
+
+		min = 1,
+
+		max = 200,
+
+		get = function()
+			return self.owner:GetDisplayLevel() or 1
+		end,
+
+		set = function(_, value)
+			self.owner:SetDisplayLevel(value)
+		end
+	}
+end
+
 
 function Panel:NewLeftToRightCheckbox()
 	return self:NewCheckButton{
@@ -334,30 +426,79 @@ function Panel:NewShowInPetBattleUICheckbox()
 	}
 end
 
+function Panel:NewFadeDelaySlider(smoothType)
+    return self:NewSlider({
+		name = L.Delay,
+		min = 0,
+		max = 10,
+		step = 0.1,
+		format = "%.1f",
+        get = smoothType == "IN" and function() return self.owner:GetFadeInDelay() end or
+            function() return self.owner:GetFadeOutDelay() end,
+        set = smoothType == "IN" and function(_, value) self.owner:SetFadeInDelay(value) end or
+            function(_, value) self.owner:SetFadeOutDelay(value) end,
+    })
+end
+
+function Panel:NewFadeDurationSlider(smoothType)
+    return self:NewSlider({
+        name = L.Duration,
+		min = 0.1,
+		max = 10,
+		step = 0.1,
+		format = "%.1f",
+        get = smoothType == "IN" and function() return self.owner:GetFadeInDuration() end or
+            function() return self.owner:GetFadeOutDuration() end,
+        set = smoothType == "IN" and function(_, value) self.owner:SetFadeInDuration(value) end or
+            function(_, value) self.owner:SetFadeOutDuration(value) end,
+    })
+end
+
 function Panel:AddLayoutOptions()
 	self.colsSlider = self:NewColumnsSlider()
 	self.spacingSlider = self:NewSpacingSlider()
-	self.paddingSlider = self:NewPaddingSlider()
-	self.scaleSlider = self:NewScaleSlider()
-	self.opacitySlider = self:NewOpacitySlider()
-	self.fadeSlider = self:NewFadeSlider()
+	self:AddBasicLayoutOptions()
 end
 
-function Panel:AddAdvancedOptions()
-	self:NewLeftToRightCheckbox()
-	self:NewTopToBottomCheckbox()
-	self:NewClickThroughCheckbox()
-	self:NewShowInOverrideUICheckbox()
-	self:NewShowInPetBattleUICheckbox()
+function Panel:AddBasicLayoutOptions()
+	self.paddingSlider = self:NewPaddingSlider()
+	self.scaleSlider = self:NewScaleSlider()
+	self.displayLayerSlider = self:NewDisplayLayerSlider()
+	self.displayLevelSlider = self:NewDisplayLevelSlider()
+end
+
+function Panel:AddAdvancedOptions(displayConditionsOnly)
+	if not displayConditionsOnly then
+		self:NewLeftToRightCheckbox()
+		self:NewTopToBottomCheckbox()
+		self:NewClickThroughCheckbox()
+	end
+
+	if ParentAddon:IsBuild("retail") then
+		self:NewShowInOverrideUICheckbox()
+		self:NewShowInPetBattleUICheckbox()
+	end
 
 	self.showStatesEditBox = self:NewTextInput{
 		name = L.ShowStates,
 		multiline = true,
 		width = 268,
 		height = 64,
-		get = function() return self.owner:GetShowStates() end,
-		set = function(_, value) self.owner:SetShowStates(value) end
+		get = function() return self.owner:GetUserDisplayConditions() end,
+		set = function(_, value) self.owner:SetUserDisplayConditions(value) end
 	}
+end
+
+function Panel:AddFadingOptions()
+	self:NewHeader(L.FadeIn)
+	self:NewOpacitySlider()
+	self:NewFadeDelaySlider("IN")
+	self:NewFadeDurationSlider("IN")
+
+    self:NewHeader(L.FadeOut)
+    self:NewFadeSlider()
+	self:NewFadeDelaySlider("OUT")
+	self:NewFadeDurationSlider("OUT")
 end
 
 Addon.Panel = Panel

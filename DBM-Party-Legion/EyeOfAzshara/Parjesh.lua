@@ -1,10 +1,9 @@
 local mod	= DBM:NewMod(1480, "DBM-Party-Legion", 3, 716)
 local L		= mod:GetLocalizedStrings()
 
-mod:SetRevision(("$Revision: 4 $"):sub(12, -3))
+mod:SetRevision("20200927225704")
 mod:SetCreatureID(91784)
 mod:SetEncounterID(1810)
-mod:SetZone()
 
 mod:RegisterCombat("combat")
 
@@ -15,7 +14,7 @@ mod:RegisterEventsInCombat(
 
 --Notes: Boss always casts 191900 (Crashing wave) few seconds before impaling spear. It doesn't really need it's own warning
 --TODO, interrupt warnings for adds maybe.
-local warnImpalingSpear				= mod:NewTargetAnnounce(192094, 4)
+local warnImpalingSpear				= mod:NewTargetNoFilterAnnounce(192094, 4)
 
 local specWarnReinforcements		= mod:NewSpecialWarningSwitch(196563, "Tank", nil, nil, 1, 2)
 local specWarnCrashingwave			= mod:NewSpecialWarningDodge(191900, nil, nil, nil, 2, 2)
@@ -26,8 +25,11 @@ local specWarnRestoration			= mod:NewSpecialWarningInterrupt(197502, "HasInterru
 local timerHatecoilCD				= mod:NewCDTimer(28, 192072, nil, nil, nil, 1)--Review more for sequence
 local timerSpearCD					= mod:NewCDTimer(28, 192094, nil, nil, nil, 3)
 
+mod.vb.firstReinforcement = 0--1 melee 2 cacster
+
 function mod:OnCombatStart(delay)
-	timerHatecoilCD:Start(3-delay)
+	self.vb.firstReinforcement = 0
+--	timerHatecoilCD:Start(3-delay)--Instantly on pull
 	timerSpearCD:Start(28-delay)
 end
 
@@ -36,7 +38,7 @@ function mod:SPELL_AURA_APPLIED(args)
 	if spellId == 192094 then
 		timerSpearCD:Start()
 		if args:IsPlayer() then
-			specWarnImpalingSpear:Show(DBM_ADDS)
+			specWarnImpalingSpear:Show(DBM_CORE_L.ADDS)
 			yellImpalingSpear:Yell()
 			specWarnImpalingSpear:Play("behindmob")
 		else
@@ -50,11 +52,17 @@ function mod:SPELL_CAST_START(args)
 	if spellId == 192073 and self:IsNormal() then--Caster mob
 		specWarnReinforcements:Show()
 		specWarnReinforcements:Play("bigmobsoon")
-		timerHatecoilCD:Start(20)
+		if self.vb.firstReinforcement == 0 then
+			self.vb.firstReinforcement = 2
+		end
+		timerHatecoilCD:Start(self.vb.firstReinforcement == 2 and 20 or 32)
 	elseif spellId == 192072 and self:IsNormal() then--Melee mob
 		specWarnReinforcements:Show()
 		specWarnReinforcements:Play("bigmobsoon")
-		timerHatecoilCD:Start(33)
+		if self.vb.firstReinforcement == 0 then
+			self.vb.firstReinforcement = 1
+		end
+		timerHatecoilCD:Start(self.vb.firstReinforcement == 1 and 20 or 32)
 	elseif spellId == 196563 then--Both of them (heroic+)
 		specWarnReinforcements:Show()
 		specWarnReinforcements:Play("bigmobsoon")

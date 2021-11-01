@@ -1,76 +1,55 @@
 local L
 
 -----------------------
--- Ana-Mouz --
+-- Inquisitor Meto --
 -----------------------
-L= DBM:GetModLocalization(1790)
+L= DBM:GetModLocalization(2012)
+
+L:SetMiscLocalization({
+	Pull				= "Your fate is only death!"
+})
 
 -----------------------
--- Apocron --
+-- Occularus --
 -----------------------
-L= DBM:GetModLocalization(1956)
+L= DBM:GetModLocalization(2013)
+
+L:SetMiscLocalization({
+	Pull				= "I see the weakness in your soul!"
+})
 
 -----------------------
--- Brutallus --
+-- Sotanathor --
 -----------------------
-L= DBM:GetModLocalization(1883)
+L= DBM:GetModLocalization(2014)
+
+L:SetMiscLocalization({
+	Pull				= "Come, small ones. Die by my hand!"
+})
 
 -----------------------
--- Calamir --
+-- Mistress Alluradel --
 -----------------------
-L= DBM:GetModLocalization(1774)
+L= DBM:GetModLocalization(2011)
+
+L:SetMiscLocalization({
+	Pull				= "New playthings? How irresistible!"
+})
 
 -----------------------
--- Drugon the Frostblood --
+-- Matron Folnuna --
 -----------------------
-L= DBM:GetModLocalization(1789)
+L= DBM:GetModLocalization(2010)
+
+L:SetMiscLocalization({
+	Pull				= "Yes... come closer, little ones!"
+})
 
 -----------------------
--- Flotsam --
+-- Pit Lord Vilemus --
 -----------------------
-L= DBM:GetModLocalization(1795)
+L= DBM:GetModLocalization(2015)
 
------------------------
--- Humongris --
------------------------
-L= DBM:GetModLocalization(1770)
-
------------------------
--- Levantus --
------------------------
-L= DBM:GetModLocalization(1769)
-
------------------------
--- Malificus --
------------------------
-L= DBM:GetModLocalization(1884)
-
------------------------
--- Na'zak the Fiend --
------------------------
-L= DBM:GetModLocalization(1783)
-
------------------------
--- Nithrogg --
------------------------
-L= DBM:GetModLocalization(1749)
-
------------------------
--- Shar'thos --
------------------------
-L= DBM:GetModLocalization(1763)
-
------------------------
--- Si'vash --
------------------------
-L= DBM:GetModLocalization(1885)
-
------------------------
--- The Soultakers --
------------------------
-L= DBM:GetModLocalization(1756)
-
------------------------
--- Withered J'im --
------------------------
-L= DBM:GetModLocalization(1796)
+L:SetMiscLocalization({
+	Pull				= "All worlds will burn in felfire!"
+})

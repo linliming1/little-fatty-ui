@@ -1,18 +1,18 @@
-## Interface: 80100
+## Interface: 90100
 ## Title: Master Plan
-## Notes: Garrision missions UI tweaks.
+## Notes: Garrison missions UI tweaks.
 ## Author: foxlit
-## X-Website: https://www.townlong-yak.com/master-plan/
+## X-Website: https://www.townlong-yak.com/addons/master-plan/
 ## LoadOnDemand: 1
 ## RequiredDeps: Blizzard_GarrisonUI, MasterPlanA
 ## SavedVariablesPerCharacter: MasterPlanPC
-## Version: 0.115
-## X-Version-Key: canary
+## Version: 0.122
+## X-Version-Key: parts 2, 5, and 7
 Libs/Evie.lua
-Libs/AltGameTooltip.xml
 Libs/Reframe.lua
 Locale.lua
 Mark-50.lua
+Nine.lua
 GarrisonAPI-Data.lua
 GarrisonAPI.lua
 MasterPlan.lua
@@ -23,6 +23,7 @@ FollowerSummary.lua
 ShipMoI.lua
 LandingCache.lua
 LandingAlts.lua
+
 
 ## Title-zhCN: |cff880303[爱不易]|r MasterPlan 要塞任务大师
 ## Title-zhTW: |cff880303[爱不易]|r MasterPlan 要塞任務大師

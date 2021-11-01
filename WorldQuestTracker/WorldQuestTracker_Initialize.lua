@@ -2,6 +2,8 @@
 
 
 do
+	WQT_VERSION = 414
+
 	--> update quest type max when a new type of world quest is added to the filtering
 	WQT_QUESTTYPE_MAX = 		10			--[[global]]
 
@@ -36,7 +38,7 @@ do
 	--helps blend the icons within the map texture
 	WQT_ZONEWIDGET_ALPHA =		0.83
 	WQT_WORLDWIDGET_ALPHA =	0.845
-	WQT_WORLDWIDGET_BLENDED =	ALPHA_BLEND_AMOUNT - 0.16
+	WQT_WORLDWIDGET_BLENDED =	ALPHA_BLEND_AMOUNT - 0.11
 	
 	WQT_ANIMATION_SPEED = 0.05
 	
@@ -45,6 +47,7 @@ do
 	QUESTTYPE_RESOURCE = 0x2
 	QUESTTYPE_ITEM = 0x4
 	QUESTTYPE_ARTIFACTPOWER = 0x8
+	QUESTTYPE_PET = 0x16
 	
 	--todo: rename or put these into a table
 	FILTER_TYPE_PET_BATTLES = "pet_battles"
@@ -57,6 +60,21 @@ do
 	FILTER_TYPE_REPUTATION_TOKEN = "reputation_token"
 	FILTER_TYPE_EQUIPMENT = "equipment"
 	FILTER_TYPE_TRADESKILL = "trade_skill"
+
+	--9.0.1 re-filling the French globals
+	local questTagType = _G.Enum.QuestTagType
+	LE_QUEST_TAG_TYPE_PET_BATTLE = questTagType.PetBattle
+	LE_QUEST_TAG_TYPE_PROFESSION = questTagType.Profession
+	LE_QUEST_TAG_TYPE_DUNGEON = questTagType.Dungeon
+	LE_QUEST_TAG_TYPE_RAID = questTagType.Raid
+	LE_QUEST_TAG_TYPE_INVASION = questTagType.Invasion
+	LE_QUEST_TAG_TYPE_FACTION_ASSAULT = questTagType.FactionAssault
+	LE_QUEST_TAG_TYPE_PVP = questTagType.PvP
+--
+	local questQualityType = _G.Enum.WorldQuestQuality --former known as rarity
+	LE_WORLD_QUEST_QUALITY_COMMON = questQualityType.Common
+	LE_WORLD_QUEST_QUALITY_RARE = questQualityType.Rare
+	LE_WORLD_QUEST_QUALITY_EPIC = questQualityType.Epic
 
 	local default_config = {
 		profile = {
@@ -74,16 +92,16 @@ do
 			},
 			
 			sort_order = {
-				[WQT_QUESTTYPE_REPUTATION] = 10,
-				[WQT_QUESTTYPE_TRADE] = 9,
-				[WQT_QUESTTYPE_APOWER] = 8,
-				[WQT_QUESTTYPE_GOLD] = 6,
-				[WQT_QUESTTYPE_RESOURCE] = 7,
-				[WQT_QUESTTYPE_EQUIPMENT] = 5,
+				[WQT_QUESTTYPE_REPUTATION] = 8,
+				[WQT_QUESTTYPE_TRADE] = 5,
+				[WQT_QUESTTYPE_APOWER] = 10,
+				[WQT_QUESTTYPE_GOLD] = 7,
+				[WQT_QUESTTYPE_RESOURCE] = 5,
+				[WQT_QUESTTYPE_EQUIPMENT] = 9,
 				[WQT_QUESTTYPE_DUNGEON] = 4,
 				[WQT_QUESTTYPE_PROFESSION] = 3,
 				[WQT_QUESTTYPE_PVP] = 2,
-				[WQT_QUESTTYPE_PETBATTLE] = 1,
+				[WQT_QUESTTYPE_PETBATTLE] = 6,
 			},
 			
 			groupfinder = {
@@ -105,6 +123,16 @@ do
 				ignored_quests = {},
 				send_whispers = false,
 				dont_open_in_group = true,
+
+				kfilter = { --anti spam on pre-made dungeons
+					enabled = true,
+					ignore_leaders_enabled = true,
+					leaders_ignored = {},
+					ignore_by_time = 30,
+					show_button = true,
+					dont_show_ignored_leaders = true,
+					wipe_counter = 0,
+				},
 			},
 
 			rarescan = {
@@ -126,17 +154,21 @@ do
 				autosearch_share = false,
 			},
 
+			raredetected = {},
+
 			world_map_config = {
 				onmap_show = true,
 				onmap_scale_offset = 0,
 				summary_show = true,
 				summary_scale = 1,
-				summary_showbyzone = true,
+				summary_showbyzone = false,
 				summary_anchor = "left",
-				summary_widgets_per_row = 7,
+				summary_widgets_per_row = 10,
 			},
 			
 			disable_world_map_widgets = false,
+			
+			show_emissary_info = true,
 			
 			worldmap_widgets = {
 				textsize = 9,
@@ -146,16 +178,16 @@ do
 			
 			accessibility = {
 				extra_tracking_indicator = false,
-				
+				use_bounty_ring = false,
 			},
-			
+
 			last_news_time = 0,
 
 			hoverover_animations = true, --hover and shown slider animations
 			anchor_options = {}, --store the anchor options of each anchor
 			
 			filter_always_show_faction_objectives = true,
-			filter_force_show_brokenshore = false, --deprecated at this point, but won't be removed since further expantion might need this back
+			filter_force_show_brokenshore = true, --deprecated at this point, but won't be removed since further expantion might need this back
 			sort_time_priority = 0,
 			force_sort_by_timeleft = false,
 			alpha_time_priority = false,
@@ -184,6 +216,15 @@ do
 			tracker_scale = 1,
 			tracker_show_time = false,
 			tracker_textsize = 12,
+
+			talking_heads_heard = {},
+			talking_heads_torgast = true,
+			talking_heads_dungeon = true,
+			talking_heads_raid = true,
+			talking_heads_openworld = true,
+
+			flymaster_tracker_frame_pos = {},
+			flymaster_tracker_enabled = false,
 			
 			show_faction_frame = true,
 			
@@ -242,14 +283,15 @@ do
 	end
 	
 	--create the addon object
-	local WorldQuestTracker = DF:CreateAddOn ("WorldQuestTrackerAddon", "WQTrackerDB", default_config)
+	local WorldQuestTracker = DF:CreateAddOn("WorldQuestTrackerAddon", "WQTrackerDB", default_config)
+	WorldQuestTracker.__debug = false
 
 	--create the group finder and rare finder frames
-	CreateFrame ("frame", "WorldQuestTrackerFinderFrame", UIParent)
-	CreateFrame ("frame", "WorldQuestTrackerRareFrame", UIParent)
+	CreateFrame("frame", "WorldQuestTrackerFinderFrame", UIParent, "BackdropTemplate")
+	CreateFrame("frame", "WorldQuestTrackerRareFrame", UIParent, "BackdropTemplate")
 
 	--create world quest tracker pin
-	WorldQuestTrackerPinMixin = CreateFromMixins (MapCanvasPinMixin)
+	WorldQuestTrackerPinMixin = CreateFromMixins(MapCanvasPinMixin)
 	
 	--data providers are stored inside .dataProviders folder
 	--catch the blizzard quest provider
@@ -273,10 +315,10 @@ do
 	WorldQuestTrackerAddon.CatchMapProvider()
 
 	--store zone widgets
-	WorldQuestTracker.ZoneWidgetPool = {} 
+	WorldQuestTracker.ZoneWidgetPool = {}
 	--default world quest pins
-	WorldQuestTracker.DefaultWorldQuestPin = {} 
-	WorldQuestTracker.ShowDefaultWorldQuestPin = {} 
+	WorldQuestTracker.DefaultWorldQuestPin = {}
+	WorldQuestTracker.ShowDefaultWorldQuestPin = {}
 	--frame where things will be parented to
 	WorldQuestTracker.AnchoringFrame = WorldMapFrame.BorderFrame
 	--frame level for things attached to the world map
@@ -358,7 +400,6 @@ do
 		{1544645786, "Anchor Changes", "December 13, 2018", "Hover over the zone name in the quest summary for a zone to show options for that anchor."},
 		{1544477110, "World Map Changes", "December 13, 2018", "World map is now aligned in the center of the screen. " .. L["S_MAPBAR_OPTIONS"] .. " > '" .. L["S_OPTIONS_MAPFRAME_ALIGN"] .. "' to disable this."},
 		{1544477110, "World Map Changes", "December 13, 2018", "Quest list is now default to quest type, click '" .. L["S_WORLDBUTTONS_SHOW_ZONE"] .. "' to swap."},
-		{1544477110, "World Map Changes", "December 13, 2018", "Added quest locations to world map, click '" .. L["S_WORLDBUTTONS_TOGGLE_QUESTS"] .. "' to hide."},
 		{1544477110, "World Map Changes", "December 13, 2018", "Added an arrow button in the quest list to start tracking all quests in that list."},
 		{1544477110, "World Map Changes", "December 13, 2018", "Added faction indicators, SHIFT + Left Click to track all quests for that faction."},
 		{1544477110, "Zone Map Changes", "December 13, 2018", "The fullscreen quest summary is now available in windowed mode."},

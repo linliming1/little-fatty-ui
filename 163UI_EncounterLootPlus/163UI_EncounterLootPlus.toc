@@ -1,7 +1,8 @@
-## Interface: 80100
+## Interface: 90100
 ## Title: |cff880303[爱不易]|r AbyUI 手册装备搜索
 ## Notes: 增强冒险指南里副本掉落装备的筛选功能
 ## SavedVariables: ELPDATA
+## X-DataVersion: 20210718
 ## X-Vendor: AbyUI
 
 EncounterLootPlus.lua

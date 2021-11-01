@@ -1,8 +1,10 @@
 local _, ELP = ...
 local db = ELP.db
 
-local ELP_CURRENT_TIER = 8 --BfA
-local ELP_RELIC_SLOT = 30
+-- 没有属性的部位，忽略选择的属性
+local SLOTS_WITH_NO_STATS = {
+    [Enum.ItemSlotFilterType.Other] = true,
+}
 
 local curr_items = {}
 local curr_encts = {}
@@ -21,7 +23,7 @@ function ELP_RetrieveNext()
     if itemID == nil then
         ELP_RetrieveDone()
     else
-        local stats = ELP_ScanStats(itemID)
+        local stats = ELP_ScanStats(curr_links[itemID])
         if stats ~= nil then
             --if type(stats) == "table" then print(itemID, select(2, GetItemInfo(itemID)), unpack(stats, 2, 5)) end
             db.ITEMS[itemID] = stats
@@ -44,7 +46,7 @@ end
 function ELP_RetrieveDone()
     ELP.frame:Hide()
     for k, _ in pairs(curr_encts) do
-        if EJ_GetSlotFilter() == ELP_RELIC_SLOT then
+        if SLOTS_WITH_NO_STATS[C_EncounterJournal.GetSlotFilter()] then
             tinsert(curr_items, k)
         elseif (db.attr1 == 0 or (db.attr1 ~= 0 and type(db.ITEMS[k])=="table" and db.ITEMS[k][db.attr1]))
             and (db.attr1 == 0 or db.attr2 == 0 or (db.attr2 ~= 0 and type(db.ITEMS[k])=="table" and db.ITEMS[k][db.attr2])) then
@@ -52,7 +54,7 @@ function ELP_RetrieveDone()
         end
     end
     -- sort according to attr1
-    if db.attr1 ~= 0 and EJ_GetSlotFilter() ~= ELP_RELIC_SLOT then
+    if db.attr1 ~= 0 and not SLOTS_WITH_NO_STATS[C_EncounterJournal.GetSlotFilter()] then
         table.sort(curr_items, sortByAttr1)
     end
     EncounterJournal_LootUpdate()
@@ -74,12 +76,21 @@ function ELP_UpdateItemList()
     for _, v in ipairs(ELP.currs) do wipe(v) end
     EJ_SelectTier(ELP_CURRENT_TIER)
     -- force slot filter to avoid too many items listed.
-    local forceSlot = db.range > 0 and EJ_GetSlotFilter() == 0
-    if forceSlot then EJ_SetSlotFilter(11) end
+    local forceSlot = db.range > 0 and db.range ~= 4 and C_EncounterJournal.GetSlotFilter() == ELP_ALL_SLOT --4是最新团本
+    if forceSlot then
+        C_EncounterJournal.SetSlotFilter(ELP_DEFAULT_SLOT)
+        EncounterJournal_RefreshSlotFilterText()
+    end
+
+    local range, lastRaid = db.range, nil
+    if range == 4 or range == 5 then
+        lastRaid = ELP_LAST_RAID_IDX
+        range = range == 4 and 1 or 3
+    end
 
     for i = 1, 2 do
-        local index = 1
-        while( bit.band(i, db.range) > 0 ) do
+        local index = (i == 1 and lastRaid or 1)
+        while( bit.band(i, range) > 0 ) do
             local insID, name, _, _, _, _, _, _, link = EJ_GetInstanceByIndex(index, i == 1)
             if not insID then break end
             index = index + 1
@@ -91,18 +102,18 @@ function ELP_UpdateItemList()
                 EJ_SetDifficulty(i==1 and 14 or 1)
             end
             for loot = 1, EJ_GetNumLoot() do
-                local itemID, encounterID, name, icon, slot, armorType, link = EJ_GetLootInfoByIndex(loot)
+                local info = C_EncounterJournal.GetLootInfoByIndex(loot)
+                local itemID = info.itemID
                 if not curr_encts[itemID] then
                     if not db.ITEMS[itemID] then curr_retrieving[itemID] = 1 end
-                    curr_encts[itemID] = encounterID
+                    curr_encts[itemID] = info.encounterID
                     curr_insts[itemID] = insID
-                    curr_links[itemID] = link
+                    curr_links[itemID] = info.link
                 end
             end
         end
     end
 
-    if forceSlot then EJ_SetSlotFilter(0) end
     EncounterJournal:RegisterEvent("EJ_LOOT_DATA_RECIEVED")
     EncounterJournal:RegisterEvent("EJ_DIFFICULTY_UPDATE")
 
@@ -123,14 +134,19 @@ local function GetItemIDFromLink(link)
 	return tonumber(ID)
 end
 
-function ELP_ScanStats(itemID, itemLink)
-    if not itemID and not itemLink then return end
-    itemID = itemID or GetItemIDFromLink(itemLink)
-    local name, link, _, iLevel = GetItemInfo(itemID)
+local MAX_PLAYER_LEVEL = GetMaxLevelForPlayerExpansion()
+function ELP_ScanStats(itemLink)
+    if not itemLink then return end
+    --local itemID = GetItemIDFromLink(itemLink)
+    local name, link, _, iLevel = GetItemInfo(itemLink)
     if not link or not iLevel then return end
-    local fakeLink = format("item:%d::::::::120::::2:%d:3517::", itemID, 1472+(920-iLevel))
-    local stats = U1GetItemStats(fakeLink, nil, nil, false, select(3, UnitClass("player")), GetSpecializationInfo(GetSpecialization() or 0))
-    if type(stats) == "table" then stats[3],stats[4] = stats[4], stats[3] end
+    --local fakeLink = format("item:%d::::::::%d::::1:%d:::", itemID, MAX_PLAYER_LEVEL, 1472+(465-iLevel))
+    local stats = U1GetItemStats(itemLink, nil, nil, false, select(3, UnitClass("player")), GetSpecializationInfo(GetSpecialization() or 0))
+    if type(stats) == "table" then
+        stats[3],stats[4] = stats[4], stats[3]
+        stats[5] = stats[9] --导灵器
+        stats[6], stats[7], stats[8], stats[9] = nil, nil, nil, nil --主属性没用
+    end
     return stats
 end
 

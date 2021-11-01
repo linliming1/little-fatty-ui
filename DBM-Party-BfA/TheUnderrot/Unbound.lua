@@ -1,10 +1,9 @@
 local mod	= DBM:NewMod(2158, "DBM-Party-BfA", 8, 1001)
 local L		= mod:GetLocalizedStrings()
 
-mod:SetRevision(("$Revision: 18026 $"):sub(12, -3))
+mod:SetRevision("20201116014239")
 mod:SetCreatureID(133007)
 mod:SetEncounterID(2123)
-mod:SetZone()
 
 mod:RegisterCombat("combat")
 
@@ -22,7 +21,7 @@ local warnVisage					= mod:NewAddsLeftAnnounce("ej18312", 2, 269692)
 
 local specWarnBloodVisage			= mod:NewSpecialWarningSwitch("ej18312", "-Healer", nil, nil, 1, 2)
 local specWarnVileExpulsion			= mod:NewSpecialWarningDodge(269843, nil, nil, nil, 2, 2)
-local specWarnCleansingLight		= mod:NewSpecialWarningYou(269310, nil, nil, nil, 1, 2)
+local specWarnCleansingLight		= mod:NewSpecialWarningSpell(269310, nil, nil, nil, 1, 2)
 local specWarnGTFO					= mod:NewSpecialWarningGTFO(269838, nil, nil, nil, 1, 8)
 
 local timerBloodVisageCD			= mod:NewCDTimer(15.7, "ej18312", nil, nil, nil, 1, 269692)
@@ -32,7 +31,6 @@ local timerCleansingLightCD			= mod:NewCDTimer(23.7, 269310, nil, nil, nil, 5)--
 mod:AddInfoFrameOption(269301, "Healer")
 
 mod.vb.remainingAdds = 6
-local vileExpulsion = DBM:GetSpellInfo(269843)
 
 function mod:OnCombatStart(delay)
 	self.vb.remainingAdds = 6
@@ -80,7 +78,7 @@ function mod:UNIT_DIED(args)
 	end
 end
 
-function mod:UNIT_SPELLCAST_SUCCEEDED(uId, _, spellId)
+function mod:UNIT_SPELLCAST_SUCCEEDED(_, _, spellId)
 	if spellId == 272663 and self:AntiSpam(2, 1) then--Blood Clone Cosmetic
 		specWarnBloodVisage:Show()
 		specWarnBloodVisage:Play("killmob")

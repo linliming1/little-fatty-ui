@@ -158,7 +158,7 @@ local function ScanForAura(GUID, spellName, spellID)
 		if GUID == UnitGUID(unit) then
 			local buffName, duration, expirationTime, id, _
 			local index, stage = 1, 1
-			local filter = "PLAYER"
+			local filter = "HELPFUL|PLAYER"
 
 			while true do
 				buffName, _, _, _, duration, expirationTime, _, _, _, id = UnitAura(unit, index, filter)
@@ -198,7 +198,7 @@ local function VerifyAll()
 			local auras
 
 			local index, stage = 1, 1
-			local filter = "PLAYER"
+			local filter = "HELPFUL|PLAYER"
 
 			while true do
 				local buffName, _, count, _, duration, expirationTime, _, _, _, spellID = UnitAura(unit, index, filter)
@@ -490,7 +490,7 @@ local function Dotwatch_OnUpdate_Controller(icon, time)
 				local remaining = duration - (time - start)
 
 				if remaining > 0 or (start == 0 and duration == 0) then
-					if presentAlpha > 0 and not icon:YieldInfo(true, iName, start, duration, aura.unitName, GUID, aura.stacks) then
+					if not icon:YieldInfo(true, iName, start, duration, aura.unitName, GUID, aura.stacks) then
 						-- YieldInfo returns true if we need to keep harvesting data. Otherwise, it returns false.
 						return
 					end

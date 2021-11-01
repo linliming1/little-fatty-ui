@@ -37,34 +37,11 @@ U1RegisterAddon("163UI_MoreOptions", {
     }),--]]
 
     U1CfgMakeCVarOption("姓名板的最大显示距离", "nameplateMaxDistance", 60, {
-        tip = "说明`7.0之后默认显示距离是60码，会导致另一个楼层的怪物都会被显示出来，可以修改此选项进行设置。建议设置为40或30",
+        tip = "说明`8.2后已被固定为60码，无法修改",
+        disableOnLoad = true,
         type = "spin",
-        range = {20, 80, 5},
+        range = {59, 60, 5},
     }),
-
-    {
-        text = "反向整理背包",
-        var = "SetSortBagsRightToLeft",
-        tip = "说明`设置默认背包整理(不是tdPack背包整理)的顺序。`7.0以后暴雪将此选项精简掉了",
-        default = function() return GetSortBagsRightToLeft() end,
-        getvalue = function() return GetSortBagsRightToLeft() end,
-        callback = function(cfg, v, loading)
-            if loading then return end
-            SetSortBagsRightToLeft(v)
-        end,
-    },
-
-    {
-        text = "新物品优先放入行囊",
-        var = "SetInsertItemsLeftToRight",
-        tip = "说明`拾取/购买新物品时，优先放入行囊，也就是先放入靠右的背包。`7.0以后暴雪将此选项精简掉了",
-        default = function() return not GetInsertItemsLeftToRight() end,
-        getvalue = function() return not GetInsertItemsLeftToRight() end,
-        callback = function(cfg, v, loading)
-            if loading then return end
-            SetInsertItemsLeftToRight(not v)
-        end,
-    },
 
     U1CfgMakeCVarOption("显示目标施法条", "showTargetCastbar", 1, {
         tip = "说明`是否在目标头像下方显示施法条`7.0以后暴雪将此选项精简掉了",
@@ -100,11 +77,11 @@ U1RegisterAddon("163UI_MoreOptions", {
     {
         var = 'profanityFilter',
         text = '强制关闭语言过滤器',
-        tip = '说明`4.3版本后出现的BUG，玩家即使不开启过滤器，系统有时也会强制过滤，而且在界面选项里无法修改。开启此选项后，爱不易会强制关闭语言过滤器选项。',
+        tip = '说明`国服强制开启语言过滤器，但是可以通过一些手段关闭。不过关闭后会影响暴雪自带的支持功能，需要时可以恢复此选项。',
         default = true,
         --getvalue = function() return GetCVar'profanityFilter' == '1' end,
         callback = function(cfg, v, loading)
-            return setProfanityFilter()
+            return setProfanityFilter(loading)
         end
     },
 
@@ -142,41 +119,20 @@ U1RegisterAddon("163UI_MoreOptions", {
 
         --makeCVarOption("能量点位于目标姓名板", "nameplateResourceOnTarget", { tip = '连击点等框体显示在目标姓名板上而不是自己脚下', secure = 1 }),
 
-        U1CfgMakeCVarOption("姓名板分散不重叠", "nameplateMotion", nil, { tip = UNIT_NAMEPLATES_TYPE_TOOLTIP_2, secure = 1, callback = function(cfg, v, loading)
+        U1CfgMakeCVarOption("姓名板分散不重叠", "nameplateMotion", nil, { tip = UNIT_NAMEPLATES_TYPE_TOOLTIP_2, callback = function(cfg, v, loading)
             if not loading then
-                SetCVar(cfg.var:gsub("^cvar_", ""), v)
-                local d = InterfaceOptionsNamesPanelUnitNameplatesMotionDropDown
-                if d then
-                    local v --= v and 1 or 0 will taint
-                    d.value = v
-                    d.selectedValue = v
-                end
-            end
-        end}),
-
---[[
-        {
-            text = "堆叠姓名板(不重叠)",
-            tip = UNIT_NAMEPLATES_TYPE_TOOLTIP_2,
-            secure = 1,
-            var = "cvar_nameplateMotion",
-            default = 1,
-            getvalue = function() return GetCVar("nameplateMotion") == "1" and true end,
-            callback = function(cfg, v, loading)
-                if not InCombatLockdown() then
+                local function f()
                     SetCVar(cfg.var:gsub("^cvar_", ""), v)
                     local d = InterfaceOptionsNamesPanelUnitNameplatesMotionDropDown
-                    if d and not loading then
+                    if d then
                         local v --= v and 1 or 0 will taint
                         d.value = v
                         d.selectedValue = v
                     end
-                else
-                    U1Message("无法在战斗中修改")
                 end
-            end,
-        },
-]]
+                CoreLeaveCombatCall("ABY_nameplateMotion", "脱战后会自动更新设置", f)
+            end
+        end}),
 
         U1CfgMakeCVarOption("允许姓名板移到屏幕之外", "nameplateOtherTopInset", nil, {
             tip = "说明`7.0之后，姓名板默认会收缩到屏幕之内挤在一起``此选项可以恢复到7.0之前的方式",
@@ -234,7 +190,9 @@ U1RegisterAddon("163UI_MoreOptions", {
             if loading then
                 hooksecurefunc(NamePlateDriverFrame, "UpdateNamePlateOptions", function()
                     -- call in InterfaceOptionsPanel_Cancel -> InterfaceOptionsLargerNamePlate_OnLoad setFunc
-                    U1CfgCallBack(cfg)
+                    if not InCombatLockdown() then
+                        U1CfgCallBack(cfg)
+                    end
                 end)
             end
         end,
@@ -260,11 +218,126 @@ U1RegisterAddon("163UI_MoreOptions", {
 
 if(not GetCVar) then return end --java parser
 do
-    setProfanityFilter = function()
+    local realPortal = GetCVar("portal") or "CN" --GetCVar is always realPortal even after ConsoleExec("SET portal TW")
+
+    StaticPopupDialogs["ABYUI_CLOSE_PROFANITYFILTER"] = {preferredIndex = 3,
+        text = "爱不易监测到你使用了|cff00ff00'强制关闭语言过滤器'|r的功能，这可能会导致暴雪的客服支持面板一直转圈或报错。如果你现在需要客服支持，点击'是'会恢复语言过滤设置，并自动|cffff0000重载界面|r，然后就可以使用了。是否确定？",
+        button1 = TEXT(YES),
+        button2 = TEXT(CANCEL),
+        OnAccept = function(self, data)
+            U1ChangeCfg("163UI_MoreOptions/profanityFilter", false)
+            ReloadUI()
+        end,
+        OnCancel = function(self, data)
+        end,
+        hideOnEscape = 1,
+        timeout = 0,
+        exclusive = 1,
+        whileDead = 1,
+    }
+
+    --[==[ 9.1邀请按钮提示 ERR_TRAVEL_PASS_DIFFERENT_REGION 不同的地区, 没法修改下拉框等，作废
+    local INVITE_RESTRICTION_NONE = 9;
+    local INVITE_RESTRICTION_MOBILE = 10;
+    local INVITE_RESTRICTION_REGION = 11;
+    hooksecurefunc("FriendsFrame_UpdateFriendButton", function(button)
+        if button.buttonType == FRIENDS_BUTTON_TYPE_BNET then
+            local restriction = FriendsFrame_GetInviteRestriction(button.id);
+            if restriction == INVITE_RESTRICTION_NONE or restriction == INVITE_RESTRICTION_REGION then
+                button.travelPassButton:Enable();
+                if not button.travelPassButton.__hookedOnEnter then
+                    button.travelPassButton.__hookedOnEnter = true
+                    button.travelPassButton:HookScript("OnEnter", function(self)
+                    	local restriction = FriendsFrame_GetInviteRestriction(self:GetParent().id);
+                    	if ( restriction == INVITE_RESTRICTION_REGION ) then
+                            GameTooltip:SetOwner(self, "ANCHOR_RIGHT");
+                    		local guid = FriendsFrame_GetPlayerGUIDFromIndex(self:GetParent().id);
+                    		local inviteType = GetDisplayedInviteType(guid);
+                    		if ( inviteType == "INVITE" ) then
+                    			GameTooltip:SetText(TRAVEL_PASS_INVITE, HIGHLIGHT_FONT_COLOR.r, HIGHLIGHT_FONT_COLOR.g, HIGHLIGHT_FONT_COLOR.b);
+                    		elseif ( inviteType == "SUGGEST_INVITE" ) then
+                    			GameTooltip:SetText(SUGGEST_INVITE, HIGHLIGHT_FONT_COLOR.r, HIGHLIGHT_FONT_COLOR.g, HIGHLIGHT_FONT_COLOR.b);
+                    		else --inviteType == "REQUEST_INVITE"
+                    			GameTooltip:SetText(REQUEST_INVITE, HIGHLIGHT_FONT_COLOR.r, HIGHLIGHT_FONT_COLOR.g, HIGHLIGHT_FONT_COLOR.b);
+                    			--For REQUEST_INVITE, we'll display other members in the group if there are any.
+                    			local group = C_SocialQueue.GetGroupForPlayer(guid);
+                    			local members = C_SocialQueue.GetGroupMembers(group);
+                    			local numDisplayed = 0;
+                    			for i=1, #members do
+                    				if ( members[i].guid ~= guid ) then
+                    					if ( numDisplayed == 0 ) then
+                    						GameTooltip:AddLine(SOCIAL_QUEUE_ALSO_IN_GROUP);
+                    					elseif ( numDisplayed >= 7 ) then
+                    						GameTooltip:AddLine(SOCIAL_QUEUE_AND_MORE, GRAY_FONT_COLOR.r, GRAY_FONT_COLOR.g, GRAY_FONT_COLOR.b, 1);
+                    						break;
+                    					end
+                    					local name, color = SocialQueueUtil_GetRelationshipInfo(members[i].guid, nil, members[i].clubId);
+                    					GameTooltip:AddLine(color..name..FONT_COLOR_CODE_CLOSE);
+
+                    					numDisplayed = numDisplayed + 1;
+                    				end
+                    			end
+                            end
+                            GameTooltip:Show();
+                        end
+                    end)
+                end
+            else
+                button.travelPassButton:Disable();
+            end
+        end
+    end)
+    ]==]
+    hooksecurefunc("ConsoleExec", function(msg)
+        if FriendsFrame_GetInviteRestriction_Origin then return end
+        local portal = type(msg) == "string" and select(3, msg:lower():find("set portal (.+)"))
+                                              or select(3, msg:lower():find("portal (.+)"))
+        if portal and portal ~= GetCVar("portal"):lower() then
+            FriendsFrame_GetInviteRestriction_Origin = FriendsFrame_GetInviteRestriction
+            local INVITE_RESTRICTION_REGION = 11;
+            local INVITE_RESTRICTION_NONE = 9;
+            FriendsFrame_GetInviteRestriction = function(index)
+                local restriction = FriendsFrame_GetInviteRestriction_Origin(index)
+                if restriction == INVITE_RESTRICTION_REGION then
+                    return INVITE_RESTRICTION_NONE
+                else
+                    return restriction
+                end
+            end
+        end
+    end)
+
+    if GameMenuButtonHelp then
+        SetOrHookScript(HelpFrame, "OnShow", function()
+            if(U1GetCfgValue("163UI_MoreOptions", 'profanityFilter')) then
+                StaticPopup_Show("ABYUI_CLOSE_PROFANITYFILTER")
+                AbySetProfanityButton:Hide()
+            else
+                AbySetProfanityButton:Show()
+            end
+        end)
+
+        local btn = WW:Button("AbySetProfanityButton", HelpFrame, "UIPanelButtonTemplate")
+        :SetTextFont(GameFontNormal, 13, "")
+        :SetText("关闭语言过滤器"):Size(120, 26)
+        :TOPRIGHT(-25, 2)
+        :AddFrameLevel(1)
+        :SetScript("OnClick", function()
+            U1ChangeCfg("163UI_MoreOptions/profanityFilter", true)
+            U1Message("已强制关闭语言过滤器，聊天不会再乱码，即时生效，不需重载界面")
+            if not InCombatLockdown() then HideUIPanel(HelpFrame) end
+        end):un()
+        CoreUIEnableTooltip(btn, '说明', '强制关闭语言过滤器和暴雪的支持功能有冲突, 需要访问暴雪支持功能时需要临时恢复语言过滤器。用完了可通过此按钮再次关闭（也可在控制台-额外设置里设置）')
+    end
+
+    setProfanityFilter = function(loading)
         if(U1GetCfgValue("163UI_MoreOptions", 'profanityFilter')) then
+            ConsoleExec("SET portal TW")
             SetCVar('profanityFilter', '0')
             --if BNConnected() then
             pcall(BNSetMatureLanguageFilter, false)
+        elseif not loading then
+            ConsoleExec("SET portal " .. realPortal)
         end
     end
 

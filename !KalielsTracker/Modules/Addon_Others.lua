@@ -1,5 +1,5 @@
 --- Kaliel's Tracker
---- Copyright (c) 2012-2018, Marouan Sabbagh <mar.sabbagh@gmail.com>
+--- Copyright (c) 2012-2021, Marouan Sabbagh <mar.sabbagh@gmail.com>
 --- All Rights Reserved.
 ---
 --- This file is part of addon Kaliel's Tracker.
@@ -20,34 +20,23 @@ local msqGroup1, msqGroup2
 
 local KTwarning = "  |cff00ffffAddon "..KT.title.." is active.  "
 
-StaticPopupDialogs[addonName.."_ReloadUI"] = {
-    text = KTwarning,
-    button1 = "Reload UI",
-    OnAccept = function()
-        ReloadUI()
-    end,
-    timeout = 0,
-    whileDead = true,
-    preferredIndex = 3,
-}
-
 --------------
 -- Internal --
 --------------
 
 -- Masque
 local function Masque_SetSupport()
-    if db.addonMasque and MSQ then
-        msqGroup1 = MSQ:Group(KT.title, "Quest Item Button")
-        msqGroup2 = MSQ:Group(KT.title, "Active Button")
-        hooksecurefunc(msqGroup2, "Enable", function(self)
+    if M.isLoadedMasque then
+        msqGroup1 = MSQ:Group(KT.title, "Quest Item Buttons")
+        msqGroup2 = MSQ:Group(KT.title, "Quest Active Button")
+        hooksecurefunc(msqGroup2, "__Enable", function(self)
             for button in pairs(self.Buttons) do
                 if button.Style then
                     button.Style:SetAlpha(0)
                 end
             end
         end)
-        hooksecurefunc(msqGroup2, "Disable", function(self)
+        hooksecurefunc(msqGroup2, "__Disable", function(self)
             for button in pairs(self.Buttons) do
                 if button.Style then
                     button.Style:SetAlpha(1)
@@ -59,25 +48,28 @@ end
 
 -- ElvUI
 local function ElvUI_SetSupport()
-    if KT:CheckAddOn("ElvUI", "10.84", true) then
+    if KT:CheckAddOn("ElvUI", "12.29", true) then
         local E = unpack(_G.ElvUI)
-        E.Blizzard.SetObjectiveFrameHeight = function() end
-        E.Blizzard.MoveObjectiveFrame = function() end
+        local B = E:GetModule("Blizzard")
+        B.SetObjectiveFrameHeight = function() end    -- preventive
+        B.SetObjectiveFrameAutoHide = function() end  -- preventive
+        B.SetupTorghastBuffFrame = function() end     -- preventive
+        B.MoveObjectiveFrame = function() end
+        if E.private.skins.blizzard.objectiveTracker then
+            StaticPopup_Show(addonName.."_ReloadUI", nil, "Activate changes for |cff00ffe3ElvUI|r.")
+        end
         hooksecurefunc(E, "CheckIncompatible", function(self)
             self.private.skins.blizzard.objectiveTracker = false
         end)
-        hooksecurefunc(E, "ToggleConfig", function(self)
-            local ACD = LibStub("AceConfigDialog-3.0-ElvUI")
-            if ACD.OpenFrames[self.name] then
-                local options = self.Options.args.general.args.objectiveFrameGroup.args
-                options.objectiveFrameHeight.disabled = true
-                options.bonusObjectivePosition.disabled = true
-                options[addonName.."Warning"] = {
+        hooksecurefunc(E, "ToggleOptionsUI", function(self)
+            if E.Libs.AceConfigDialog.OpenFrames[self.name] then
+                local options = self.Options.args.general.args.blizzUIImprovements.args.objectiveFrameGroup
+                options.disabled = true
+                options.args[addonName.."Warning"] = {
                     name = KTwarning,
                     type = "description",
-                    order = options.objectiveFrameHeader.order + 0.5,
+                    order = 0.1,
                 }
-                self.Options.args.skins.args.blizzard.args.objectiveTracker.disabled = true
             end
         end)
     end
@@ -85,7 +77,7 @@ end
 
 -- Tukui
 local function Tukui_SetSupport()
-    if KT:CheckAddOn("Tukui", "18.19", true) then
+    if KT:CheckAddOn("Tukui", "20.22", true) then
         local T = unpack(_G.Tukui)
         T.Miscellaneous.ObjectiveTracker.Enable = function() end
     end
@@ -93,11 +85,16 @@ end
 
 -- RealUI
 local function RealUI_SetSupport()
-    if KT:CheckAddOn("nibRealUI", "2.0.0", true) then
+    if KT:CheckAddOn("nibRealUI", "2.3.0", true) then
         local R = _G.RealUI
         R:SetModuleEnabled("Objectives Adv.", false)
-        -- Fade
+
         --[[
+        local module = "Objectives Adv."
+        if R:GetModuleEnabled(module) then
+            R:SetModuleEnabled(module, false)
+            StaticPopup_Show(addonName.."_ReloadUI", nil, "Activate changes for |cff00ffe3RealUI|r.")
+        end
         local bck_UIFrameFadeIn = UIFrameFadeIn
         function UIFrameFadeIn(frame, ...)
             if frame ~= OTF then bck_UIFrameFadeIn(frame, ...) end
@@ -107,12 +104,15 @@ local function RealUI_SetSupport()
             if frame ~= OTF then bck_UIFrameFadeOut(frame, ...) end
         end
         --]]
+        if not IsAddOnLoaded("Aurora_Extension") then
+            StaticPopup_Show(addonName.."_Info", nil, "Please install / activate addon |cff00ffe3Aurora - Extension|r\nand disable Objective Tracker skin.")
+        end
     end
 end
 
 -- SyncUI
 local function SyncUI_SetSupport()
-    if KT:CheckAddOn("SyncUI", "8.0.3", true) then
+    if KT:CheckAddOn("SyncUI", "8.3.0.3", true) then
         SyncUI_ObjTracker.Show = function() end
         SyncUI_ObjTracker:Hide()
         SyncUI_ObjTracker:SetScript("OnLoad", nil)
@@ -123,31 +123,37 @@ end
 
 -- SpartanUI
 local function SpartanUI_SetSupport()
-    if KT:CheckAddOn("SpartanUI", "5.0.11", true) then
-        local ACD = LibStub("AceConfigDialog-3.0")
-        SUI.DB.EnabledComponents.Objectives = false
-        local bck_ACD_Open = ACD.Open
-        function ACD:Open(name, ...)
-            if name == "SpartanUI" then
-                local options = SUI.opt.args.ModSetting.args.Components.args
-                options.Objectives.disabled = true
-                options[addonName.."Warning"] = {
-                    name = KTwarning,
+    if KT:CheckAddOn("SpartanUI", "6.0.26", true) then
+        SUI.DB.DisabledComponents.Objectives = true
+        local module = SUI:GetModule("Component_Objectives")
+        local bck_module_OnEnable = module.OnEnable
+        function module:OnEnable()
+            if SUI.DB.DisabledComponents.Objectives then
+                local options = SUI.opt.args.ModSetting.args
+                options.Objectives = {
+                    type = "group",
+                    name = SUI.L.Objectives,
+                    disabled = true,
+                    args = {},
+                }
+                options.Components.args.Objectives.disabled = true
+                options.Components.args[addonName.."Warning"] = {
+                    name = "\n"..KTwarning,
                     type = "description",
                     order = 1000,
                 }
+                return
             end
-            bck_ACD_Open(self, name, ...)
+            bck_module_OnEnable(self)
         end
     end
 end
 
--- SuperVillain UI
-local function SVUI_SetSupport()
-    if KT:CheckAddOn("SVUI_!Core", "1.5.1", true) then
-        if IsAddOnLoaded("SVUI_QuestTracker") then
-            DisableAddOn("SVUI_QuestTracker")
-            StaticPopup_Show(addonName.."_ReloadUI")
+-- Aurora
+local function Aurora_SetCompatibility()
+    if IsAddOnLoaded("Aurora") then
+        if not IsAddOnLoaded("Aurora_Extension") then
+            StaticPopup_Show(addonName.."_Info", nil, "Please install / activate addon |cff00ffe3Aurora - Extension|r\nand disable Objective Tracker skin.")
         end
     end
 end
@@ -185,6 +191,16 @@ local function DQE_SetCompatibility()
     end
 end
 
+-- MoveAnything
+local function MoveAnything_SetCompatibility()
+    if IsAddOnLoaded("MoveAnything") then
+        MovAny:ResetFrame("ObjectiveTrackerFrameMover")
+        MovAny:ResetFrame("ObjectiveTrackerFrameScaleMover")
+        MovAny.lVirtualMovers.ObjectiveTrackerFrameMover = nil
+        MovAny.lVirtualMovers.ObjectiveTrackerFrameScaleMover = nil
+    end
+end
+
 --------------
 -- External --
 --------------
@@ -192,7 +208,11 @@ end
 function M:OnInitialize()
     _DBG("|cffffff00Init|r - "..self:GetName(), true)
     db = KT.db.profile
-    KT:CheckAddOn("Masque", "8.0.1")
+    self.isLoadedMasque = (KT:CheckAddOn("Masque", "9.0.6") and db.addonMasque)
+
+    if self.isLoadedMasque then
+        KT:Alert_IncompatibleAddon("Masque", "9.0.4")
+    end
 end
 
 function M:OnEnable()
@@ -203,9 +223,10 @@ function M:OnEnable()
     RealUI_SetSupport()
     SyncUI_SetSupport()
     SpartanUI_SetSupport()
-    SVUI_SetSupport()
+    Aurora_SetCompatibility()
     Chinchilla_SetCompatibility()
     DQE_SetCompatibility()
+    MoveAnything_SetCompatibility()
 end
 
 -- Masque

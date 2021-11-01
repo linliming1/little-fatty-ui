@@ -1,0 +1,19 @@
+## Interface: 90100
+## Version: v9.1.5
+## Title: PlexusStatusRaidDebuff(BfA)
+## Notes: Debuff List for Battle for Azeroth
+## Author: Doadin
+## Grid Author: Pastamancer & Maia
+## Dependencies: PlexusStatusRaidDebuff
+## X-Curse-Project-ID: 300448
+
+Uldir.lua
+Azeroth.lua
+BattleofDazaralor.lua
+CrucibleofStorms.lua
+TheEternalPalace.lua
+Nyalotha.lua
+
+
+## Title: |cff880303[爱不易]|r Grid 团队减益8.0
+## X-Vendor: AbyUI

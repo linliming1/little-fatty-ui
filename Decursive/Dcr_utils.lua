@@ -1,14 +1,21 @@
 --[[
     This file is part of Decursive.
 
-    Decursive (v 2.7.6.2) add-on for World of Warcraft UI
-    Copyright (C) 2006-2018 John Wellesz (Decursive AT 2072productions.com) ( http://www.2072productions.com/to/decursive.php )
+    Decursive (v 2.7.8.3) add-on for World of Warcraft UI
+    Copyright (C) 2006-2019 John Wellesz (Decursive AT 2072productions.com) ( http://www.2072productions.com/to/decursive.php )
 
-    Starting from 2009-10-31 and until said otherwise by its author, Decursive
-    is no longer free software, all rights are reserved to its author (John Wellesz).
+    Decursive is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
 
-    The only official and allowed distribution means are www.2072productions.com, www.wowace.com and curse.com.
-    To distribute Decursive through other means a special authorization is required.
+    Decursive is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Decursive.  If not, see <https://www.gnu.org/licenses/>.
 
 
     Decursive is inspired from the original "Decursive v1.9.4" by Patrick Bohnet (Quu).
@@ -17,7 +24,7 @@
     Decursive is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY.
 
-    This file was last updated on 2018-08-09T22:29:16Z
+    This file was last updated on 2020-11-12T11:34:16Z
 --]]
 -------------------------------------------------------------------------------
 
@@ -84,6 +91,7 @@ local UnitInRange       = _G.UnitInRange;
 local debugprofilestop  = _G.debugprofilestop;
 local GetSpellInfo      = _G.GetSpellInfo;
 local GetItemInfo       = _G.GetItemInfo;
+local pcall             = _G.pcall;
 
 -- replacement for the default function as it is bugged in WoW5 (it returns nil for some spells such as resto shamans' 'Purify Spirit')
 D.IsSpellInRange = function (spellName, unit)
@@ -92,9 +100,9 @@ D.IsSpellInRange = function (spellName, unit)
     if range ~= nil then
         return range;
     else
-        --[===[@debug@
+        --[==[@debug@
         D:Debug('IsSpellInRange() returned nil for', spellName, unit);
-        --@end-debug@]===]
+        --@end-debug@]==]
         if unit == 'player' or unit == 'pet' then
             return 1;
         else
@@ -110,7 +118,7 @@ function D:ColorText (text, color)
 end
 
 function D:ColorTextNA (text, color)
-    return "|cFF".. color .. text .. "|r";
+    return (#color == 6 and "|cFF" or "|c") .. color .. text .. "|r";
 end
 
 function D:RemoveColor (text)
@@ -137,7 +145,7 @@ function D:PetUnitName (Unit, Check) -- {{{
     if not Check or self:UnitIsPet(Unit) then
         Name = ("%s-%s"):format(DC.PET, Name);
     end
-    
+
     return Name;
 
 end -- }}}
@@ -148,7 +156,7 @@ function D:UnitName(Unit)
             return name.."-"..server;
         else
             return name;
-        end 
+        end
 end
 
 local function isFormattedString(string)
@@ -171,16 +179,35 @@ function D:NumToHexStr(number)
     end
 end
 
+do
 
+    local PPrintAntiLoopActive = false
+    local printFailCount = 0
 
+    function D:PPrint( ... ) -- A protected print that doesn't interrupt the flow when it fails because of another add-on unsecure hook {{{
+
+        local ok, errorM = pcall(self.Print, self, ...)
+
+        if (not ok) and (not PPrintAntiLoopActive) and (printFailCount < 5) then
+            PPrintAntiLoopActive = true
+            D:AddDebugText(
+                "Decursive could not print a message to the chat. Another add-on is probably bugged, there is a good chance you can find its name in the following stack trace:",
+                errorM,
+                debugstack(2)
+            )
+            PPrintAntiLoopActive = false
+            printFailCount = printFailCount + 1
+        end
+    end -- }}}
+end
 
 function D:Println( ... ) --{{{
 
     if D.profile.Print_ChatFrame then
-        self:Print(D.Status.OutputWindow, UseFormatIfPresent(...));
+        self:PPrint(D.Status.OutputWindow, UseFormatIfPresent(...));
     end
     if D.profile.Print_CustomFrame then
-        self:Print(DecursiveTextFrame, UseFormatIfPresent(...));
+        self:PPrint(DecursiveTextFrame, UseFormatIfPresent(...));
     end
 end --}}}
 
@@ -194,23 +221,23 @@ function D:ColorPrint (r,g,b, ... )
     t_insert(datas, #datas + 1, "|r");
 
     if D.profile and D.profile.Print_ChatFrame then
-        self:Print(D.Status.OutputWindow, ColorHeader, unpack(datas));
+        self:PPrint(D.Status.OutputWindow, ColorHeader, unpack(datas));
     end
 
     if D.profile and D.profile.Print_CustomFrame then
-        self:Print(DecursiveTextFrame, ColorHeader, unpack(datas));
+        self:PPrint(DecursiveTextFrame, ColorHeader, unpack(datas));
     end
 
     if not self.db then
-        self:Print(ColorHeader, unpack(datas));
+        self:PPrint(ColorHeader, unpack(datas));
     end
-    
+
 end
 
 function D:errln( ... ) --{{{
     if not D.db or D.profile.Print_Error then
         self:ColorPrint(1,0,0,...);
-        
+
     end
 end --}}}
 
@@ -223,7 +250,7 @@ do
 
     function D:Debug(...)
         if self.debug then
-            self:Print(debugStyle(UseFormatIfPresent(...)));
+            self:PPrint(debugStyle(UseFormatIfPresent(...)));
         end
     end
 end
@@ -239,6 +266,14 @@ function D:tremovebyval(tab, val) -- {{{
     return false;
 end -- }}}
 
+function D:tMap(t, f)
+    local mapped_t = {};
+    for k,v in pairs(t) do
+        mapped_t[k] = f(v);
+    end
+    return mapped_t;
+end
+
 function D:tAsString(t, indent) -- debugging function
 
     if type(t) ~= 'table' then
@@ -249,9 +284,9 @@ function D:tAsString(t, indent) -- debugging function
         indent = "  ";
     end
 
-    local s = "\n" .. indent .. "{"
+    local s = "\n" .. indent .. "{" .. "\n"
     for k,v in pairs(t) do
-        s = s .. "\n" .. indent .. indent .. ("[%s] = [%s],\n"):format(tostring(k), self:tAsString(v, indent .. "  "))
+        s = s .. indent .. indent .. ("[%s] = [%s],\n"):format(tostring(k), self:tAsString(v, indent .. "  "))
     end
     return s .. indent .. "}"
 end
@@ -270,11 +305,11 @@ end -- }}}
 
 -- tcopy: recursively copy contents of one table to another
 function D:tcopy(to, from)   -- "to" must be a table (possibly empty)
-    if (type(from) ~= "table") then 
+    if (type(from) ~= "table") then
         return error(("D:tcopy: bad argument #2 'from' must be a table, got '%s' instead"):format(type(from)),2);
     end
 
-    if (type(to) ~= "table") then 
+    if (type(to) ~= "table") then
         return error(("D:tcopy: bad argument #1 'to' must be a table, got '%s' instead"):format(type(to)),2);
     end
     for k,v in pairs(from) do
@@ -290,14 +325,14 @@ end
 
 -- tcopycallback: recursively copy contents of one table to another calling a callback before storing the new values
 function D:tcopycallback(to, from, CallBack) -- "to" must be a table (possibly empty)
-    if (type(from) ~= "table") then 
+    if (type(from) ~= "table") then
         return error(("D:tcopycallback: bad argument #2 'from' must be a table, got '%s' instead"):format(type(from)),2);
     end
 
-    if (type(to) ~= "table") then 
+    if (type(to) ~= "table") then
         return error(("D:tcopycallback: bad argument #1 'to' must be a table, got '%s' instead"):format(type(to)),2);
     end
-    if (type(CallBack) ~= "function") then 
+    if (type(CallBack) ~= "function") then
         return error(("D:tcopycallback: bad argument #3 'CallBack' must be a function ref, got '%s' instead"):format(type(CallBack)),2);
     end
     for k,v in pairs(from) do
@@ -456,16 +491,32 @@ function D:NumToHexColor(ColorTable)
         return str_format("%02x%02x%02x%02x", ColorTable[4] * 255, ColorTable[1] * 255, ColorTable[2] * 255, ColorTable[3] * 255)
 end
 
+function D:HexColorToNum(hexColor)
+    local t_color = {};
+    for hex in (hexColor):gmatch("[0-9a-fA-F][0-9a-fA-F]") do
+        t_color[#t_color + 1] = tonumber(hex, 16) / 255;
+    end
+
+    -- put the alpha in fourth position
+    if #t_color == 4 then
+        t_color[4] = table.remove(t_color, 1);
+    else -- add it if missing
+        t_color[4] = 1.0;
+    end
+
+    return t_color;
+end
+
 -- function taken from http://www.wowwiki.com/SetTexCoord_Transformations
 function D:SetCoords(t, A, B, C, D, E, F)
         local det = A*E - B*D;
         local ULx, ULy, LLx, LLy, URx, URy, LRx, LRy;
-        
+
         ULx, ULy = ( B*F - C*E ) / det, ( -(A*F) + C*D ) / det;
         LLx, LLy = ( -B + B*F - C*E ) / det, ( A - A*F + C*D ) / det;
         URx, URy = ( E + B*F - C*E ) / det, ( -D - A*F + C*D ) / det;
         LRx, LRy = ( E - B + B*F - C*E ) / det, ( -D + A -(A*F) + C*D ) / det;
-        
+
         t:SetTexCoord(ULx, ULy, LLx, LLy, URx, URy, LRx, LRy);
 end
 
@@ -474,6 +525,13 @@ do
     DC.ClassesColors = { };
 
     local RAID_CLASS_COLORS = CUSTOM_CLASS_COLORS or RAID_CLASS_COLORS;
+
+    local NON_CLASSIC_CLASSES = {
+        ["DEMONHUNTER"]    = true,
+        ["DEATHKNIGHT"]    = true,
+        ["MONK"]           = true
+
+    };
 
     function D:GetClassColor (EnglishClass, noCache)
         if not DC.ClassesColors[EnglishClass] or noCache then
@@ -507,9 +565,9 @@ do
                 if LC[class] then -- Some badly coded add-ons are modifying RAID_CLASS_COLORS causing multiple problems...
                     D:GetClassColor(class, true);
                     D:GetClassHexColor(class, true);
-                else
+                elseif not (DC.WOWC and NON_CLASSIC_CLASSES[class]) then
                     D:AddDebugText("Strange class found in RAID_CLASS_COLORS:", class, 'maxClass:', CLASS_SORT_ORDER and #CLASS_SORT_ORDER or 'CLASS_SORT_ORDER unavailable...');
-                    print("Decursive: |cFFFF0000Unexpected value found in _G.RAID_CLASS_COLORS table|r\nThis may cause many issues, Decursive will display this message until the culprit add-on is fixed or removed, the unexpected value is: '", class, "'");
+                    D:PPrint("Decursive: |cFFFF0000Unexpected value found in _G.RAID_CLASS_COLORS table|r\nThis may cause many issues, Decursive will display this message until the culprit add-on is fixed or removed, the unexpected value is: '", class, "'");
                 end
             end
         else
@@ -522,7 +580,7 @@ do
 
     if CUSTOM_CLASS_COLORS and CUSTOM_CLASS_COLORS.RegisterCallback then
         CUSTOM_CLASS_COLORS:RegisterCallback(function() D:ScheduleDelayedCall('update_Class_Colors', D.CreateClassColorTables, .3, D) end);
-    end 
+    end
 
 end
 
@@ -538,13 +596,15 @@ function D:GetSpellFromLink(link)
             return nil;
         end
 
+       local isPetAbility = (GetSpellBookItemInfo(spellName)) == "PETACTION" and true or false;
+
         if spellRank and spellRank ~= "" then
             spellName = ("%s(%s)"):format(spellName, spellRank);
         end
         D:Debug('Spell link detected:', spellID, spellName, spellRank);
 
         --return spellName;
-        return spellID;
+        return spellID, isPetAbility;
     end
 
     return nil;
@@ -560,6 +620,32 @@ function D:isItemUsable(itemIDorName)
     end
 
     return IsUsableItem(itemIDorName);
+end
+
+
+function D:isSpellReady(spellID, isPetAbility)
+
+    if DC.WOWC and isPetAbility then
+        -- Former ranks of known pet spell abilities are lost in WoW classic
+        -- so we need to get back to the corresponding current spell id using
+        -- the name of the spell.
+
+        local spellName = (GetSpellInfo(spellID));
+        local spellType, id = GetSpellBookItemInfo(spellName);
+
+        if spellType == "PETACTION" then
+            spellID = bit.band(0xffffff, id);
+        elseif spellType then
+           D:Debug("Pet ability update lookup failed", spellID, spellName, spellType, id);
+        end
+    end
+
+    if spellID == 115450 and IsSpellKnown(218164) then
+        --abyui Monk 9.0 清创生血 织雾是115450，其他是218164
+        return GetSpecialization() == 2
+    end
+
+    return IsSpellKnown(spellID, isPetAbility);
 end
 
 function D:GetItemFromLink(link)
@@ -596,7 +682,7 @@ function D.GetSpellOrItemInfo(spellID)
 end
 
 local function BadLocalTest (localtest)
-    D:Print(L[localtest]);
+    D:PPrint(L[localtest]);
 end
 
 -- /run LibStub("AceAddon-3.0"):GetAddon("Decursive"):MakeError()
@@ -716,23 +802,23 @@ do
 
 
     function D:ScheduleDelayedCall(RefName, FunctionRef, Delay, arg1, ...)
-        --[===[@debug@
+        --[==[@debug@
     --  D:Debug('|cFFFF0000SDC:|r|cFF00FFAA', RefName, Delay, arg1, unpack({...}));
-        --@end-debug@]===]
+        --@end-debug@]==]
 
         argCount = select('#', ...);
 
         if DcrTimers[RefName] and DcrTimers[RefName][1] then -- a timer with the same refname still exists
             -- we test up to two arguments to avoid the cancellation->re-creation of the timer (AceTimers doesn't remove them right away)
             if (argCount == 0 or argCount == 1 and  select(1, ...) == DcrTimers[RefName][2][2]) and arg1 == DcrTimers[RefName][2][1] then
-                --[===[@debug@
+                --[==[@debug@
                 D:Debug("Timer |cFF0000DDcancellation-creation canceled|r for", RefName, "Arg:", arg1, "indargcount:", argCount);
-                --@end-debug@]===]
+                --@end-debug@]==]
                 return;
-                --[===[@debug@
+                --[==[@debug@
             else
                 D:Debug("Timer |cFF0066DD-replaced-|r for", RefName, "argcount:", argCount);
-                --@end-debug@]===]
+                --@end-debug@]==]
             end
             if not self:CancelTimer(DcrTimers[RefName][1]) then
                 self:AddDebugText("Timer cancellation failed in ScheduleDelayedCall() for", RefName);
@@ -791,9 +877,9 @@ do
             );
         end
 
-        --[===[@debug@
+        --[==[@debug@
     --  D:Debug('|cFFFF0000SDC:|r ACEID:|cFF00FFAA', DcrTimers[RefName][1]);
-        --@end-debug@]===]
+        --@end-debug@]==]
         return DcrTimers[RefName][1];
     end
 
@@ -843,18 +929,18 @@ do
         for RefName, timer in pairs(DcrTimers) do
             if timer[1] then
                 dcrCount = dcrCount + 1;
-                --[===[@debug@
+                --[==[@debug@
                 self:Debug("|cff00AA00TimerRef:|r ", RefName, "ARGS:",timer[2] and unpack (timer[2]) or 'NONE', 'ACEID: |cffaa8833', timer[1], '|r', AceTimer.activeTimers[timer[1]] and 'active' or 'UNKNOWN');
-                --@end-debug@]===]
+                --@end-debug@]==]
             end
         end
         local libTimerCount = 0;
         for id,timer in pairs(AceTimer.activeTimers) do
             if timer.object == D then
                 libTimerCount = libTimerCount + 1;
-                --[===[@debug@
+                --[==[@debug@
                 self:Debug("|cff00AA00AceRef:", id,'|r');
-                --@end-debug@]===]
+                --@end-debug@]==]
             end
         end
         return dcrCount, libTimerCount, Yields, LongestExecBesidesYields, LargestBatch, TimersTotalExecs;
@@ -900,4 +986,4 @@ do
 end
 
 
-T._LoadedFiles["Dcr_utils.lua"] = "2.7.6.2";
+T._LoadedFiles["Dcr_utils.lua"] = "2.7.8.3";

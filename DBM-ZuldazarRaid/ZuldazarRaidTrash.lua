@@ -1,9 +1,8 @@
 local mod	= DBM:NewMod("ZuldazarRaidTrash", "DBM-ZuldazarRaid", 1)
 local L		= mod:GetLocalizedStrings()
 
-mod:SetRevision(("$Revision: 18318 $"):sub(12, -3))
+mod:SetRevision("20201116005403")
 --mod:SetModelID(47785)
-mod:SetZone()
 mod.isTrashMod = true
 
 mod:RegisterEvents(
@@ -84,7 +83,7 @@ end
 function mod:SPELL_AURA_REMOVED(args)
 	local spellId = args.spellId
 	if spellId == 289917 then
-	
+
 	end
 end
 --]]

@@ -1,11 +1,11 @@
 --- Kaliel's Tracker
---- Copyright (c) 2012-2018, Marouan Sabbagh <mar.sabbagh@gmail.com>
+--- Copyright (c) 2012-2021, Marouan Sabbagh <mar.sabbagh@gmail.com>
 --- All Rights Reserved.
 ---
 --- This file is part of addon Kaliel's Tracker.
 
 local addonName, addon = ...
-local KT = LibStub("AceAddon-3.0"):NewAddon(addon, addonName, "LibSink-2.0")
+local KT = LibStub("AceAddon-3.0"):NewAddon(addon, addonName, "LibSink-2.0", "MSA-ProtRouter-1.0")
 KT:SetDefaultModuleState(false)
 KT.title = GetAddOnMetadata(addonName, "Title")
 KT.version = GetAddOnMetadata(addonName, "Version")
@@ -26,8 +26,10 @@ local gsub = string.gsub
 local ipairs = ipairs
 local pairs = pairs
 local strfind = string.find
+local tonumber = tonumber
 local tinsert = table.insert
 local tremove = table.remove
+local tContains = tContains
 local unpack = unpack
 local round = function(n) return floor(n + 0.5) end
 
@@ -35,7 +37,7 @@ local round = function(n) return floor(n + 0.5) end
 local _G = _G
 local CreateFrame = CreateFrame
 local GameTooltip = GameTooltip
-local HaveQuestData = HaveQuestData
+local HaveQuestRewardData = HaveQuestRewardData
 local InCombatLockdown = InCombatLockdown
 local FormatLargeNumber = FormatLargeNumber
 local UIParent = UIParent
@@ -43,7 +45,7 @@ local UIParent = UIParent
 local trackerWidth = 280
 local paddingBottom = 15
 local mediaPath = "Interface\\AddOns\\"..addonName.."\\Media\\"
-local questState = {}
+local freeIcons = {}
 local freeTags = {}
 local freeButtons = {}
 local msgPatterns = {}
@@ -51,61 +53,121 @@ local combatLockdown = false
 local db, dbChar
 
 -- Main frame
-local KTF = CreateFrame("Frame", addonName.."Frame", UIParent)
+local KTF = CreateFrame("Frame", addonName.."Frame", UIParent, "BackdropTemplate")
 KT.frame = KTF
 
 -- Blizzard frame
 local OTF = ObjectiveTrackerFrame
 local OTFHeader = OTF.HeaderMenu
-
---[=[ 
---ours
-local line = DEFAULT_OBJECTIVE_TRACKER_MODULE.freeLines[1] or CreateFrame("Frame", nil, nil, DEFAULT_OBJECTIVE_TRACKER_MODULE.lineTemplate)
-line.Dash:SetText(QUEST_DASH)
-OBJECTIVE_TRACKER_DASH_WIDTH = line.Dash:GetWidth()
-OBJECTIVE_TRACKER_TEXT_WIDTH = OBJECTIVE_TRACKER_LINE_WIDTH - OBJECTIVE_TRACKER_DASH_WIDTH - 12
-DEFAULT_OBJECTIVE_TRACKER_MODULE.lineWidth = OBJECTIVE_TRACKER_TEXT_WIDTH
-line.Text:SetWidth(OBJECTIVE_TRACKER_TEXT_WIDTH)
---theirs
-DEFAULT_OBJECTIVE_TRACKER_MODULE.freeLines[1].Dash:SetText(QUEST_DASH)
-OBJECTIVE_TRACKER_DASH_WIDTH = DEFAULT_OBJECTIVE_TRACKER_MODULE.freeLines[1].Dash:GetWidth()
-OBJECTIVE_TRACKER_TEXT_WIDTH = OBJECTIVE_TRACKER_LINE_WIDTH - OBJECTIVE_TRACKER_DASH_WIDTH - 12
-DEFAULT_OBJECTIVE_TRACKER_MODULE.lineWidth = OBJECTIVE_TRACKER_TEXT_WIDTH
-DEFAULT_OBJECTIVE_TRACKER_MODULE.freeLines[1].Text:SetWidth(OBJECTIVE_TRACKER_TEXT_WIDTH)
---]=]
-
-
--- Blizzard Constants
-OBJECTIVE_TRACKER_COLOR["Header"] = { r = 1, g = 0.5, b = 0 }					-- orange
-OBJECTIVE_TRACKER_COLOR["Complete"] = { r = 0.1, g = 0.85, b = 0.1 }			-- green
-OBJECTIVE_TRACKER_COLOR["CompleteHighlight"] = { r = 0, g = 1, b = 0 }			-- green
-OBJECTIVE_TRACKER_COLOR["TimeLeft2"] = { r = 0, g = 0.5, b = 1 }				-- blue
-OBJECTIVE_TRACKER_COLOR["TimeLeft2Highlight"] = { r = 0.3, g = 0.65, b = 1 }	-- blue
-OBJECTIVE_TRACKER_COLOR["Header"].reverse = OBJECTIVE_TRACKER_COLOR["HeaderHighlight"]
-OBJECTIVE_TRACKER_COLOR["HeaderHighlight"].reverse = OBJECTIVE_TRACKER_COLOR["Header"]
-OBJECTIVE_TRACKER_COLOR["Complete"].reverse = OBJECTIVE_TRACKER_COLOR["CompleteHighlight"]
-OBJECTIVE_TRACKER_COLOR["CompleteHighlight"].reverse = OBJECTIVE_TRACKER_COLOR["Complete"]
-OBJECTIVE_TRACKER_COLOR["TimeLeft2"].reverse = OBJECTIVE_TRACKER_COLOR["TimeLeft2Highlight"]
-OBJECTIVE_TRACKER_COLOR["TimeLeft2Highlight"].reverse = OBJECTIVE_TRACKER_COLOR["TimeLeft2"]
-
-OTF.BlocksFrame.PopupQuestHeader = CreateFrame("Frame", "PopupQuestHeader", OTF.BlocksFrame, "ObjectiveTrackerHeaderTemplate")
-AUTO_QUEST_POPUP_TRACKER_MODULE:SetHeader(OTF.BlocksFrame.PopupQuestHeader, TRACKER_HEADER_QUESTS, nil)
-AUTO_QUEST_POPUP_TRACKER_MODULE.blockOffsetX = -26
-AUTO_QUEST_POPUP_TRACKER_MODULE.blockOffsetY = -6
-SCENARIO_CONTENT_TRACKER_MODULE.blockOffsetX = -16
-BONUS_OBJECTIVE_TRACKER_MODULE.blockPadding = 0
-WORLD_QUEST_TRACKER_MODULE.blockPadding = 0
-DEFAULT_OBJECTIVE_TRACKER_MODULE.blockTemplate = "KT_ObjectiveTrackerBlockTemplate"
-DEFAULT_OBJECTIVE_TRACKER_MODULE.lineTemplate = "KT_ObjectiveTrackerLineTemplate"
-BONUS_OBJECTIVE_TRACKER_MODULE.blockTemplate = "KT_BonusObjectiveTrackerBlockTemplate"
-WORLD_QUEST_TRACKER_MODULE.blockTemplate = "KT_BonusObjectiveTrackerBlockTemplate"
-QUEST_TRACKER_MODULE.buttonOffsets.groupFinder = { 2, 4 }
-BONUS_OBJECTIVE_TRACKER_MODULE.buttonOffsets.groupFinder = { 2, 2 }
-WORLD_QUEST_TRACKER_MODULE.buttonOffsets.groupFinder = { 2, 2 }
+local MawBuffs = ScenarioBlocksFrame.MawBuffsBlock.Container
 
 --------------
 -- Internal --
 --------------
+
+local changedDefaultFunctions = {}
+local customizationKeys = { "blockOffset", "buttonOffsets", "paddingBetweenButtons" }
+
+local function Default_SetFunctionChanged(name, ...)
+	tinsert(changedDefaultFunctions, {
+		name = name,
+		skipModules = { ... }
+	})
+end
+
+local function Default_ChangeModuleTemplate(module, template)
+	for _, key in ipairs(customizationKeys) do
+		if module[key] then
+			module[key][template] = module[key][module.blockTemplate]
+		end
+	end
+	module.blockTemplate = template
+end
+
+local function Default_UpdateModuleInfoTables()
+	-- Template
+	for _, moduleName in ipairs(KT.ALL_BLIZZARD_MODULES) do
+		local module = _G[moduleName]
+		if module.blockTemplate == "ObjectiveTrackerBlockTemplate" then
+			Default_ChangeModuleTemplate(module, "KT_ObjectiveTrackerBlockTemplate")
+		elseif module.blockTemplate == "BonusObjectiveTrackerBlockTemplate" then
+			Default_ChangeModuleTemplate(module, "KT_BonusObjectiveTrackerBlockTemplate")
+		end
+	end
+
+	-- Functions
+	local baseModule
+	for _, func in ipairs(changedDefaultFunctions) do
+		for _, module in ipairs(KT.ALL_BLIZZARD_MODULES) do
+			if not tContains(func.skipModules, module) then
+				baseModule = DEFAULT_OBJECTIVE_TRACKER_MODULE
+				if module == "CAMPAIGN_QUEST_TRACKER_MODULE" then
+					baseModule = QUEST_TRACKER_MODULE
+				end
+				_G[module][func.name] = baseModule[func.name]
+			end
+		end
+	end
+end
+
+local function QuestsCache_Update(isForced)
+	local numQuests = 0
+	local numEntries = C_QuestLog.GetNumQuestLogEntries()
+	local headerTitle
+
+	for i = 1, numEntries do
+		local questInfo = C_QuestLog.GetInfo(i)
+		if not questInfo.isHidden then
+			if questInfo.isHeader then
+				headerTitle = questInfo.title
+			else
+				if not questInfo.isTask and (not questInfo.isBounty or C_QuestLog.IsComplete(questInfo.questID)) then
+					if not dbChar.quests.cache[questInfo.questID] or isForced then
+						dbChar.quests.cache[questInfo.questID] = {
+							title = questInfo.title,
+							level = questInfo.level,
+							zone = headerTitle,
+							startMapID = dbChar.quests.cache[questInfo.questID] and dbChar.quests.cache[questInfo.questID].startMapID or 0,
+							isCalling = C_QuestLog.IsQuestCalling(questInfo.questID)
+						}
+					end
+				end
+				numQuests = numQuests + 1
+			end
+		end
+	end
+
+	return numEntries <= 1, numQuests
+end
+
+local function QuestsCache_GetProperty(questID, key)
+	return dbChar.quests.cache[questID] and dbChar.quests.cache[questID][key] or nil
+end
+KT.QuestsCache_GetProperty = QuestsCache_GetProperty
+
+local function QuestsCache_UpdateProperty(questID, key, value)
+	if dbChar.quests.cache[questID] then
+		dbChar.quests.cache[questID][key] = value
+	end
+end
+
+local function QuestsCache_RemoveQuest(questID)
+	dbChar.quests.cache[questID] = nil
+end
+
+local function QuestsCache_Init()
+	return QuestsCache_Update(true)
+end
+KT.QuestsCache_Init = QuestsCache_Init
+
+local function ObjectiveTracker_Toggle()
+	if OTF.collapsed then
+		ObjectiveTracker_Expand()
+	else
+		ObjectiveTracker_Collapse()
+	end
+	ObjectiveTracker_Update()
+end
 
 local function SetHeaders(type)
 	local bgrColor = db.hdrBgrColorShare and KT.borderColor or db.hdrBgrColor
@@ -168,7 +230,7 @@ end
 
 local function SlashHandler(msg, editbox)
 	local cmd, value = msg:match("^(%S*)%s*(.-)$")
-	if cmd == "config" then
+	if cmd == "config" or cmd == "option" then
 		KT:OpenOptions()
 	else
 		ObjectiveTracker_MinimizeButton_OnClick()
@@ -192,6 +254,33 @@ local function GetTaskTimeLeftData(questID)
 	return timeString, timeColor
 end
 
+local function GetBlockIcon(block)
+	local icon = block.icon
+	if not icon then
+		local numFreeIcons = #freeIcons
+		if numFreeIcons > 0 then
+			icon = freeIcons[numFreeIcons]
+			tremove(freeIcons, numFreeIcons)
+			icon:ClearAllPoints()
+		else
+			icon = CreateFrame("Frame", nil, OTF.BlocksFrame, "KT_ObjectiveTrackerBlockIconTemplate")
+		end
+		icon:SetPoint("TOPRIGHT", block.HeaderText, "TOPLEFT", 1, 8)
+		block.icon = icon
+	end
+	icon:Show()
+	return icon
+end
+
+local function RemoveBlockIcon(block)
+	local icon = block.icon
+	if icon then
+		tinsert(freeIcons, icon)
+		icon:Hide()
+		block.icon = nil
+	end
+end
+
 -- Setup ---------------------------------------------------------------------------------------------------------------
 
 local function Init()
@@ -207,17 +296,18 @@ local function Init()
 	end
 
 	KT:MoveTracker()
+    CoreOnEvent("PLAYER_ENTERING_WORLD", function() KT:MoveTracker() end)
 	KT:SetBackground()
 	KT:SetText()
 
 	KT.stopUpdate = false
 	KT.inWorld = true
 
-	if dbChar.collapsed then
-		ObjectiveTracker_MinimizeButton_OnClick()
-	end
-
 	C_Timer.After(0, function()
+		if dbChar.collapsed then
+			ObjectiveTracker_Toggle()
+		end
+
 		KT:SetQuestsHeaderText()
 		KT:SetAchievsHeaderText()
 
@@ -238,22 +328,19 @@ local function SetFrames()
 	KTF:SetFrameStrata(db.frameStrata)
 	KTF:SetFrameLevel(KTF:GetFrameLevel() + 25)
 
-	KTF:SetScript("OnEvent", function(_, event, ...)
+	KTF:SetScript("OnEvent", function(self, event, ...)
 		_DBG("Event - "..event)
 		if event == "PLAYER_ENTERING_WORLD" and not KT.stopUpdate then
 			KT.inWorld = true
 			KT.inInstance = IsInInstance()
 			if db.collapseInInstance and KT.inInstance and not dbChar.collapsed then
-				ObjectiveTracker_MinimizeButton_OnClick()
+				ObjectiveTracker_Toggle()
 			end
 		elseif event == "PLAYER_LEAVING_WORLD" then
 			KT.inWorld = false
 		elseif event == "QUEST_WATCH_LIST_CHANGED" then
 			local id, added = ...
 			if id and not added then
-				if not KT.questStateStopUpdate then
-					questState[id] = nil
-				end
 				if KT.activeTasks[id] then
 					KT.activeTasks[id] = nil
 				end
@@ -267,8 +354,14 @@ local function SetFrames()
 			if newStage == nil then
 				KT.inScenario = false
 			elseif not KT.inScenario then
-				KT.inScenario = true
-				KT:ToggleEmptyTracker(true)
+				C_Timer.After(0.1, function()  -- WTF
+					if IsInJailersTower() == nil or IsOnGroundFloorInJailersTower() == true then
+						KT.inScenario = false
+					else
+						KT.inScenario = true
+					end
+					KT:ToggleEmptyTracker(KT.inScenario)
+				end)
 			end
 			if not newStage then
 				local numSpells = ScenarioObjectiveBlock.numSpells or 0
@@ -283,7 +376,17 @@ local function SetFrames()
 		elseif event == "QUEST_AUTOCOMPLETE" then
 			KTF.Scroll.value = 0
 		elseif event == "QUEST_ACCEPTED" or event == "QUEST_REMOVED" then
-			KT:SetQuestsHeaderText()
+			local questID = ...
+			if not C_QuestLog.IsQuestTask(questID) and not C_QuestLog.IsQuestBounty(questID) then
+				local _, numQuests = QuestsCache_Update()
+				dbChar.quests.num = numQuests
+				KT:SetQuestsHeaderText()
+				if event == "QUEST_ACCEPTED" then
+					QuestsCache_UpdateProperty(questID, "startMapID", KT.GetCurrentMapAreaID())
+				elseif event == "QUEST_REMOVED" then
+					QuestsCache_RemoveQuest(questID)
+				end
+			end
 		elseif event == "ACHIEVEMENT_EARNED" then
 			KT:SetAchievsHeaderText()
 		elseif event == "PLAYER_REGEN_ENABLED" and combatLockdown then
@@ -297,6 +400,25 @@ local function SetFrames()
 		elseif event == "PLAYER_LEVEL_UP" then
 			local level = ...
 			KT.playerLevel = level
+		elseif event == "QUEST_SESSION_JOINED" then
+			self:RegisterEvent("QUEST_POI_UPDATE")
+		elseif event == "PET_BATTLE_OPENING_START" then
+			KT:prot("Hide", KTF)
+			KT:prot("Hide", KTF.Buttons)
+			KT.locked = true
+		elseif event == "PET_BATTLE_CLOSE" then
+			KT:prot("Show", KTF)
+			KT:prot("Show", KTF.Buttons)
+			KT.locked = false
+		elseif event == "QUEST_LOG_UPDATE" then
+			local emptyCache = QuestsCache_Init()
+			if not emptyCache then
+				self:UnregisterEvent(event)
+			end
+		elseif event == "QUEST_POI_UPDATE" then
+			dbChar.quests.num = KT.GetNumQuests()
+			ObjectiveTracker_Update(OBJECTIVE_TRACKER_UPDATE_QUEST)
+			self:UnregisterEvent(event)
 		end
 	end)
 	KTF:RegisterEvent("PLAYER_ENTERING_WORLD")
@@ -308,12 +430,17 @@ local function SetFrames()
 	KTF:RegisterEvent("QUEST_AUTOCOMPLETE")
 	KTF:RegisterEvent("QUEST_ACCEPTED")
 	KTF:RegisterEvent("QUEST_REMOVED")
+	KTF:RegisterEvent("QUEST_SESSION_JOINED")
+	KTF:RegisterEvent("QUEST_LOG_UPDATE")
+	KTF:RegisterEvent("QUEST_POI_UPDATE")
 	KTF:RegisterEvent("ACHIEVEMENT_EARNED")
 	KTF:RegisterEvent("PLAYER_REGEN_ENABLED")
 	KTF:RegisterEvent("ZONE_CHANGED_NEW_AREA")
 	KTF:RegisterEvent("ZONE_CHANGED")
 	KTF:RegisterEvent("UPDATE_BINDINGS")
 	KTF:RegisterEvent("PLAYER_LEVEL_UP")
+	KTF:RegisterEvent("PET_BATTLE_OPENING_START")
+	KTF:RegisterEvent("PET_BATTLE_CLOSE")
 
 	-- DropDown frame
 	KT.DropDown = MSA_DropDownMenu_Create(addonName.."DropDown", KTF)
@@ -332,7 +459,7 @@ local function SetFrames()
 	button:SetScript("OnClick", function(self, btn)
 		if IsAltKeyDown() then
 			KT:OpenOptions()
-		elseif not KT:IsTrackerEmpty() then
+		elseif not KT:IsTrackerEmpty() and not KT.locked then
 			ObjectiveTracker_MinimizeButton_OnClick()
 		end
 	end)
@@ -369,8 +496,9 @@ local function SetFrames()
 			if db.frameScrollbar then
 				SetScrollbarPosition()
 			end
-			if self.value > 0 and self.value < OTF.height-db.maxHeight then
+			if self.value >= 0 and self.value < OTF.height-db.maxHeight then
 				MSA_CloseDropDownMenus()
+				MawBuffs.List:Hide()
 			end
 			_DBG("SCROLL ... "..self.value.." ... "..OTF.height.." - "..db.maxHeight)
 		end
@@ -400,19 +528,26 @@ local function SetFrames()
 	OTFHeader.SetShown = function() end
 	OTFHeader:SetSize(10, 21)
 	OTFHeader:ClearAllPoints()
+	OTFHeader.ClearAllPoints = function() end
 	OTFHeader:SetPoint("TOPLEFT", -20, -1)
+	OTFHeader.SetPoint = function() end
 	OTFHeader.Title:ClearAllPoints()
+	OTFHeader.Title.ClearAllPoints = function() end
 	OTFHeader.Title:SetPoint("LEFT", -5, -1)
+	OTFHeader.Title.SetPoint = function() end
 	OTFHeader.Title:SetWidth(trackerWidth - 40)
-	OTFHeader.Title:SetJustifyH("LEFT")
 	OTFHeader.Title:SetWordWrap(false)
 	ScenarioBlocksFrame:SetWidth(243)
+	MawBuffs.List:SetParent(UIParent)
+	MawBuffs.List:SetFrameLevel(MawBuffs:GetFrameLevel() - 1)
+	MawBuffs.List:SetClampedToScreen(true)
+	HelpTip:Hide(MawBuffs, JAILERS_TOWER_BUFFS_TUTORIAL)
 
 	-- Other buttons
 	KT:ToggleOtherButtons()
 
 	-- Buttons frame
-	local Buttons = CreateFrame("Frame", addonName.."Buttons", UIParent)
+	local Buttons = CreateFrame("Frame", addonName.."Buttons", UIParent, "BackdropTemplate")
 	Buttons:SetSize(40, 40)
 	Buttons:SetPoint("TOPLEFT", 0, 0)
 	Buttons:SetFrameStrata(db.frameStrata)
@@ -422,13 +557,9 @@ local function SetFrames()
 	Buttons.reanchor = false
 	KTF.Buttons = Buttons
 
-	-- Frame locks
-    CoreHideOnPetBattle(addonName.."Frame")
-    CoreHideOnPetBattle(addonName.."Buttons")
-	--if FRAMELOCK_STATES and FRAMELOCK_STATES.PETBATTLES then
-	--	FRAMELOCK_STATES.PETBATTLES[addonName.."Frame"] = "hidden"
-	--	FRAMELOCK_STATES.PETBATTLES[addonName.."Buttons"] = "hidden"
-	--end
+	--abyui origin had hide code but removed in 4.2.0
+    --CoreHideOnPetBattle(addonName.."Frame")
+    --CoreHideOnPetBattle(addonName.."Buttons")
 end
 
 -- Hooks ---------------------------------------------------------------------------------------------------------------
@@ -471,18 +602,17 @@ local function SetHooks()
 				local tasksTable = GetTasksTable()
 				for i = 1, #tasksTable do
 					questID = tasksTable[i]
-					questLogIndex = GetQuestLogIndexByID(questID)
-					if questLogIndex > 0 and QuestUtils_IsQuestWorldQuest(questID) and not IsWorldQuestWatched(questID) then
-						block = WORLD_QUEST_TRACKER_MODULE.usedBlocks[questID]
+					if KT.activeTasks[questID] and QuestUtils_IsQuestWorldQuest(questID) and not QuestUtils_IsQuestWatched(questID) then
+						block = WORLD_QUEST_TRACKER_MODULE:GetExistingBlock(questID)
 						if block and block.itemButton then
 							idx, contentsHeight, yOfs = SetFixedButton(block, idx, contentsHeight, yOfs)
 						end
 					end
 				end
-				for i = 1, GetNumWorldQuestWatches() do
-					questID = GetWorldQuestWatchInfo(i)
+				for i = 1, C_QuestLog.GetNumWorldQuestWatches() do
+					questID = C_QuestLog.GetQuestIDForWorldQuestWatchIndex(i)
 					if questID then
-						block = WORLD_QUEST_TRACKER_MODULE.usedBlocks[questID]
+						block = WORLD_QUEST_TRACKER_MODULE:GetExistingBlock(questID)
 						if block and block.itemButton then
 							idx, contentsHeight, yOfs = SetFixedButton(block, idx, contentsHeight, yOfs)
 						end
@@ -490,9 +620,9 @@ local function SetHooks()
 				end
 				-- Quest items
 				_DBG(" - REANCHOR buttons - Q", true)
-				for i = 1, GetNumQuestWatches() do
-					questID = GetQuestWatchInfo(i)
-					block = QUEST_TRACKER_MODULE.usedBlocks[questID]
+				for i = 1, C_QuestLog.GetNumQuestWatches() do
+					questID = C_QuestLog.GetQuestIDForQuestWatchIndex(i)
+					block = QUEST_TRACKER_MODULE:GetExistingBlock(questID) or CAMPAIGN_QUEST_TRACKER_MODULE:GetExistingBlock(questID)
 					if block and block.itemButton then
 						idx, contentsHeight, yOfs = SetFixedButton(block, idx, contentsHeight, yOfs)
 					end
@@ -507,7 +637,7 @@ local function SetHooks()
 			if dbChar.collapsed or KTF.Buttons.num == 0 then
 				KTF.Buttons:Hide()
 			else
-				KTF.Buttons:Show()
+				KTF.Buttons:SetShown(not KT.locked)
 			end
 			KT.ActiveButton:Update()
 		end
@@ -520,13 +650,27 @@ local function SetHooks()
 
 	OTF:HookScript("OnEvent", function(self, event)
 		if event == "PLAYER_ENTERING_WORLD" and not KT.initialized then
+			self.freeLines[1] = nil
+
+			Default_UpdateModuleInfoTables()
+
+			SCENARIO_CONTENT_TRACKER_MODULE.blockOffset[SCENARIO_CONTENT_TRACKER_MODULE.blockTemplate][1] = -16
+			QUEST_TRACKER_MODULE.buttonOffsets[QUEST_TRACKER_MODULE.blockTemplate].useItem = { 3, 4 }
+			QUEST_TRACKER_MODULE.buttonOffsets[QUEST_TRACKER_MODULE.blockTemplate].groupFinder = { 2, 3 }
+			BONUS_OBJECTIVE_TRACKER_MODULE.blockPadding = 0
+			BONUS_OBJECTIVE_TRACKER_MODULE.buttonOffsets[BONUS_OBJECTIVE_TRACKER_MODULE.blockTemplate].useItem = { 0, 2 }
+			BONUS_OBJECTIVE_TRACKER_MODULE.buttonOffsets[BONUS_OBJECTIVE_TRACKER_MODULE.blockTemplate].groupFinder = { 2, 2 }
+			WORLD_QUEST_TRACKER_MODULE.blockPadding = 0
+			WORLD_QUEST_TRACKER_MODULE.buttonOffsets[WORLD_QUEST_TRACKER_MODULE.blockTemplate].useItem = { 0, 2 }
+			WORLD_QUEST_TRACKER_MODULE.buttonOffsets[WORLD_QUEST_TRACKER_MODULE.blockTemplate].groupFinder = { 2, 2 }
+
 			Init()
 		end
 	end)
     KT.Init = Init
 
 	local bck_ObjectiveTracker_Update = ObjectiveTracker_Update
-	ObjectiveTracker_Update = function(reason, id)
+	ObjectiveTracker_Update = function(reason, id, moduleWhoseCollapseChanged)
 		if KT.stopUpdate then return end
 		if reason ~= OBJECTIVE_TRACKER_UPDATE_STATIC then
 			local dbgReason
@@ -537,36 +681,36 @@ local function SetHooks()
 			end
 			_DBG("|cffffff00Update ... "..dbgReason, true)
 		end
-		bck_ObjectiveTracker_Update(reason, id)
-		OTF.isUpdating = true
+		bck_ObjectiveTracker_Update(reason, id, moduleWhoseCollapseChanged)
 		FixedButtonsReanchor()
 		if dbChar.collapsed then
-			local _, numQuests = GetNumQuestLogEntries()
 			local title = ""
 			if db.hdrCollapsedTxt == 2 then
-				title = "|T"..mediaPath.."KT_logo:22:22:0:1|t"..("%d/%d"):format(numQuests, MAX_QUESTS)
+				title = "|T"..mediaPath.."KT_logo:22:22:0:0|t"..("%d/%d"):format(dbChar.quests.num, MAX_QUESTS)
 			elseif db.hdrCollapsedTxt == 3 then
-				title = "|T"..mediaPath.."KT_logo:22:22:0:1|t"..L("%d/%d Quests"):format(numQuests, MAX_QUESTS)
+				title = "|T"..mediaPath.."KT_logo:22:22:0:0|t"..L("%d/%d Quests"):format(dbChar.quests.num, MAX_QUESTS)
 			end
 			OTFHeader.Title:SetText(title)
 		end
 		if reason == OBJECTIVE_TRACKER_UPDATE_STATIC then
-			OTF.isUpdating = false
 			return
 		elseif KT.IsTableEmpty(KT.activeTasks) then
 			KT:ToggleEmptyTracker()
 		end
 		KT:SetSize()
-		OTF.isUpdating = false
 	end
 
-	function DEFAULT_OBJECTIVE_TRACKER_MODULE:AddObjective(block, objectiveKey, text, lineType, useFullHeight, dashStyle, colorStyle, adjustForNoText)  -- RO
+	function DEFAULT_OBJECTIVE_TRACKER_MODULE:AddObjective(block, objectiveKey, text, lineType, useFullHeight, dashStyle, colorStyle, adjustForNoText, overrideHeight)  -- RO
 		if objectiveKey == "TimeLeft" then
 			text, colorStyle = GetTaskTimeLeftData(block.id)
 			self:FreeProgressBar(block, block.currentLine)	-- fix ProgressBar duplicity
+		elseif objectiveKey == 0 then	-- Bonus Objective as a Header
+			block.title = text
 		end
 		if self == ACHIEVEMENT_TRACKER_MODULE and text == "" then
-			text = "..."	-- fix Blizz bug
+			text = "..."  -- fix Blizz bug
+		elseif self == SCENARIO_TRACKER_MODULE and self.lineSpacing == 12 then
+			self.lineSpacing = 5
 		end
 		local _, _, leftText, colon, progress, numHave, numNeed, rightText = strfind(text, "(.-)(%s?:?%s?)((%d+)%s?/%s?(%d+))(.*)")
 		if progress then
@@ -600,10 +744,10 @@ local function SetHooks()
 			if ( line.dashStyle ~= dashStyle ) then
 				if ( dashStyle == OBJECTIVE_DASH_STYLE_SHOW ) then
 					line.Dash:Show();
-					line.Dash:SetText(KT_QUEST_DASH);
+					line.Dash:SetText(KT.QUEST_DASH);
 				elseif ( dashStyle == OBJECTIVE_DASH_STYLE_HIDE ) then
 					line.Dash:Hide();
-					line.Dash:SetText(KT_QUEST_DASH);
+					line.Dash:SetText(KT.QUEST_DASH);
 				elseif ( dashStyle == OBJECTIVE_DASH_STYLE_HIDE_AND_COLLAPSE ) then
 					line.Dash:Hide();
 					line.Dash:SetText(nil);
@@ -626,7 +770,8 @@ local function SetHooks()
 			line.Check.KTskinned = true
 		end
 		-- set the text
-		local height = self:SetStringText(line.Text, text, useFullHeight, colorStyle, block.isHighlighted);
+		local textHeight = self:SetStringText(line.Text, text, useFullHeight, colorStyle, block.isHighlighted);
+		local height = overrideHeight or textHeight;
 		line:SetHeight(height);
 
 		local yOffset;
@@ -649,29 +794,31 @@ local function SetHooks()
 		block.currentLine = line;
 
 		-- completion state
-		if KT.inWorld and type(objectiveKey) == "string" then
+		local questsCache = dbChar.quests.cache
+		if KT.inWorld and questsCache[block.id] and type(objectiveKey) == "string" then
 			if strfind(objectiveKey, "Complete") then
-				if not questState[block.id] or questState[block.id] ~= "complete" then
+				if not questsCache[block.id].state or questsCache[block.id].state ~= "complete" then
 					if db.messageQuest then
 						KT:SetMessage(block.title, 0, 1, 0, ERR_QUEST_COMPLETE_S, "Interface\\GossipFrame\\ActiveQuestIcon", -2, 0)
 					end
 					if db.soundQuest then
 						KT:PlaySound(db.soundQuestComplete)
 					end
-					questState[block.id] = "complete"
+					questsCache[block.id].state = "complete"
 				end
 			elseif strfind(objectiveKey, "Failed") then
-				if not questState[block.id] or questState[block.id] ~= "failed" then
+				if not questsCache[block.id].state or questsCache[block.id].state ~= "failed" then
 					if db.messageQuest then
 						KT:SetMessage(block.title, 1, 0, 0, ERR_QUEST_FAILED_S, "Interface\\GossipFrame\\AvailableQuestIcon", -2, 0)
 					end
-					questState[block.id] = "failed"
+					questsCache[block.id].state = "failed"
 				end
 			end
 		end
 
 		return line;
 	end
+	Default_SetFunctionChanged("AddObjective")
 
 	function DEFAULT_OBJECTIVE_TRACKER_MODULE:SetStringText(fontString, text, useFullHeight, colorStyle, useHighlight)  -- RO
 		if not fontString.KTskinned or KT.forcedUpdate then
@@ -681,15 +828,16 @@ local function SetHooks()
 			fontString.KTskinned = true
 		end
 		if self == QUEST_TRACKER_MODULE and not useHighlight then
-			useHighlight = fontString:GetParent().isHighlighted		-- Fix Blizz bug
+			useHighlight = fontString:GetParent().isHighlighted  -- fix Blizz bug
 		end
-		fontString:SetHeight(0)
+		if useFullHeight then
+			fontString:SetMaxLines(0)
+		else
+			fontString:SetMaxLines(2)
+		end
 		fontString:SetText(text)
+
 		local stringHeight = fontString:GetHeight()
-		if ( stringHeight > KT_OBJECTIVE_TRACKER_DOUBLE_LINE_HEIGHT and not useFullHeight ) then
-			fontString:SetHeight(KT_OBJECTIVE_TRACKER_DOUBLE_LINE_HEIGHT)
-			stringHeight = KT_OBJECTIVE_TRACKER_DOUBLE_LINE_HEIGHT
-		end
 		colorStyle = colorStyle or OBJECTIVE_TRACKER_COLOR["Normal"]
 		if ( useHighlight and colorStyle.reverse ) then
 			colorStyle = colorStyle.reverse
@@ -700,15 +848,36 @@ local function SetHooks()
 		end
 		return stringHeight
 	end
+	Default_SetFunctionChanged("SetStringText")
 
-	function QuestUtils_AddQuestCurrencyRewardsToTooltip(questID, tooltip, currencyContainerTooltip)	-- R
+	local function ShouldShowWarModeBonus(questID, currencyID, firstInstance)  -- C
+		if not C_PvP.IsWarModeDesired() then
+			return false;
+		end
+
+		local warModeBonusApplies, limitOncePerTooltip = C_CurrencyInfo.DoesWarModeBonusApply(currencyID);
+		if not warModeBonusApplies or (limitOncePerTooltip and not firstInstance) then
+			return false;
+		end
+
+		return QuestUtils_IsQuestWorldQuest(questID) and C_QuestLog.QuestHasWarModeBonus(questID) and not C_CurrencyInfo.GetFactionGrantedByCurrency(currencyID);
+	end
+
+	function QuestUtils_AddQuestCurrencyRewardsToTooltip(questID, tooltip, currencyContainerTooltip)  -- RO
 		local numQuestCurrencies = GetNumQuestLogRewardCurrencies(questID);
 		local currencies = { };
+		local uniqueCurrencyIDs = { };
 		for i = 1, numQuestCurrencies do
 			local name, texture, numItems, currencyID = GetQuestLogRewardCurrencyInfo(i, questID);
-			local rarity = select(8, GetCurrencyInfo(currencyID));
-			local currencyInfo = { name = name, texture = texture, numItems = numItems, currencyID = currencyID, rarity = rarity };
-			tinsert(currencies, currencyInfo);
+			local rarity = C_CurrencyInfo.GetCurrencyInfo(currencyID).quality;
+			local firstInstance = not uniqueCurrencyIDs[currencyID];
+			if firstInstance then
+				uniqueCurrencyIDs[currencyID] = true;
+			end
+			local currencyInfo = { name = name, texture = texture, numItems = numItems, currencyID = currencyID, rarity = rarity, firstInstance = firstInstance };
+			if(currencyID ~= ECHOS_OF_NYLOTHA_CURRENCY_ID or numQuestCurrencies == 1) then
+				tinsert(currencies, currencyInfo);
+			end
 		end
 
 		table.sort(currencies,
@@ -719,43 +888,43 @@ local function SetHooks()
 				return currency1.currencyID > currency2.currencyID;
 			end
 		);
+
 		local addedQuestCurrencies = 0;
 		local alreadyUsedCurrencyContainerId = 0; --In the case of multiple currency containers needing to displayed, we only display the first.
+		local warModeBonus = C_PvP.GetWarModeRewardBonus();
+
 		for i, currencyInfo in ipairs(currencies) do
 			local isCurrencyContainer = C_CurrencyInfo.IsCurrencyContainer(currencyInfo.currencyID, currencyInfo.numItems);
 			if ( currencyContainerTooltip and isCurrencyContainer and (alreadyUsedCurrencyContainerId == 0) ) then
 				if ( EmbeddedItemTooltip_SetCurrencyByID(currencyContainerTooltip, currencyInfo.currencyID, currencyInfo.numItems) ) then
-					if (C_PvP.IsWarModeDesired() and QuestUtils_IsQuestWorldQuest(questID) and C_QuestLog.QuestHasWarModeBonus(questID) and not C_CurrencyInfo.GetFactionGrantedByCurrency(currencyInfo.currencyID)) then
-						currencyContainerTooltip.Tooltip:AddLine(WAR_MODE_BONUS_PERCENTAGE);
+					if ShouldShowWarModeBonus(questID, currencyInfo.currencyID, currencyInfo.firstInstance) then
+						currencyContainerTooltip.Tooltip:AddLine(WAR_MODE_BONUS_PERCENTAGE_FORMAT:format(warModeBonus));
 						currencyContainerTooltip.Tooltip:Show();
 					end
+
 					if ( not tooltip ) then
 						break;
 					end
+
 					addedQuestCurrencies = addedQuestCurrencies + 1;
 					alreadyUsedCurrencyContainerId = currencyInfo.currencyID;
 				end
 			elseif ( tooltip ) then
 				if( alreadyUsedCurrencyContainerId ~= currencyInfo.currencyID ) then --if there's already a currency container of this same type skip it entirely
-					if isCurrencyContainer then
-						local text, color
-						if currencyInfo.currencyID == 1553 then	-- Azerite
-							text = format(BONUS_OBJECTIVE_ARTIFACT_XP_FORMAT, FormatLargeNumber(currencyInfo.numItems))
-							color = { r = 1, g = 1, b = 1 }
-						else
-							local name, texture, quantity, quality = CurrencyContainerUtil.GetCurrencyContainerInfo(currencyInfo.currencyID, currencyInfo.numItems);
-							text = BONUS_OBJECTIVE_REWARD_FORMAT:format(texture, name);
-							color = ITEM_QUALITY_COLORS[quality];
-						end
-						tooltip:AddLine(text, color.r, color.g, color.b);
+					local text, color
+					if currencyInfo.currencyID == 1553 then	-- Azerite
+						text = format(BONUS_OBJECTIVE_ARTIFACT_XP_FORMAT, FormatLargeNumber(currencyInfo.numItems))
+						color = { r = 1, g = 1, b = 1 }
 					else
-						local text = BONUS_OBJECTIVE_REWARD_WITH_COUNT_FORMAT:format(currencyInfo.texture, currencyInfo.numItems, currencyInfo.name);
-						local currencyColor = GetColorForCurrencyReward(currencyInfo.currencyID, currencyInfo.numItems);
-						tooltip:AddLine(text, currencyColor:GetRGB());
+						text = BONUS_OBJECTIVE_REWARD_WITH_COUNT_FORMAT:format(currencyInfo.texture, currencyInfo.numItems, currencyInfo.name)
+						color = GetColorForCurrencyReward(currencyInfo.currencyID, currencyInfo.numItems)
 					end
-					if (C_PvP.IsWarModeDesired() and QuestUtils_IsQuestWorldQuest(questID) and C_QuestLog.QuestHasWarModeBonus(questID) and not C_CurrencyInfo.GetFactionGrantedByCurrency(currencyInfo.currencyID)) then
-						tooltip:AddLine(WAR_MODE_BONUS_PERCENTAGE);
+					tooltip:AddLine(text, color.r, color.g, color.b)
+
+					if ShouldShowWarModeBonus(questID, currencyInfo.currencyID, currencyInfo.firstInstance) then
+						tooltip:AddLine(WAR_MODE_BONUS_PERCENTAGE_FORMAT:format(warModeBonus));
 					end
+
 					addedQuestCurrencies = addedQuestCurrencies + 1;
 				end
 			end
@@ -765,7 +934,8 @@ local function SetHooks()
 
 	hooksecurefunc(DEFAULT_OBJECTIVE_TRACKER_MODULE, "OnBlockHeaderEnter", function(self, block)
 		local colorStyle, _
-		if self == QUEST_TRACKER_MODULE then
+		if block.module == QUEST_TRACKER_MODULE or
+				block.module == CAMPAIGN_QUEST_TRACKER_MODULE then
 			if block.questCompleted then
 				colorStyle = OBJECTIVE_TRACKER_COLOR["CompleteHighlight"]
 			elseif db.colorDifficulty then
@@ -777,7 +947,9 @@ local function SetHooks()
 			block.HeaderText.colorStyle = colorStyle
 		end
 
-		if db.tooltipShow and (self == QUEST_TRACKER_MODULE or self == ACHIEVEMENT_TRACKER_MODULE) then
+		if db.tooltipShow and (block.module == QUEST_TRACKER_MODULE or
+				block.module == CAMPAIGN_QUEST_TRACKER_MODULE or
+				block.module == ACHIEVEMENT_TRACKER_MODULE) then
 			GameTooltip:SetOwner(block, "ANCHOR_NONE")
 			GameTooltip:ClearAllPoints()
 			if KTF.anchorLeft then
@@ -785,81 +957,15 @@ local function SetHooks()
 			else
 				GameTooltip:SetPoint("TOPRIGHT", block, "TOPLEFT", -32, 1)
 			end
-			if self == QUEST_TRACKER_MODULE then
+			if block.module == QUEST_TRACKER_MODULE or
+					block.module == CAMPAIGN_QUEST_TRACKER_MODULE then
 				GameTooltip:SetHyperlink(GetQuestLink(block.id))
 				if db.tooltipShowRewards then
-					local questLogIndex = GetQuestLogIndexByID(block.id)
-					SelectQuestLogEntry(questLogIndex)	-- for num Choices
-					if GetQuestLogRewardXP(block.id) > 0 or
-							GetQuestLogRewardMoney(block.id) > 0 or
-							GetQuestLogRewardArtifactXP(block.id) > 0 or
-							GetNumQuestLogRewardCurrencies(block.id) > 0 or
-							GetQuestLogRewardHonor(block.id) > 0 or
-							GetNumQuestLogRewards(block.id) > 0 or
-							GetNumQuestLogChoices() > 0 then
-						GameTooltip:AddLine("\n"..QUEST_REWARDS..":")
-						-- choices
-						local numQuestChoices = GetNumQuestLogChoices()
-						for i = 1, numQuestChoices do
-							local name, texture, numItems, quality, isUsable = GetQuestLogChoiceInfo(i)
-							local text
-							if numItems > 1 then
-								text = format(BONUS_OBJECTIVE_REWARD_WITH_COUNT_FORMAT, texture, numItems, name)
-							elseif texture and name then
-								text = format(BONUS_OBJECTIVE_REWARD_FORMAT, texture, name)
-							end
-							if text then
-								local color = ITEM_QUALITY_COLORS[quality]
-								GameTooltip:AddLine(text, color.r, color.g, color.b)
-							end
-						end
-						-- items
-						local numQuestRewards = GetNumQuestLogRewards(block.id)
-						for i = 1, numQuestRewards do
-							local name, texture, numItems, quality, isUsable = GetQuestLogRewardInfo(i, block.id)
-							local text
-							if numItems > 1 then
-								text = format(BONUS_OBJECTIVE_REWARD_WITH_COUNT_FORMAT, texture, numItems, name)
-							elseif texture and name then
-								text = format(BONUS_OBJECTIVE_REWARD_FORMAT, texture, name)
-							end
-							if text then
-								local color = ITEM_QUALITY_COLORS[quality]
-								GameTooltip:AddLine(text, color.r, color.g, color.b)
-							end
-						end
-						-- xp
-						local xp = GetQuestLogRewardXP(block.id)
-						if xp > 0 then
-							GameTooltip:AddLine(format(BONUS_OBJECTIVE_EXPERIENCE_FORMAT, FormatLargeNumber(xp).."|c0000ff00"), 1, 1, 1)
-						end
-						-- money
-						local money = GetQuestLogRewardMoney(block.id)
-						if money > 0 then
-							GameTooltip:AddLine(GetCoinTextureString(money, 12), 1, 1, 1)
-						end
-						-- artifact power
-						local artifactXP = GetQuestLogRewardArtifactXP(block.id)
-						if artifactXP > 0 then
-							GameTooltip:AddLine(format(BONUS_OBJECTIVE_ARTIFACT_XP_FORMAT, FormatLargeNumber(artifactXP)), 1, 1, 1)
-						end
-						-- currencies
-						local numQuestCurrencies = GetNumQuestLogRewardCurrencies(block.id)
-						for i = 1, numQuestCurrencies do
-							local name, texture, numItems, currencyID = GetQuestLogRewardCurrencyInfo(i, block.id)
-							if currencyID == 1553 then	-- Azerite
-								GameTooltip:AddLine(format(BONUS_OBJECTIVE_ARTIFACT_XP_FORMAT, FormatLargeNumber(numItems)), 1, 1, 1)
-							else
-								local currencyColor = GetColorForCurrencyReward(currencyID, numItems)
-								GameTooltip:AddLine(format(BONUS_OBJECTIVE_REWARD_WITH_COUNT_FORMAT, texture, numItems, name), currencyColor:GetRGB())
-							end
-						end
-						-- honor
-						local honorAmount = GetQuestLogRewardHonor(block.id)
-						if honorAmount > 0 then
-							GameTooltip:AddLine(format(BONUS_OBJECTIVE_REWARD_WITH_COUNT_FORMAT, "Interface\\ICONS\\Achievement_LegionPVPTier4", honorAmount, HONOR), 1, 1, 1)
-						end
-					end
+					KT.GameTooltip_AddQuestRewardsToTooltip(GameTooltip, block.id)
+				end
+				if IsInGroup() then
+					GameTooltip:AddLine(" ")
+					GameTooltip:SetQuestPartyProgress(block.id, true)
 				end
 			else
 				GameTooltip:SetHyperlink(GetAchievementLink(block.id))
@@ -877,10 +983,12 @@ local function SetHooks()
 			block.fixedTag.text:SetTextColor(colorStyle.r, colorStyle.g, colorStyle.b)
 		end
 	end)
+	Default_SetFunctionChanged("OnBlockHeaderEnter")
 
 	hooksecurefunc(DEFAULT_OBJECTIVE_TRACKER_MODULE, "OnBlockHeaderLeave", function(self, block)
 		local colorStyle
-		if self == QUEST_TRACKER_MODULE then
+		if block.module == QUEST_TRACKER_MODULE or
+				block.module == CAMPAIGN_QUEST_TRACKER_MODULE then
 			if block.questCompleted then
 				colorStyle = OBJECTIVE_TRACKER_COLOR["Complete"]
 			elseif db.colorDifficulty then
@@ -902,13 +1010,7 @@ local function SetHooks()
 			block.fixedTag.text:SetTextColor(colorStyle.r, colorStyle.g, colorStyle.b)
 		end
 	end)
-
-	hooksecurefunc(QUEST_TRACKER_MODULE, "OnBlockHeaderClick", function(self, block, mouseButton)
-		GameTooltip:Hide()
-	end)
-	hooksecurefunc(ACHIEVEMENT_TRACKER_MODULE, "OnBlockHeaderClick", function(self, block, mouseButton)
-		GameTooltip:Hide()
-	end)
+	Default_SetFunctionChanged("OnBlockHeaderLeave")
 
 	function KT_ObjectiveTrackerBlock_OnEnter(self)
 		self.module:OnBlockHeaderEnter(self)
@@ -923,8 +1025,16 @@ local function SetHooks()
 	end
 
 	local bck_ObjectiveTracker_AddBlock = ObjectiveTracker_AddBlock
-	ObjectiveTracker_AddBlock = function(block, forceAdd)
-		local blockAdded = bck_ObjectiveTracker_AddBlock(block, forceAdd)
+	ObjectiveTracker_AddBlock = function(block)
+		if block.module == SCENARIO_CONTENT_TRACKER_MODULE then
+			if block.currentBlock then
+				if BottomScenarioWidgetContainerBlock.height < 16.5 then
+					block.height = block.contentsHeight - BottomScenarioWidgetContainerBlock.height
+					block:SetHeight(block.height)
+				end
+			end
+		end
+		local blockAdded = bck_ObjectiveTracker_AddBlock(block)
 		if blockAdded then
 			if block.module == BONUS_OBJECTIVE_TRACKER_MODULE or block.module == WORLD_QUEST_TRACKER_MODULE then
 				block:SetWidth(OBJECTIVE_TRACKER_LINE_WIDTH + 4)
@@ -937,7 +1047,8 @@ local function SetHooks()
 		local colorStyle
 		if block.questCompleted then
 			colorStyle = OBJECTIVE_TRACKER_COLOR["Complete"]
-		elseif db.colorDifficulty and self == QUEST_TRACKER_MODULE then
+		elseif db.colorDifficulty and
+				(self == QUEST_TRACKER_MODULE or self == CAMPAIGN_QUEST_TRACKER_MODULE) then
 			colorStyle = GetQuestDifficultyColor(block.level)
 		end
 		if colorStyle then
@@ -945,6 +1056,26 @@ local function SetHooks()
 			block.HeaderText.colorStyle = colorStyle
 		end
 	end)
+	Default_SetFunctionChanged("FreeUnusedLines")
+
+	local function AddFixedTag(block, tag, buttonOffsetsTag)
+		if block.rightButton == tag then
+			return
+		end
+
+		tag:ClearAllPoints()
+
+		if block.rightButton then
+			tag:SetPoint("RIGHT", block.rightButton, "LEFT", -ObjectiveTracker_GetPaddingBetweenButtons(block), 0)
+		else
+			tag:SetPoint("TOPRIGHT", block, ObjectiveTracker_GetButtonOffsets(block, buttonOffsetsTag))
+		end
+
+		tag:Show()
+
+		block.rightButton = tag
+		block.lineWidth = block.lineWidth - tag:GetWidth() - ObjectiveTracker_GetPaddingBetweenButtons(block)
+	end
 
 	local function CreateFixedTag(block, x, y, anchor)
 		local tag = block.fixedTag
@@ -956,15 +1087,19 @@ local function SetHooks()
 				tag:SetParent(block)
 				tag:ClearAllPoints()
 			else
-				tag = CreateFrame("Frame", nil, block)
+				tag = CreateFrame("Frame", nil, block, "BackdropTemplate")
 				tag:SetSize(32, 32)
 				tag:SetBackdrop({ bgFile = mediaPath.."UI-KT-QuestItemTag" })
 				tag.text = tag:CreateFontString(nil, "ARTWORK", "GameFontNormalMed1")
 				tag.text:SetFont(LSM:Fetch("font", "Arial Narrow"), 13, "")
 				tag.text:SetPoint("CENTER", -0.5, 1)
 			end
-			tag:SetPoint(anchor or "TOPRIGHT", block, x, y)
-			tag:Show()
+			if not anchor then
+				AddFixedTag(block, tag, "useItem")
+			else
+				tag:SetPoint(anchor, block, x, y)
+				tag:Show()
+			end
 			block.fixedTag = tag
 		end
 
@@ -1003,7 +1138,7 @@ local function SetHooks()
 
 				button.Count = button:CreateFontString(name.."Count", "BORDER", "NumberFontNormal")
 				button.Count:SetJustifyH("RIGHT")
-				button.Count:SetPoint("BOTTOMRIGHT", button.icon, -3, 2)
+				button.Count:SetPoint("BOTTOMRIGHT", button.icon, 0, 2)
 
 				button.Cooldown = CreateFrame("Cooldown", name.."Cooldown", button, "CooldownFrameTemplate")
 				button.Cooldown:SetAllPoints()
@@ -1014,7 +1149,7 @@ local function SetHooks()
 				button.HotKey:SetText(RANGE_INDICATOR)
 				button.HotKey:SetPoint("TOPRIGHT", button.icon, 2, -2)
 
-				button.text = button:CreateFontString(name.."Text", "ARTWORK", "NumberFontNormalSmall")
+				button.text = button:CreateFontString(name.."Text", "ARTWORK", "NumberFontNormal")
 				button.text:SetSize(29, 10)
 				button.text:SetJustifyH("LEFT")
 				button.text:SetPoint("TOPLEFT", button.icon, 1, -3)
@@ -1057,101 +1192,122 @@ local function SetHooks()
 		end
 		button.block = block
 		button:SetAlpha(1)
-		if db.qiActiveButton and KTF.ActiveButton.questID == questID then
-			KT.ActiveButton:Update(questID)
-		end
 		return button
+	end
+
+	local function QuestItemButton_Add(block, x, y)
+		local questLogIndex = C_QuestLog.GetLogIndexForQuestID(block.id)
+		if not questLogIndex then return end
+
+		local link, item, charges, showItemWhenComplete = KT.GetQuestLogSpecialItemInfo(questLogIndex)
+		if item and (not block.questCompleted or showItemWhenComplete) then
+			block.itemButton:Hide()
+			block.rightButton = block.groupFinderButton
+			CreateFixedTag(block, x, y)
+			local button = CreateFixedButton(block)
+			if not InCombatLockdown() then
+				button:SetID(questLogIndex)
+				button.charges = charges
+				button.rangeTimer = -1
+				button.item = item
+				button.link = link
+				SetItemButtonTexture(button, item)
+				SetItemButtonCount(button, charges)
+				QuestObjectiveItem_UpdateCooldown(button)
+				button:SetAttribute("item", link)
+
+				if db.qiActiveButton and KTF.ActiveButton.questID == block.id then
+					KT.ActiveButton:Update(block.id)
+				end
+			end
+		else
+			KT:RemoveFixedButton(block)
+		end
 	end
 
 	hooksecurefunc(DEFAULT_OBJECTIVE_TRACKER_MODULE, "SetBlockHeader", function(self, block, text)
 		block.lineWidth = block.lineWidth or self.lineWidth - 8		-- mod default
 	end)
+	Default_SetFunctionChanged("SetBlockHeader", "QUEST_TRACKER_MODULE")
 
 	local bck_QUEST_TRACKER_MODULE_SetBlockHeader = QUEST_TRACKER_MODULE.SetBlockHeader
 	function QUEST_TRACKER_MODULE:SetBlockHeader(block, text, questLogIndex, isQuestComplete, questID)
-		local _, level, suggestedGroup, _, _, _, frequency, _ = GetQuestLogTitle(questLogIndex)
+		local questInfo = questLogIndex and C_QuestLog.GetInfo(questLogIndex) or {}
 		if db.questShowTags then
-			local tagID, _ = GetQuestTagInfo(questID)
-			text = KT:CreateQuestTag(level, tagID, frequency, suggestedGroup)..text
+			local tagInfo = KT.GetQuestTagInfo(questID)
+			text = KT:CreateQuestTag(questInfo.level, tagInfo.tagID, questInfo.frequency, questInfo.suggestedGroup)..text
 		end
 		bck_QUEST_TRACKER_MODULE_SetBlockHeader(self, block, text, questLogIndex, isQuestComplete, questID)
 		block.lineWidth = block.lineWidth or self.lineWidth - 8		-- mod default
-		block.level = level
+		block.level = questInfo.level
 		block.title = text
+		block.questCompleted = isQuestComplete
 
-		local link, item, charges, showItemWhenComplete = GetQuestLogSpecialItemInfo(questLogIndex)
-		if item and (not isQuestComplete or showItemWhenComplete) then
-			block.itemButton:Hide()
-			CreateFixedTag(block, 3, 4)
-			local button = CreateFixedButton(block)
-			if not InCombatLockdown() then
-				button:SetID(questLogIndex)
-				button.charges = charges
-				button.rangeTimer = -1
-				button.item = item
-				button.link = link
-				SetItemButtonTexture(button, item)
-				SetItemButtonCount(button, charges)
-				QuestObjectiveItem_UpdateCooldown(button)
-				button:SetAttribute("item", link)
+		QuestItemButton_Add(block, 3, 4)
+
+		local questsCache = dbChar.quests.cache
+		if db.questShowZones and questsCache[questID] then
+			local infoText = questsCache[questID].zone
+			if questsCache[questID].isCalling then
+				local timeRemaining = GetTaskTimeLeftData(questID)
+				if timeRemaining ~= "" then
+					infoText = infoText.." - "..timeRemaining
+				end
 			end
-		else
-			KT:RemoveFixedButton(block)
+			self:AddObjective(block, "Zone", infoText, nil, nil, OBJECTIVE_DASH_STYLE_HIDE, OBJECTIVE_TRACKER_COLOR["Zone"])
 		end
 	end
 
-	local bck_QUEST_TRACKER_MODULE_OnFreeBlock = QUEST_TRACKER_MODULE.OnFreeBlock
-	function QUEST_TRACKER_MODULE:OnFreeBlock(block)
+	function QUEST_TRACKER_MODULE:OnFreeBlock(block)  -- R
 		KT:RemoveFixedButton(block)
-		bck_QUEST_TRACKER_MODULE_OnFreeBlock(self, block)
-	end
+		if block.blockTemplate == "KT_ObjectiveTrackerBlockTemplate" then
+			QuestObjectiveReleaseBlockButton_Item(block);
+			QuestObjectiveReleaseBlockButton_FindGroup(block);
 
-	local function SetQuestItemButton(block)
-		local questLogIndex = GetQuestLogIndexByID(block.id)
-		local link, item, charges, showItemWhenComplete = GetQuestLogSpecialItemInfo(questLogIndex)
-		if item and (not isQuestComplete or showItemWhenComplete) then
-			block.itemButton:Hide()
-			CreateFixedTag(block, 0, 2)
-			local button = CreateFixedButton(block)
-			if not InCombatLockdown() then
-				button:SetID(questLogIndex)
-				button.charges = charges
-				button.rangeTimer = -1
-				button.item = item
-				button.link = link
-				SetItemButtonTexture(button, item)
-				SetItemButtonCount(button, charges)
-				QuestObjectiveItem_UpdateCooldown(button)
-				button:SetAttribute("item", link)
-			end
+			block.timerLine	= nil;
+			block.questCompleted = nil;
+			RemoveBlockIcon(block)
 		else
-			KT:RemoveFixedButton(block)
+			AutoQuestPopupTracker_OnFreeBlock(block);
 		end
 	end
+	CAMPAIGN_QUEST_TRACKER_MODULE.OnFreeBlock = QUEST_TRACKER_MODULE.OnFreeBlock
 
-	hooksecurefunc(WORLD_QUEST_TRACKER_MODULE, "Update", function(self)
-		local block, questID, questLogIndex
-		local tasksTable = GetTasksTable()
-		for i = 1, #tasksTable do
-			questID = tasksTable[i]
-			questLogIndex = GetQuestLogIndexByID(questID)
-			if questLogIndex > 0 and QuestUtils_IsQuestWorldQuest(questID) and not IsWorldQuestWatched(questID) then
-				block = self.usedBlocks[questID]
-				if block then
-					block.TrackedQuest:SetPoint("TOPLEFT", -2, 0)
-					SetQuestItemButton(block)
+	hooksecurefunc(QUEST_TRACKER_MODULE, "UpdatePOISingle", function(self, quest)
+		if quest:IsCalling() then
+			local questID = quest:GetID()
+			local block = self:GetExistingBlock(questID)
+			if block then
+				local covenantData = C_Covenants.GetCovenantData(C_Covenants.GetActiveCovenantID())
+				if covenantData then
+					local covenantIcon = GetBlockIcon(block)
+					covenantIcon.Icon:SetAtlas("shadowlands-landingbutton-"..covenantData.textureKit.."-up")
 				end
 			end
 		end
-		if self.ShowWorldQuests then
-			for i = 1, GetNumWorldQuestWatches() do
-				questID = GetWorldQuestWatchInfo(i)
-				if questID then
-					block = self.usedBlocks[questID]
-					if block then
-						block.TrackedQuest:SetPoint("TOPLEFT", -2, 0)
-						SetQuestItemButton(block)
-					end
+	end)
+	CAMPAIGN_QUEST_TRACKER_MODULE.UpdatePOISingle = QUEST_TRACKER_MODULE.UpdatePOISingle
+
+	hooksecurefunc(WORLD_QUEST_TRACKER_MODULE, "Update", function(self)
+		local block, questID
+		local tasksTable = GetTasksTable()
+		for i = 1, #tasksTable do
+			questID = tasksTable[i]
+			if KT.activeTasks[questID] and QuestUtils_IsQuestWorldQuest(questID) and not QuestUtils_IsQuestWatched(questID) then
+				block = self:GetExistingBlock(questID)
+				if block then
+					block.TrackedQuest:SetPoint("TOPLEFT", -2, 0)
+					QuestItemButton_Add(block, 0, 2)
+				end
+			end
+		end
+		for i = 1, C_QuestLog.GetNumWorldQuestWatches() do
+			questID = C_QuestLog.GetQuestIDForWorldQuestWatchIndex(i)
+			if questID then
+				block = self:GetExistingBlock(questID)
+				if block then
+					block.TrackedQuest:SetPoint("TOPLEFT", -2, 0)
+					QuestItemButton_Add(block, 0, 2)
 				end
 			end
 		end
@@ -1176,6 +1332,10 @@ local function SetHooks()
     end
 
 	hooksecurefunc("BonusObjectiveTracker_UntrackWorldQuest", function(questID)
+		local block = WORLD_QUEST_TRACKER_MODULE:GetExistingBlock(questID)
+		if block then
+			BonusObjectiveTracker_OnBlockAnimOutFinished(block.ScrollContents)
+		end
 		KT:ToggleEmptyTracker(not KT.IsTableEmpty(KT.activeTasks))
 	end)
 
@@ -1235,6 +1395,7 @@ local function SetHooks()
 		SetProgressBarStyle(progressBar)
 		return progressBar
 	end
+	Default_SetFunctionChanged("AddProgressBar", "SCENARIO_TRACKER_MODULE", "BONUS_OBJECTIVE_TRACKER_MODULE", "WORLD_QUEST_TRACKER_MODULE")
 
 	local bck_BONUS_OBJECTIVE_TRACKER_MODULE_AddProgressBar = BONUS_OBJECTIVE_TRACKER_MODULE.AddProgressBar
 	function BONUS_OBJECTIVE_TRACKER_MODULE:AddProgressBar(block, line, questID, finished)
@@ -1262,10 +1423,25 @@ local function SetHooks()
 		end
 	end)
 
-	local bck_BonusObjectiveTracker_ShowRewardsTooltip = BonusObjectiveTracker_ShowRewardsTooltip
-	BonusObjectiveTracker_ShowRewardsTooltip = function(block)
+	function BonusObjectiveTracker_ShowRewardsTooltip(block)  -- R
 		if db.tooltipShow then
-			bck_BonusObjectiveTracker_ShowRewardsTooltip(block)
+			local questID
+			if block.id < 0 then
+				-- this is a scenario bonus objective
+				questID = C_Scenario.GetBonusStepRewardQuestID(-block.id)
+				if questID == 0 then
+					-- huh, no reward
+					return
+				end
+			else
+				questID = block.id
+			end
+			local questLink = GetQuestLink(questID)
+			if not questLink then
+				return
+			end
+
+			GameTooltip:SetOwner(block, "ANCHOR_NONE")
 			GameTooltip:ClearAllPoints()
 			if KTF.anchorLeft then
 				GameTooltip:SetPoint("TOPLEFT", block, "TOPRIGHT", 12, -1)
@@ -1273,23 +1449,22 @@ local function SetHooks()
 				GameTooltip:SetPoint("TOPRIGHT", block, "TOPLEFT", -12, -1)
 			end
 
-			if block.module.ShowWorldQuests and HaveQuestData(block.id) and
-					GetQuestLogRewardXP(block.id) == 0 and
-					GetNumQuestLogRewardCurrencies(block.id) == 0 and
-					GetNumQuestLogRewards(block.id) == 0 and
-					GetQuestLogRewardMoney(block.id) == 0 and
-					GetQuestLogRewardArtifactXP(block.id) == 0 and
-					GetQuestLogRewardHonor(block.id) == 0 then
-				GameTooltip:SetOwner(block, "ANCHOR_PRESERVE")
-				GameTooltip:AddLine(RETRIEVING_DATA, RED_FONT_COLOR.r, RED_FONT_COLOR.g, RED_FONT_COLOR.b)
-				GameTooltip:Show()
-			elseif HaveQuestData(block.id) then
+			if not HaveQuestRewardData(questID) then
+				GameTooltip:AddLine(RETRIEVING_DATA, RED_FONT_COLOR.r, RED_FONT_COLOR.g, RED_FONT_COLOR.b);
+				GameTooltip_SetTooltipWaitingForData(GameTooltip, true);
+			else
+				GameTooltip:SetHyperlink(questLink)
+				if db.tooltipShowRewards then
+					KT.GameTooltip_AddQuestRewardsToTooltip(GameTooltip, questID, true)
+					GameTooltip_SetTooltipWaitingForData(GameTooltip, false);
+				end
 				if db.tooltipShowID then
 					GameTooltip:AddLine(" ")
-					GameTooltip:AddDoubleLine(" ", "ID: |cffffffff"..block.id)
-					GameTooltip:Show()
+					GameTooltip:AddDoubleLine(" ", "ID: |cffffffff"..questID)
 				end
 			end
+			GameTooltip:Show()
+			block.module.tooltipBlock = block
 		end
 	end
 
@@ -1330,6 +1505,10 @@ local function SetHooks()
 				button.spellID = spellInfo[i].spellID
 				button.Icon:SetTexture(spellInfo[i].spellIcon)
 				button:SetAttribute("spell", spellInfo[i].spellID)
+
+				if db.qiActiveButton and KTF.ActiveButton.questID == block.id then
+					KT.ActiveButton:Update(block.id)
+				end
 			end
 		end
 		for i = objectiveBlock.numSpells + 1, #objectiveBlock.spells do
@@ -1346,14 +1525,23 @@ local function SetHooks()
 		end
 	end)
 
-	hooksecurefunc(AUTO_QUEST_POPUP_TRACKER_MODULE, "EndLayout", function(self)
+	local function AutoQuestPopupTracker_ShouldDisplayQuest(questID, owningModule)
+		return not C_QuestLog.IsQuestBounty(questID) and owningModule:ShouldDisplayQuest(QuestCache:Get(questID));
+	end
+
+	hooksecurefunc("AutoQuestPopupTracker_Update", function(owningModule)
+		if SplashFrame:IsShown() then return end
+		if not owningModule.KTpopupSkinned then
+			owningModule:AddBlockOffset("AutoQuestPopUpBlockTemplate", -25, -4)
+			owningModule.KTpopupSkinned = true
+		end
 		for i = 1, GetNumAutoQuestPopUps() do
 			local questID, popUpType = GetAutoQuestPopUp(i)
-			if not IsQuestBounty(questID) then
-				local questTitle = GetQuestLogTitle(GetQuestLogIndexByID(questID))
+			if AutoQuestPopupTracker_ShouldDisplayQuest(questID, owningModule) then
+				local questTitle = C_QuestLog.GetTitleForQuestID(questID)
 				if questTitle and questTitle ~= "" then
-					local block = AUTO_QUEST_POPUP_TRACKER_MODULE:GetBlock(questID)
-					block.height = 68	-- fix
+					local block = owningModule:GetBlock(questID, "ScrollFrame", "AutoQuestPopUpBlockTemplate")
+					block.height = 68
 					local blockContents = block.ScrollChild
 					blockContents.QuestName:SetFont(KT.font, 14, "")
 					blockContents.BottomText:SetPoint("BOTTOM", 0, 7)
@@ -1362,7 +1550,7 @@ local function SetHooks()
 		end
 	end)
 
-	function ObjectiveTracker_Collapse()
+	function ObjectiveTracker_Collapse()  -- R
 		_DBG("--------------------------------")
 		_DBG("COLLAPSE")
 		OTF.collapsed = true
@@ -1371,9 +1559,10 @@ local function SetHooks()
 		KTF.MinimizeButton:GetNormalTexture():SetTexCoord(0, 0.5, 0, 0.25)
 		OTFHeader.Title:Show()
 		MSA_CloseDropDownMenus()
+		MawBuffs.List:Hide()
 	end
 
-	function ObjectiveTracker_Expand()
+	function ObjectiveTracker_Expand()  -- R
 		_DBG("--------------------------------")
 		_DBG("EXPAND")
 		OTF.collapsed = nil
@@ -1399,7 +1588,7 @@ local function SetHooks()
 		elseif state == "PRESENT" and not KT.activeTasks[block.id] then
 			_DBG(" - "..state)
 			KT.activeTasks[block.id] = true
-			if not IsWorldQuestWatched(block.id) then
+			if not QuestUtils_IsQuestWatched(block.id) then
 				KT:ToggleEmptyTracker(KT.initialized)
 			end
 		elseif state == "LEAVING" and KT.activeTasks[block.id] then
@@ -1411,8 +1600,25 @@ local function SetHooks()
 		end
 	end)
 
+	hooksecurefunc("GossipFrameUpdate", function()
+		local gossipQuests = C_GossipInfo.GetActiveQuests()
+		for _, questInfo in ipairs(gossipQuests) do
+			if dbChar.quests.cache[questInfo.questID] and not C_QuestLog.IsComplete(questInfo.questID) then
+				QuestsCache_UpdateProperty(questInfo.questID, "startMapID", KT.GetCurrentMapAreaID())
+			end
+		end
+	end)
+
+	QuestFrame:HookScript("OnShow", function(self)
+		local questID = GetQuestID()
+		if dbChar.quests.cache[questID] and not C_QuestLog.IsComplete(questID) then
+			QuestsCache_UpdateProperty(questID, "startMapID", KT.GetCurrentMapAreaID())
+		end
+	end)
+
 	local bck_ObjectiveTracker_ReorderModules = ObjectiveTracker_ReorderModules
 	ObjectiveTracker_ReorderModules = function()
+        --do return end --abyui82
 		local reorder = false
 		for i = 1, #OTF.MODULES do
 			if OTF.MODULES[i] ~= OTF.MODULES_UI_ORDER[i] then
@@ -1428,7 +1634,9 @@ local function SetHooks()
 	local bck_QuestPOI_GetButton = QuestPOI_GetButton
 	QuestPOI_GetButton = function(parent, questID, style, index)
 		local poiButton = bck_QuestPOI_GetButton(parent, questID, style, index)
-		poiButton.Glow.Show = function() end
+		if poiButton then
+			poiButton.Glow.SetShown = function() end
+		end
 		return poiButton
 	end
 
@@ -1451,10 +1659,10 @@ local function SetHooks()
 	end)
 
     --[[
-	function QuestMapFrame_OpenToQuestDetails(questID)	-- R
+	function QuestMapFrame_OpenToQuestDetails(questID)  -- R
 		local mapID = GetQuestUiMapID(questID);
 		if ( mapID == 0 ) then mapID = nil; end
-		OpenQuestLog(mapID);	-- fix Blizz bug
+		OpenQuestLog(mapID);  -- fix Blizz bug
 		QuestMapFrame_ShowQuestDetails(questID);
 	end
 	--]]
@@ -1482,7 +1690,7 @@ local function SetHooks()
 		if rangeTimer then
 			rangeTimer = rangeTimer - elapsed
 			if rangeTimer <= 0 then
-				local link, item, charges, showItemWhenComplete = GetQuestLogSpecialItemInfo(self:GetID())
+				local link, item, charges, showItemWhenComplete = KT.GetQuestLogSpecialItemInfo(self:GetID())
 				if charges and charges ~= self.charges then
 					ObjectiveTracker_Update(OBJECTIVE_TRACKER_UPDATE_MODULE_QUEST)
 					return
@@ -1540,27 +1748,63 @@ local function SetHooks()
 		PlaySound(SOUNDKIT.IG_MAINMENU_OPTION_CHECKBOX_ON);
 	end
 
+    local function AbyQuestLogPopupDetailFrame_Show(questLogIndex)
+
+    	local questID = C_QuestLog.GetInfo(questLogIndex).questID;
+    	if ( QuestLogPopupDetailFrame.questID == questID and QuestLogPopupDetailFrame:IsShown() ) then
+            QuestLogPopupDetailFrame:Hide(); --abyui
+    		return;
+    	end
+
+    	QuestLogPopupDetailFrame.questID = questID;
+
+        C_QuestLog.SetSelectedQuest(questID)
+    	StaticPopup_Hide("ABANDON_QUEST");
+    	StaticPopup_Hide("ABANDON_QUEST_WITH_ITEMS");
+        C_QuestLog.SetAbandonQuest();
+
+    	QuestMapFrame_UpdateQuestDetailsButtons();
+
+    	QuestLogPopupDetailFrame_Update(true);
+        --abyui
+        if InCombatLockdown() then
+            QuestLogPopupDetailFrame:Show()
+        else
+            ShowUIPanel(QuestLogPopupDetailFrame);
+        end
+    	PlaySound(SOUNDKIT.IG_QUEST_LOG_OPEN);
+
+    	-- portrait
+    	local questPortrait, questPortraitText, questPortraitName, questPortraitMount = GetQuestLogPortraitGiver();
+    	if (questPortrait and questPortrait ~= 0 and QuestLogShouldShowPortrait()) then
+    		QuestFrame_ShowQuestPortrait(QuestLogPopupDetailFrame, questPortrait, questPortraitMount, questPortraitText, questPortraitName, -3, -42);
+    	else
+    		QuestFrame_HideQuestPortrait();
+    	end
+    end
+
 	function QUEST_TRACKER_MODULE:OnBlockHeaderClick(block, mouseButton)  -- R
 		if ( ChatEdit_TryInsertQuestLinkForQuestID(block.id) ) then
 			return;
 		end
 
 		if ( mouseButton ~= "RightButton" ) then
-			MSA_CloseDropDownMenus();
 			if ( IsModifiedClick("QUESTWATCHTOGGLE") ) then
 				QuestObjectiveTracker_UntrackQuest(nil, block.id);
 			elseif IsModifiedClick(db.menuWowheadURLModifier) then
-				KT:ShowPopup("quest", block.id)
+				KT:Alert_WowheadURL("quest", block.id)
 			else
-				local questLogIndex = GetQuestLogIndexByID(block.id);
-				if ( IsQuestComplete(block.id) and GetQuestLogIsAutoComplete(questLogIndex) ) then
+				local quest = QuestCache:Get(block.id);
+				if quest.isAutoComplete and quest:IsComplete() then
 					AutoQuestPopupTracker_RemovePopUp(block.id);
-					ShowQuestComplete(questLogIndex);
+					ShowQuestComplete(block.id);
 				else
 					if db.questDefaultActionMap then
+                        if InCombatLockdown() and not WorldMapFrame:IsShown() then WorldMapFrame:Show() end
                         QuestMapFrame_OpenToQuestDetails(block.id);
 					else
-						QuestLogPopupDetailFrame_Show(questLogIndex);
+						local questLogIndex = C_QuestLog.GetLogIndexForQuestID(block.id);
+                        AbyQuestLogPopupDetailFrame_Show(questLogIndex);
 					end
 				end
 			end
@@ -1569,13 +1813,13 @@ local function SetHooks()
 			ObjectiveTracker_ToggleDropDown(block, QuestObjectiveTracker_OnOpenDropDown);
 		end
 	end
+	CAMPAIGN_QUEST_TRACKER_MODULE.OnBlockHeaderClick = QUEST_TRACKER_MODULE.OnBlockHeaderClick
 
 	function QuestObjectiveTracker_OnOpenDropDown(self)  -- R
 		local block = self.activeFrame;
-		local questLogIndex = GetQuestLogIndexByID(block.id);
 
 		local info = MSA_DropDownMenu_CreateInfo();
-		info.text = GetQuestLogTitle(questLogIndex);
+		info.text = C_QuestLog.GetTitleForQuestID(block.id);
 		info.isTitle = 1;
 		info.notCheckable = 1;
 		MSA_DropDownMenu_AddButton(info, MSA_DROPDOWN_MENU_LEVEL);
@@ -1597,7 +1841,7 @@ local function SetHooks()
 		info.noClickSound = 1;
 		MSA_DropDownMenu_AddButton(info, MSA_DROPDOWN_MENU_LEVEL);
 
-		if ( GetQuestLogPushable(questLogIndex) and IsInGroup() ) then
+		if ( C_QuestLog.IsPushableQuest(block.id) and IsInGroup() ) then
 			info.text = SHARE_QUEST;
 			info.func = QuestObjectiveTracker_ShareQuest;
 			info.arg1 = block.id;
@@ -1614,9 +1858,16 @@ local function SetHooks()
 
 		info.disabled = false;
 
+		if C_QuestLog.CanAbandonQuest(block.id) then
+			info.text = ABANDON_QUEST;
+			info.func = function(_, questID) QuestMapQuestOptions_AbandonQuest(questID) end;
+			info.arg1 = block.id;
+			MSA_DropDownMenu_AddButton(info, MSA_DROPDOWNMENU_MENU_LEVEL);
+		end
+
 		if db.menuWowheadURL then
 			info.text = "|cff33ff99Wowhead|r URL";
-			info.func = KT.ShowPopup;
+			info.func = KT.Alert_WowheadURL;
 			info.arg1 = "quest";
 			info.arg2 = block.id;
 			info.checked = false;
@@ -1631,14 +1882,13 @@ local function SetHooks()
 				ChatEdit_InsertLink(achievementLink);
 			end
 		elseif ( mouseButton ~= "RightButton" ) then
-			MSA_CloseDropDownMenus();
 			if ( not AchievementFrame ) then
 				AchievementFrame_LoadUI();
 			end
 			if ( IsModifiedClick("QUESTWATCHTOGGLE") ) then
 				AchievementObjectiveTracker_UntrackAchievement(_, block.id);
 			elseif IsModifiedClick(db.menuWowheadURLModifier) then
-				KT:ShowPopup("achievement", block.id)
+				KT:Alert_WowheadURL("achievement", block.id)
 			elseif ( not AchievementFrame:IsShown() ) then
 				AchievementFrame_ToggleAchievementFrame();
 				AchievementFrame_SelectAchievement(block.id);
@@ -1684,7 +1934,7 @@ local function SetHooks()
 
 		if db.menuWowheadURL then
 			info.text = "|cff33ff99Wowhead|r URL";
-			info.func = KT.ShowPopup;
+			info.func = KT.Alert_WowheadURL;
 			info.arg1 = "achievement";
 			info.arg2 = block.id;
 			info.checked = false;
@@ -1692,36 +1942,35 @@ local function SetHooks()
 		end
 	end
 
-	function BonusObjectiveTracker_OnBlockClick(self, button)	-- R
-		if self.module.ShowWorldQuests then
-			if button == "LeftButton" then
-				if ( not ChatEdit_TryInsertQuestLinkForQuestID(self.TrackedQuest.questID) ) then
-					MSA_CloseDropDownMenus();
-					if IsShiftKeyDown() then
-						if IsWorldQuestWatched(self.TrackedQuest.questID) then
-							BonusObjectiveTracker_UntrackWorldQuest(self.TrackedQuest.questID);
-						end
-					elseif IsModifiedClick(db.menuWowheadURLModifier) then
-						KT:ShowPopup("quest", self.TrackedQuest.questID)
-					else
-						local mapID = C_TaskQuest.GetQuestZoneID(self.TrackedQuest.questID);
-						if mapID then
-							QuestMapFrame_CloseQuestDetails();
-							OpenQuestLog(mapID);
-							WorldMapPing_StartPingQuest(self.TrackedQuest.questID);
-						end
+	function BonusObjectiveTracker_OnBlockClick(self, button)  -- R
+		local questID = self.TrackedQuest and self.TrackedQuest.questID or self.id;
+		local isThreatQuest = C_QuestLog.IsThreatQuest(questID);
+		if button == "LeftButton" then
+			if ( not ChatEdit_TryInsertQuestLinkForQuestID(questID) ) then
+				if IsShiftKeyDown() then
+					if QuestUtils_IsQuestWatched(questID) and not isThreatQuest then
+						BonusObjectiveTracker_UntrackWorldQuest(questID);
+					end
+				elseif IsModifiedClick(db.menuWowheadURLModifier) then
+					KT:Alert_WowheadURL("quest", questID)
+				else
+					local mapID = C_TaskQuest.GetQuestZoneID(questID);
+					if mapID then
+						QuestMapFrame_CloseQuestDetails();
+						OpenQuestLog(mapID);
+						WorldMapPing_StartPingQuest(questID);
 					end
 				end
-			elseif button == "RightButton" then
-				ObjectiveTracker_ToggleDropDown(self, BonusObjectiveTracker_OnOpenDropDown);
 			end
+		elseif button == "RightButton" then
+			ObjectiveTracker_ToggleDropDown(self, BonusObjectiveTracker_OnOpenDropDown);
 		end
 	end
 
 	function BonusObjectiveTracker_OnOpenDropDown(self)  -- R
 		local block = self.activeFrame;
-		local questID = block.TrackedQuest.questID;
-		local addStopTracking = IsWorldQuestWatched(questID);
+		local questID = block.TrackedQuest and block.TrackedQuest.questID or block.id;
+		local addStopTracking = QuestUtils_IsQuestWatched(questID);
 
 		-- Ensure at least one option will appear before showing the dropdown.
 		if not addStopTracking and not db.menuWowheadURL then
@@ -1730,18 +1979,17 @@ local function SetHooks()
 
 		-- Add title
 		local info = MSA_DropDownMenu_CreateInfo();
-		info.text = C_TaskQuest.GetQuestInfoByQuestID(questID);
+		info.text = C_TaskQuest.GetQuestInfoByQuestID(questID) or block.title;  -- fix Blizz bug
 		info.isTitle = 1;
 		info.notCheckable = 1;
 		MSA_DropDownMenu_AddButton(info, MSA_DROPDOWN_MENU_LEVEL);
 
 		-- Add "stop tracking"
-		if IsWorldQuestWatched(questID) then
+		if QuestUtils_IsQuestWatched(questID) then
 			info = MSA_DropDownMenu_CreateInfo();
 			info.notCheckable = true;
 			info.text = OBJECTIVES_STOP_TRACKING;
 			info.func = function()
-				--KT_BonusObjectiveTracker_UntrackWorldQuest(questID);
 				BonusObjectiveTracker_UntrackWorldQuest(questID);
 			end
 			MSA_DropDownMenu_AddButton(info, MSA_DROPDOWN_MENU_LEVEL);
@@ -1751,18 +1999,84 @@ local function SetHooks()
 			info = MSA_DropDownMenu_CreateInfo();
 			info.notCheckable = true;
 			info.text = "|cff33ff99Wowhead|r URL";
-			info.func = KT.ShowPopup;
+			info.func = KT.Alert_WowheadURL;
 			info.arg1 = "quest";
 			info.arg2 = questID;
 			info.checked = false;
 			MSA_DropDownMenu_AddButton(info, MSA_DROPDOWN_MENU_LEVEL);
 		end
 	end
+
+	-- Headers
+	hooksecurefunc(QUEST_TRACKER_MODULE.Header, "UpdateHeader", function(self)
+		self.module.title = self.Text:GetText()
+		KT:SetQuestsHeaderText()
+	end)
+
+	-- Torghast
+	hooksecurefunc(UIWidgetTemplateStatusBarMixin, "Setup", function(self, widgetInfo, widgetContainer)
+		if self.isJailersTowerBar then
+			if not self.KTskinned then
+				local bck_Bar_OnEnter = self.Bar:GetScript("OnEnter")
+				self.Bar:SetScript("OnEnter", function(self)
+					if KTF.anchorLeft then
+						self:SetTooltipLocation(Enum.UIWidgetTooltipLocation.Right)
+						self.tooltipXOffset = 17
+					else
+						self:SetTooltipLocation(Enum.UIWidgetTooltipLocation.Left)
+						self.tooltipXOffset = -19
+					end
+					self.tooltipYOffset = 0
+					bck_Bar_OnEnter(self)
+				end)
+				self.KTskinned = true
+			end
+		end
+	end)
+
+	hooksecurefunc(UIWidgetTemplateStatusBarMixin, "EvaluateTutorials", function(self)
+		if self.isJailersTowerBar then
+			HelpTip:Hide(self, TORGHAST_DOMINANCE_BAR_TIP)
+			HelpTip:Hide(self, TORGHAST_DOMINANCE_BAR_CUTOFF_TIP)
+		end
+	end)
+
+	local bck_UIWidgetTemplateSpacerMixin_Setup = UIWidgetTemplateSpacerMixin.Setup
+	function UIWidgetTemplateSpacerMixin:Setup(widgetInfo, widgetContainer)
+		if widgetContainer.widgetSetID ~= 252 then
+			bck_UIWidgetTemplateSpacerMixin_Setup(self, widgetInfo, widgetContainer)
+		end
+	end
+
+	MawBuffs.List:SetScript("OnShow", function(self)  -- R
+		self.button:SetPushedAtlas("jailerstower-animapowerbutton-normalpressed", true)
+		self.button:SetHighlightAtlas("jailerstower-animapowerbutton-highlight", true)
+		self.button:SetWidth(253)
+		self.button:SetButtonState("NORMAL")
+		self.button:SetPushedTextOffset(1.25, -1)
+		self.button:SetButtonState("PUSHED", true)
+
+		self:ClearAllPoints()
+		if KTF.anchorLeft then
+			self:SetPoint("TOPLEFT", self.button, "TOPRIGHT", 15, 1)
+		else
+			self:SetPoint("TOPRIGHT", self.button, "TOPLEFT", -5, 1)
+		end
+	end)
+
+	MawBuffs.UpdateHelptip = function() end
 end
 
 --------------
 -- External --
 --------------
+
+function KT_WorldQuestPOIButton_OnClick(self)
+	local questID = self.questID
+	PlaySound(SOUNDKIT.IG_MAINMENU_OPTION_CHECKBOX_ON)
+	C_SuperTrack.SetSuperTrackedQuestID(questID)
+	WorldMapPing_StartPingQuest(questID)
+end
 
 function KT:SetSize()
 	local height = 33
@@ -1776,6 +2090,10 @@ function KT:SetSize()
 
 	_DBG(" - height = "..OTF.BlocksFrame.contentsHeight)
 	if not dbChar.collapsed and not self:IsTrackerEmpty() then
+		-- width
+		KTF:SetWidth(trackerWidth)
+
+		-- height
 		if BONUS_OBJECTIVE_TRACKER_MODULE.firstBlock then
 			mod = mod + BONUS_OBJECTIVE_TRACKER_MODULE.blockPadding
 		end
@@ -1810,8 +2128,26 @@ function KT:SetSize()
 		end
 		self:MoveButtons()
 	else
+		-- width
+		if db.hdrCollapsedTxt == 1 then
+			local width = 35
+			if KTF.FilterButton then
+				width = width + 20
+			end
+			if db.hdrOtherButtons then
+				width = width + (2 * 20)
+			end
+			KTF:SetWidth(width)
+		else
+			KTF:SetWidth(trackerWidth)
+		end
+
+		-- height
 		OTF.height = height - 10
 		OTF:SetHeight(OTF.height)
+        if OTF.BlocksFrame.contentsHeight == 0 then
+            KTF.Scroll.value = 0
+        end
 		KTF.Scroll:SetVerticalScroll(0)
 		if db.frameScrollbar then
 			KTF.Bar:Hide()
@@ -1823,9 +2159,25 @@ function KT:SetSize()
 	end
 end
 
+if CoreDependCall then
+    CoreDependCall("Blizzard_MawBuffs", function()
+        SetOrHookScript(MawBuffsBelowMinimapFrame, "OnShow", function() KT:MoveTracker() end)
+        SetOrHookScript(MawBuffsBelowMinimapFrame, "OnHide", function() KT:MoveTracker() end)
+    end)
+end
+
 function KT:MoveTracker()
 	KTF:ClearAllPoints()
 	KTF:SetPoint(db.anchorPoint, UIParent, db.anchorPoint, db.xOffset, db.yOffset)
+    if MawBuffsBelowMinimapFrame and MawBuffsBelowMinimapFrame:IsShown() then
+        if CoreIsFrameIntersects(MawBuffsBelowMinimapFrame, KTF) then
+            local delta = KTF:GetTop() - MawBuffsBelowMinimapFrame:GetBottom()
+            if delta > 0 and KTF:GetBottom() < MawBuffsBelowMinimapFrame:GetTop() and
+                    (KTF:GetTop() <= MawBuffsBelowMinimapFrame:GetTop() + 50) then
+                KTF:SetPoint(db.anchorPoint, UIParent, db.anchorPoint, db.xOffset, db.yOffset - delta)
+            end
+        end
+    end
 	KTF.directionUp = (db.anchorPoint == "BOTTOMLEFT" or db.anchorPoint == "BOTTOMRIGHT")
 	KTF.anchorLeft = (db.anchorPoint == "TOPLEFT" or db.anchorPoint == "BOTTOMLEFT")
 
@@ -1903,8 +2255,6 @@ end
 function KT:SetText()
 	self.font = LSM:Fetch("font", db.font)
 
-	KT_OBJECTIVE_TRACKER_DOUBLE_LINE_HEIGHT = (2 * db.fontSize) + 1
-
 	-- Headers
 	SetHeaders("text")
 	-- Others
@@ -1912,13 +2262,25 @@ function KT:SetText()
 end
 
 function KT:SaveHeader(module)
+	if not module.Header then return end
+	module.Header.Text:SetWidth(165)
+	module.Header.PlayAddAnimation = function() end
+	module.Header.LineGlow:Hide()
+	module.Header.SoftGlow:Hide()
+	module.Header.StarBurst:Hide()
+	module.Header.LineSheen:Hide()
+	if module == BONUS_OBJECTIVE_TRACKER_MODULE or module == WORLD_QUEST_TRACKER_MODULE then
+		module.Header.TopShadow:Hide()
+		module.Header.BottomShadow:Hide()
+	end
+	module.Header.MinimizeButton:SetShown(false)
+	module.Header.MinimizeButton.SetShown = function() end
 	tinsert(KT.headers, module.Header)
 	module.title = module.Header.Text:GetText()
-	module.Header.Text:SetWidth(165)
 end
 
 function KT:SetHeaderText(module, append)
-	local text = module.title
+	local text = module.title or ""
 	if append then
 		text = format("%s (%s)", text, append)
 	end
@@ -1927,8 +2289,7 @@ end
 
 function KT:SetQuestsHeaderText(reset)
 	if db.hdrQuestsTitleAppend then
-		local _, numQuests = GetNumQuestLogEntries()
-		self:SetHeaderText(QUEST_TRACKER_MODULE, numQuests.."/"..MAX_QUESTS)
+		self:SetHeaderText(QUEST_TRACKER_MODULE, dbChar.quests.num.."/"..MAX_QUESTS)
 	elseif reset then
 		self:SetHeaderText(QUEST_TRACKER_MODULE)
 	end
@@ -2095,35 +2456,37 @@ function KT:CreateQuestTag(level, questTag, frequency, suggestedGroup)
 		level = tostring(level)
 	end
 
-	if questTag == Enum.QuestTag.Group then
-		tag = "g"
-		if suggestedGroup > 0 then
-			tag = tag..suggestedGroup
+	if questTag then
+		if questTag == Enum.QuestTag.Group then
+			tag = "g"
+			if suggestedGroup > 0 then
+				tag = tag..suggestedGroup
+			end
+		elseif questTag == Enum.QuestTag.PvP then
+			tag = "pvp"
+		elseif questTag == Enum.QuestTag.Dungeon then
+			tag = "d"
+		elseif questTag == Enum.QuestTag.Heroic then
+			tag = "hc"
+		elseif questTag == Enum.QuestTag.Raid then
+			tag = "r"
+		elseif questTag == Enum.QuestTag.Raid10 then
+			tag = "r10"
+		elseif questTag == Enum.QuestTag.Raid25 then
+			tag = "r25"
+		elseif questTag == Enum.QuestTag.Scenario then
+			tag = "s"
+		elseif questTag == Enum.QuestTag.Account then
+			tag = "a"
+		elseif questTag == Enum.QuestTag.Legendary then
+			tag = "leg"
 		end
-	elseif questTag == Enum.QuestTag.Pvp then
-		tag = "pvp"
-	elseif questTag == Enum.QuestTag.Dungeon then
-		tag = "d"
-	elseif questTag == Enum.QuestTag.Heroic then
-		tag = "hc"
-	elseif questTag == Enum.QuestTag.Raid then
-		tag = "r"
-	elseif questTag == Enum.QuestTag.Raid10 then
-		tag = "r10"
-	elseif questTag == Enum.QuestTag.Raid25 then
-		tag = "r25"
-	elseif questTag == Enum.QuestTag.Scenario then
-		tag = "s"
-	elseif questTag == Enum.QuestTag.Account then
-		tag = "a"
-	elseif questTag == Enum.QuestTag.Legendary then
-		tag = "leg"
 	end
 
-	if frequency == 2 then
-		tag = tag.."!"	-- daily quest
-	elseif frequency == 3 then
-		tag = tag.."!!"	-- weekly quest
+	if frequency == Enum.QuestFrequency.Daily then
+		tag = tag.."!"
+	elseif frequency == Enum.QuestFrequency.Weekly then
+		tag = tag.."!!"
 	end
 
 	if tag ~= "" then
@@ -2135,11 +2498,11 @@ function KT:CreateQuestTag(level, questTag, frequency, suggestedGroup)
 end
 
 function KT:IsTrackerEmpty(noaddon)
-	local result = (GetNumQuestWatches() == 0 and
+	local result = (KT.GetNumQuestWatches() == 0 and
 		GetNumAutoQuestPopUps() == 0 and
 		GetNumTrackedAchievements() == 0 and
 		self.IsTableEmpty(self.activeTasks) and
-		GetNumWorldQuestWatches() == 0 and
+		C_QuestLog.GetNumWorldQuestWatches() == 0 and
 		not self.inScenario)
 	if not noaddon then
 		result = (result and not self.AddonPetTracker:IsShown())
@@ -2151,7 +2514,7 @@ function KT:ToggleEmptyTracker(added)
 	local alpha, mouse = 1, true
 	if self:IsTrackerEmpty() then
 		if not dbChar.collapsed then
-			ObjectiveTracker_MinimizeButton_OnClick()
+			ObjectiveTracker_Toggle()
 		end
 		KTF.MinimizeButton:GetNormalTexture():SetTexCoord(0, 0.5, 0.5, 0.75)
 		if db.hideEmptyTracker then
@@ -2161,7 +2524,7 @@ function KT:ToggleEmptyTracker(added)
 	else
 		if dbChar.collapsed then
 			if added then
-				ObjectiveTracker_MinimizeButton_OnClick()
+				ObjectiveTracker_Toggle()
 			else
 				KTF.MinimizeButton:GetNormalTexture():SetTexCoord(0, 0.5, 0, 0.25)
 			end
@@ -2181,6 +2544,7 @@ function KT:ToggleEmptyTracker(added)
 end
 
 function KT:SetMessage(text, r, g, b, pattern, icon, x, y)
+    if not text then return end
 	if pattern then
 		text = format(pattern, text.." ...")
 	end
@@ -2220,40 +2584,6 @@ function KT:MergeTables(source, target)
 	return target
 end
 
-StaticPopupDialogs[addonName.."_WowheadURL"] = {
-	text = "|T"..mediaPath.."KT_logo:22:22:0:-1|t"..NORMAL_FONT_COLOR_CODE..KT.title.."|r - Wowhead URL",
-	button2 = CLOSE,
-	hasEditBox = 1,
-	editBoxWidth = 300,
-	EditBoxOnEnterPressed = function(self)
-		self:GetParent():Hide()
-	end,
-	EditBoxOnEscapePressed = function(self)
-		self:GetParent():Hide()
-	end,
-	OnShow = function(self)
-		local name = "..."
-		if self.text.text_arg1 == "quest" then
-			name = QuestUtils_GetQuestName(self.text.text_arg2)
-		elseif self.text.text_arg1 == "achievement" then
-			name = select(2, GetAchievementInfo(self.text.text_arg2))
-		end
-		local www = KT.locale:sub(1, 2)
-		if www == "zh" then www = "cn" end
-		self.text:SetText(self.text:GetText().."\n|cffff7f00"..name.."|r")
-		self.editBox:SetText("http://"..www..".wowhead.com/"..self.text.text_arg1.."="..self.text.text_arg2)
-		self.editBox:SetFocus()
-		self.editBox:HighlightText()
-	end,
-	timeout = 0,
-	whileDead = 1,
-	hideOnEscape = 1
-}
-
-function KT:ShowPopup(type, id)
-	StaticPopup_Show(addonName.."_WowheadURL", type, id)
-end
-
 -- Load ----------------------------------------------------------------------------------------------------------------
 
 function KT:OnInitialize()
@@ -2278,9 +2608,10 @@ function KT:OnInitialize()
 	self.activeTasks = {}
 	self.inWorld = false
 	self.inInstance = IsInInstance()
-	self.inScenario = C_Scenario.IsInScenario()
+	self.inScenario = C_Scenario.IsInScenario() and not KT.IsScenarioHidden()
 	self.stopUpdate = true
 	self.questStateStopUpdate = false
+	self.locked = false
 	self.wqInitialized = false
 	self.initialized = false
 
@@ -2288,9 +2619,9 @@ function KT:OnInitialize()
 	self:SetupOptions()
 	db = self.db.profile
 	dbChar = self.db.char
+	--KT:Alert_ResetIncompatibleProfiles("4.2.5")
 
 	-- Blizzard frame resets
-	OTF.IsUserPlaced = function() return true end
 	OTF.KTSetParent = OTF.SetParent
 	OTF.SetParent = function() end
 	OTF.SetFrameStrata = function() end
@@ -2305,15 +2636,17 @@ function KT:OnInitialize()
 	OTF.ClearAllPoints = function() end
 	OTF.SetAllPoints = function() end
 	OTF.KTSetPoint = OTF.SetPoint
-	OTF.SetPoint = function() end
-	OTF:Show()
-	OTF.Show = function() end
-	OTF.Hide = function() end
 	OTF.SetShown = function() end
+	OTF:Show()
 end
 
 function KT:OnEnable()
 	_DBG("|cff00ff00Enable|r - "..self:GetName(), true)
+
+	-- Blizzard frame resets
+	OTF.IsUserPlaced = function() return true end
+	OTF.SetPoint = function() end
+
 	SetFrames()
 	SetHooks()
 
@@ -2331,4 +2664,18 @@ function KT:OnEnable()
 
 	self.screenWidth = round(GetScreenWidth())
 	self.screenHeight = round(GetScreenHeight())
+
+	local i = 1
+	local isChange = false
+	while i <= #db.modulesOrder do
+		if _G[db.modulesOrder[i]] then
+			i = i + 1
+		else
+			tremove(db.modulesOrder, i)
+			isChange = true
+		end
+	end
+	if isChange then
+		self.db:RegisterDefaults(self.db.defaults)
+	end
 end

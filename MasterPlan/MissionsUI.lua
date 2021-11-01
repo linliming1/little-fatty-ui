@@ -1,7 +1,9 @@
 local _, T = ...
 if T.Mark ~= 50 then return end
 local L, EV, G, api = T.L, T.Evie, T.Garrison, {}
-local GameTooltip = AltGameTooltip or GameTooltip
+
+local Nine = T.Nine or _G
+local C_Garrison = Nine.C_Garrison
 
 local function HookOnShow(self, OnShow)
 	self:HookScript("OnShow", OnShow)
@@ -167,7 +169,7 @@ local GetAvailableResources do
 	end
 	function GetAvailableResources(ftID, dropCost, missions)
 		if ftID ~= ctID then
-			local n, _, r = 0, GetCurrencyInfo(ftID == 1 and GARRISON_CURRENCY or 1101)
+			local n, _, r = 0, Nine.GetCurrencyInfo(ftID == 1 and GARRISON_CURRENCY or 1101)
 			for k,v in pairs(G.GetFollowerInfo()) do
 				if v.isCombat and v.followerTypeID == ftID and (v.status == GARRISON_FOLLOWER_IN_PARTY or v.status == nil) and not T.config.ignore[v.followerID] and not G.GetFollowerTentativeMission(v.followerID) then
 					n = n + 1
@@ -194,9 +196,6 @@ MISSION_PAGE_FRAME.StartMissionButton:SetScript("OnClick", function()
 	PlaySound(SOUNDKIT.UI_GARRISON_COMMAND_TABLE_MISSION_START)
 	GarrisonMissionFrame:CloseMission()
 	RefreshAvailMissionsView(true)
-	if (not GetCVarBitfield("closedInfoFrames", LE_FRAME_TUTORIAL_GARRISON_LANDING)) then
-		GarrisonLandingPageTutorialBox:Show()
-	end
 end)
 
 do -- CreateLoader(parent, W, G, H)
@@ -540,9 +539,7 @@ local activeUI = CreateFrame("Frame", nil, missionList) do
 				local f = popup
 				f:SetFrameStrata("DIALOG")
 				f:SetSize(260, 68)
-				f:SetBackdrop({edgeFile="Interface/Tooltips/UI-Tooltip-Border", bgFile="Interface/DialogFrame/UI-DialogBox-Background-Dark", tile=true, edgeSize=16, tileSize=16, insets={left=4,right=4,bottom=4,top=4}})
-				f:SetBackdropColor(0,0,0, 0.95)
-				f:SetBackdropBorderColor(0.75,0.75,0.75)
+				T.CreateEdge(f, {edgeFile="Interface/Tooltips/UI-Tooltip-Border", bgFile="Interface/DialogFrame/UI-DialogBox-Background-Dark", tile=true, edgeSize=16, tileSize=16, insets={left=4,right=4,bottom=4,top=4}}, 0xf2000000, 0xffbfbfbf)
 				f:SetHitRectInsets(-4, -4, 0, -4)
 				f:EnableMouse(true)
 				f:Hide()
@@ -554,7 +551,7 @@ local activeUI = CreateFrame("Frame", nil, missionList) do
 				s:SetSize(236, 17)
 				s:SetPoint("TOP", 0, -42)
 				s:SetHitRectInsets(0,0,-10,-10)
-				s:SetBackdrop({bgFile="Interface\\Buttons\\UI-SliderBar-Background", edgeFile="Interface\\Buttons\\UI-SliderBar-Border", tile=true, edgeSize=8, tileSize=8, insets={left=3,right=3,top=6,bottom=6}})
+				T.CreateEdge(s, {bgFile="Interface\\Buttons\\UI-SliderBar-Background", edgeFile="Interface\\Buttons\\UI-SliderBar-Border", tile=true, edgeSize=8, tileSize=8, insets={left=3,right=3,top=6,bottom=6}})
 				s:SetThumbTexture("Interface\\Buttons\\UI-SliderBar-Button-Horizontal")
 				local tt = s:GetThumbTexture()
 				tt:SetSize(24,32)
@@ -900,7 +897,7 @@ local activeUI = CreateFrame("Frame", nil, missionList) do
 				elseif self.itemID then
 					link = select(2, GetItemInfo(self.itemID))
 				elseif self.currencyID and self.currencyID > 0 then
-					link = GetCurrencyLink(self.currencyID)
+					link = Nine.GetCurrencyLink(self.currencyID, tonumber(self.Quantity:GetText() or 1) or 1)
 				end
 				if link then
 					ChatEdit_InsertLink(link)
@@ -958,7 +955,7 @@ local activeUI = CreateFrame("Frame", nil, missionList) do
 				icon, tooltipHeader, tooltipText = "Interface\\Icons\\INV_Misc_Coin_02", GARRISON_REWARD_MONEY, GetMoneyString(v.quantity)
 				quantity = floor(quantity/10000)
 			elseif v.currencyID then
-				_, _, icon = GetCurrencyInfo(v.currencyID)
+				_, _, icon = Nine.GetCurrencyInfo(v.currencyID)
 			end
 			if icon then
 				local ib = lootContainer.items[ni]
@@ -1174,7 +1171,7 @@ local availUI = CreateFrame("Frame", nil, missionList) do
 			end
 		end
 		local function cmp(a,b)
-			local am, bm = a.level == 100 and a.quality > 3, b.level == 100 and b.quality > 3
+			local am, bm = a.level == T.FOLLOWER_LEVEL_CAP and a.quality > 3, b.level == T.FOLLOWER_LEVEL_CAP and b.quality > 3
 			if am ~= bm then
 				return bm
 			elseif a.level ~= b.level then
@@ -1307,7 +1304,7 @@ local availUI = CreateFrame("Frame", nil, missionList) do
 				end
 				rewards.xp, rewards[0] = nil
 				for cid, cq in pairs(rewards) do
-					rtext = rtext .. "  " .. floor(cq) .. " |T" .. (select(3,GetCurrencyInfo(cid)) or "Interface/Icons/Temp") .. ":12:12:0:0:64:64:4:60:4:60|t"
+					rtext = rtext .. "  " .. floor(cq) .. " |T" .. (select(3,Nine.GetCurrencyInfo(cid)) or "Interface/Icons/Temp") .. ":12:12:0:0:64:64:4:60:4:60|t"
 				end
 				if rtext ~= "" then
 					GameTooltip:AddDoubleLine(L"Expected rewards:", rtext, nil, nil, nil, 1,1,1)
@@ -1523,7 +1520,7 @@ local interestUI = CreateFrame("Frame", nil, missionList) do
 						if key > 2e3 then
 							name, ico = GetItemInfo(key), GetItemIcon(key)
 						else
-							name, _, ico = GetCurrencyInfo(key)
+							name, _, ico = Nine.GetCurrencyInfo(key)
 						end
 						mi.text, mi.placeholder = "|T" .. (ico or "Interaface\\Icons\\INV_Misc_QuestionMark") .. ":16:16:0:0:64:64:4:60:4:60|t " .. (name or ("#" .. key)), not name or nil
 					end
@@ -1623,7 +1620,8 @@ do -- tabs
 		SetTabState(followerTab, GarrisonMissionFrame.selectedTab == 2)
 		api.roamingParty:Update()
 		api:SetMissionsUI(GarrisonMissionFrame.selectedTab)
-		if GarrisonMissionFrame.selectedTab == 3 or #C_Garrison.GetCompleteMissions(1) == 0 then
+		local cm = C_Garrison.GetCompleteMissions(1)
+		if GarrisonMissionFrame.selectedTab == 3 or (not cm or #cm == 0) then
 			activeTab.Pulse:Stop()
 		else
 			activeTab.Pulse:Play()
@@ -1697,7 +1695,7 @@ local GetActiveMissions, StartCompleteAll, CompleteMission, ClearCompletionState
 		end
 		for j=1,2 do
 			local t = C_Garrison[j == 1 and "GetCompleteMissions" or "GetInProgressMissions"](1)
-			for i=1,#t do
+			for i=1,t and #t or 0 do
 				local v = t[i]
 				if not mark[v.missionID] then
 					if j == 1 then
@@ -1772,7 +1770,7 @@ activeUI.CompleteAll:SetScript("OnClick", function(_, button)
 	if button ~= "RightButton" then
 		StartCompleteAll()
 	else
-		GarrisonMissionFrame.MissionComplete.completeMissions = C_Garrison.GetCompleteMissions(1)
+		GarrisonMissionFrame.MissionComplete.completeMissions = C_Garrison.GetCompleteMissions(1) or {}
 		GarrisonMissionFrameMissions.CompleteDialog.BorderFrame.ViewButton:Click()
 	end
 end)
@@ -1996,7 +1994,7 @@ do -- CreateMissionButton
 				if self.itemID then
 					_, text = GetItemInfo(self.itemID)
 				elseif self.currencyID and self.currencyID ~= 0 then
-					text = GetCurrencyLink(self.currencyID)
+					text = Nine.GetCurrencyLink(self.currencyID, qt or 0)
 				elseif self.tooltipTitle then
 					text = self.tooltipTitle
 				end
@@ -2308,7 +2306,7 @@ local GroupButtonBase = {} do
 		elseif ec > 0 and et == 1101 then
 			text = ("%d|TInterface\\Garrison\\GarrisonCurrencyIcons:0:0:0:2:128:128:70:104:68:104|t"):format(ec)
 		elseif ec > 0 and et == 823 then
-			text = ec .. " |T" .. select(3,GetCurrencyInfo(et)) .. ":0:0:0:1:64:64:4:60:4:60|t"
+			text = ec .. " |T" .. select(3,Nine.GetCurrencyInfo(et)) .. ":0:0:0:1:64:64:4:60:4:60|t"
 		elseif ec >= 1e4 and et == 0 and G.HasSignificantRewards(mi) == "gold" then
 			text = GetMoneyString(ec - ec % 1e4)
 		else
@@ -2457,7 +2455,7 @@ do -- activeMissionsHandle
 	end
 	local function SetActiveMission(self, d)
 		local mid = d.missionID
-		self.level:SetText((d.isRare and "|cff4DB5FF" or "") .. (d.level == 100 and d.iLevel > 600 and d.iLevel or d.level))
+		self.level:SetText((d.isRare and "|cff4DB5FF" or "") .. (d.level == T.FOLLOWER_LEVEL_CAP and d.iLevel > 600 and d.iLevel or d.level))
 		self.rare:SetShown(d.isRare or false)
 		self.iconBG:SetVertexColor(0, d.isRare and 0.012 or 0, d.isRare and 0.291 or 0, 0.4)
 		self.mtype:SetAtlas(d.typeAtlas)
@@ -2705,7 +2703,7 @@ do -- availMissionsHandle
 		return b
 	end
 	local function SetAvailableMission(self, d)
-		self.level:SetText((d.isRare and "|cff4DB5FF" or "") .. (d.level == 100 and d.iLevel > 600 and d.iLevel or d.level))
+		self.level:SetText((d.isRare and "|cff4DB5FF" or "") .. (d.level == T.FOLLOWER_LEVEL_CAP and d.iLevel > 600 and d.iLevel or d.level))
 		self.rare:SetShown(d.isRare or false)
 		self.iconBG:SetVertexColor(0, d.isRare and 0.012 or 0, d.isRare and 0.291 or 0, 0.4)
 		self.mtype:SetAtlas(d.typeAtlas)
@@ -2718,10 +2716,10 @@ do -- availMissionsHandle
 		local _, _, expTimeShort = G.GetMissionSeen(d.missionID, d)
 		self.expire:SetText(expTimeShort or "")
 
-		if d.locPrefix then
-			self.loc:SetAtlas(d.locPrefix.."-List")
+		if d.locTextureKit then
+			self.loc:SetAtlas(d.locTextureKit.."-List")
 		end
-		self.loc:SetShown(not not d.locPrefix)
+		self.loc:SetShown(not not d.locTextureKit)
 		local fol = "" do
 			local nf = G.HasTentativeParty(d.missionID)
 			for i=1, d.numFollowers do
@@ -2739,7 +2737,7 @@ do -- availMissionsHandle
 				r.itemID, r.tooltipTitle, r.tooltipText, r.currencyID, r.isIgnored, r.canIgnore = v.itemID, v.title, v.tooltip, v.currencyID, isIgnored
 				r.border:Hide()
 				if v.followerXP then
-					quant, r.canIgnore = v.followerXP, d.level == 100 and "f:xp10" or d.level < 95 and "f:xp90" or "f:xp95"
+					quant, r.canIgnore = v.followerXP, d.level == T.FOLLOWER_LEVEL_CAP and "f:xp10" or d.level < (T.FOLLOWER_LEVEL_BASE+5) and "f:xp90" or "f:xp95"
 				elseif v.currencyID == 0 then
 					quant = floor(v.quantity/10000)
 					r.tooltipText, r.canIgnore = GetMoneyString(v.quantity), "c:0"
@@ -2748,7 +2746,7 @@ do -- availMissionsHandle
 				elseif v.itemID then
 					local _, _, q, l, _, _, _, _, _, tex = GetItemInfo(v.itemID)
 					r.canIgnore, icon, l = "i:" .. v.itemID, tex or GetItemIcon(v.itemID), T.CrateLevels[v.itemID] or l
-					if v.quantity == 1 and q and l and l > 500 then
+					if v.quantity == 1 and q and l and l > 40 then
 						quant = ITEM_QUALITY_COLORS[q].hex .. l
 						if G.IsLevelAppropriateToken(v.itemID) then
 							local ac = q == 3 and "blue" or q == 4 and "purple" or "green"
@@ -2785,7 +2783,10 @@ do -- availMissionsHandle
 		end
 		local nt, tt, used = 1, self.threats, wipe(used) or used
 		for i=1,#enemies do
-			for id, minfo in pairs(enemies[i].mechanics) do
+			local mech = enemies[i].mechanics
+			for i=1,#mech do
+				local minfo = mech[i]
+				local id = minfo.mechanicTypeID
 				nt = nt + 1, SetThreat(tt[nt], minfo.icon, id, mlvl, cinfo[id], finfo, used)
 			end
 		end
@@ -2837,27 +2838,28 @@ do -- availMissionsHandle
 		local function sortMissions(missions, nf, nr)
 			local order, horizon = T.config.availableMissionSort, T.config.timeHorizon
 			local field = fields[order] or 1
-			local groupCache = G.GetSuggestedGroupsForAllMissions(1, order, roamingParty:GetFollowers())
+			local naf = C_Garrison.GetNumActiveFollowers(1)
+			local groupCache = naf <= 25 and G.GetSuggestedGroupsForAllMissions(1, order, roamingParty:GetFollowers()) or {}
 			local checkReq = (nf < 3 or nr < 100) and T.config.availableMissionSort ~= "expire"
 			local p1, p2, p3 = api.roamingParty:GetFollowers()
 			p1 = not (p2 and p3) and p1
 			if p1 then
 				local f1 = G.GetFollowerInfo()[p1]
-				if not (f1 and (f1.level < 100 or f1.quality < 4)) then
+				if not (f1 and (f1.level < T.FOLLOWER_LEVEL_CAP or f1.quality < 4)) then
 					p1 = nil
 				end
 			end
 			
-			local _, resq = GetCurrencyInfo(824)
+			local _, resq = Nine.GetCurrencyInfo(824)
 			cw[824] = resq < 3e3 and 10 or (resq < 7e3 and 6 or 3)
-			local _, oilq = GetCurrencyInfo(1101)
+			local _, oilq = Nine.GetCurrencyInfo(1101)
 			cw[1101] = C_Garrison.HasShipyard() and (oilq < 1e3 and 11 or 2) or 1
 			cw[823], cw[0], cw.minor = 4, 5, 1.5
 			
 			for i=1, #missions do
 				local mi, g = missions[i]
 				local mid, sr = mi.missionID, G.HasSignificantRewards(mi)
-				local sg = groupCache[mid]
+				local sg = groupCache[mid] or {}
 				mi.groups, g = sg, sg[1] and not G.GetMissionGroupDeparture(sg[1], mi) and sg[1] or eg
 				mi.ord1 = (cw[g[9]] or cw[sr] or (sr and 8) or 0) * 1e16 + g[1]*g[3]*1e3 + (sr and g[1] or 0)
 				
@@ -2868,7 +2870,7 @@ do -- availMissionsHandle
 					mi.ord = (max or -1) >= 0 and -floor(max/1800) or -math.huge
 				elseif order == "level" then
 					local i, l = mi.iLevel, mi.level
-					mi.ord = l == 100 and i > 600 and i or l
+					mi.ord = l == T.FOLLOWER_LEVEL_CAP and i > 600 and i or l
 				elseif order == "reward" then
 					mi.ord, mi.ord1 = mi.ord1, (g[11] or 0)*1e8 + ((g[5] and G.GetMissionGroupXP(g, mi) or 0)) * 100 + (g and g[1] or 0)
 				elseif g[5] and (order == "xp" or order == "xptime") then
@@ -2978,7 +2980,7 @@ do -- interestMissionsHandle
 		b:SetSize(21, 21)
 		local t = b:CreateTexture(nil, "ARTWORK")
 		t:SetAllPoints()
-		t, b.Icon = b:CreateTexture(nil, "ARWORK", nil, 1), t
+		t, b.Icon = b:CreateTexture(nil, "ARTWORK", nil, 1), t
 		t:SetAtlas("GarrMission_EncounterAbilityBorder-Lg")
 		t:SetSize(34.5, 34.5)
 		t:SetPoint("CENTER")
@@ -3076,7 +3078,7 @@ do -- interestMissionsHandle
 			local mlvl2 = self.targetLevel
 			if (mlvl2 or 0) > 600 then
 				local m = "|cffa0a0a0" .. GARRISON_FOLLOWER_ITEM_LEVEL:format(info.iLevel) .. (info.iLevel < mlvl2 and "|cffff2020" or "")  .. " (" .. mlvl2 .. ")"
-				if info.quality >= 4 and info.level >= 100 then
+				if info.quality >= 4 and info.level >= T.FOLLOWER_LEVEL_CAP then
 					GarrisonFollowerTooltip.ILevel:SetText(m)
 				else
 					GarrisonFollowerTooltip.ClassSpecName:SetText(info.className .. " - " .. m)
@@ -3246,7 +3248,7 @@ do -- interestMissionsHandle
 				fb.glow:Hide()
 				if fi.status == GARRISON_FOLLOWER_INACTIVE then
 					fb.portrait:SetVertexColor(0.2, 0.2, 1)
-				elseif fb.targetLevel > (mlvl > 100 and fi.iLevel or fi.level) then
+				elseif fb.targetLevel > (mlvl > T.FOLLOWER_LEVEL_CAP and fi.iLevel or fi.level) then
 					fb.portrait:SetVertexColor(1, 0.6, 0.6)
 					fb.glow:Show()
 					fb.glow:SetVertexColor(1,0,0)
@@ -3293,7 +3295,7 @@ do -- interestMissionsHandle
 			local rq = d[3] * (1 + (best and best[4] or 0))
 			r.currencyID, r.itemID, r.tooltipTitle, r.tooltipText = rt
 			r.quantity:SetText(rq > 1 and rq or "")
-			r.icon:SetTexture((select(3,GetCurrencyInfo(rt))))
+			r.icon:SetTexture((select(3,Nine.GetCurrencyInfo(rt))))
 		else
 			r.itemID, r.currencyID, r.tooltipTitle, r.tooltipText = rt
 			r.quantity:SetText(d[3] > 1 and d[3] or "")
@@ -3415,13 +3417,13 @@ do -- Ships
 		local f = CreateFrame("FRAME", nil, parent)
 		f:SetAllPoints()
 		for i=1,2 do
-			local t = f:CreateTexture(nil, "ARWORK", nil, i)
+			local t = f:CreateTexture(nil, "ARTWORK", nil, i)
 			t:SetSize(22-5*i, 22-5*i)
 			t:SetTexture("Interface\\CharacterFrame\\TempPortraitAlphaMaskSmall")
 			t:SetPoint("CENTER", f, "TOPRIGHT", -12, -12)
 			f[i == 1 and "outer" or "inner"] = t
 		end
-		local t = f:CreateTexture(nil, "ARWORK", nil, 3)
+		local t = f:CreateTexture(nil, "ARTWORK", nil, 3)
 		t:SetSize(12, 5)
 		t:SetTexture("Interface\\CharacterFrame\\TempPortraitAlphaMaskSmall")
 		t:SetTexCoord(0, 1, 7/12, 1)
@@ -3513,7 +3515,7 @@ do -- Ships
 	local function UpdateShipMissionMap()
 		local self = GarrisonShipyardFrame.MissionTab.MissionList
 		local sg = G.GetSuggestedGroupsForAllMissions(2)
-		local oil = select(2, GetCurrencyInfo(1101)) or 0
+		local oil = select(2, Nine.GetCurrencyInfo(1101)) or 0
 		for i=1, #self.missions do
 			local mission, frame = self.missions[i], self.missionFrames[i]
 			if frame:IsShown() and not mission.inProgress then
@@ -3651,12 +3653,13 @@ function GarrisonMissionFrame:CheckCompleteMissions(onShow, ...)
 		return oldComplete(self, onShow, ...)
 	end
 	if not GarrisonMissionFrame.MissionComplete:IsShown() then
-		GarrisonMissionFrame.MissionComplete.completeMissions = C_Garrison.GetCompleteMissions(1)
+		GarrisonMissionFrame.MissionComplete.completeMissions = C_Garrison.GetCompleteMissions(1) or {}
 		if #GarrisonMissionFrame.MissionComplete.completeMissions > 0 then
 			T.UpdateMissionTabs()
 		end
 	end
-	if onShow and not activeUI:IsVisible() and #C_Garrison.GetCompleteMissions(1) > 0 then
+	local cm = C_Garrison.GetCompleteMissions(1)
+	if onShow and not activeUI:IsVisible() and (cm and #cm or 0) > 0 then
 		missionList.activeTab:Click()
 	end
 end
@@ -3715,12 +3718,4 @@ function EV:ADDON_LOADED(a)
 		GarrisonMissionFrame:CheckCompleteMissions(true)
 	end
 	return "remove"
-end
-local o1, o2 = C_Garrison.GetCompleteMissions, C_Garrison.GetInProgressMissions
-local function rest()
-	if not activeUI:IsVisible() then
-		C_Garrison.GetCompleteMissions, C_Garrison.GetInProgressMissions = o1, o2
-	else
-		C_Timer.After(0.1, rest)
-	end
 end

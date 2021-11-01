@@ -1,10 +1,9 @@
 local mod	= DBM:NewMod(1896, "DBM-TombofSargeras", nil, 875)
 local L		= mod:GetLocalizedStrings()
 
-mod:SetRevision(("$Revision: 3 $"):sub(12, -3))
+mod:SetRevision("20210905144823")
 mod:SetCreatureID(118460, 118462, 119072)--118460 Engine of Souls, 118462 Soul Queen Dajahna, 119072 The Desolate Host
 mod:SetEncounterID(2054)
-mod:SetZone()
 mod:SetBossHPInfoToHighest()
 mod:SetUsedIcons(3, 4)
 mod.respawnTime = 40
@@ -79,13 +78,10 @@ local timerSoulbindCD				= mod:NewCDCountTimer(24, 236459, nil, nil, nil, 3)
 local timerWailingSoulsCD			= mod:NewNextCountTimer(58, 236072, nil, nil, nil, 2)
 --The Desolate Host
 mod:AddTimerLine(SCENARIO_STAGE:format(2))
-local timerSunderingDoomCD			= mod:NewCDTimer(24.4, 236542, nil, nil, nil, 5)
-local timerDoomedSunderingCD		= mod:NewCDTimer(24.4, 236544, nil, nil, nil, 5)
+local timerSunderingDoomCD			= mod:NewCDTimer(24.4, 236542, nil, nil, nil, 5, nil, nil, nil, 1, 4)
+local timerDoomedSunderingCD		= mod:NewCDTimer(24.4, 236544, nil, nil, nil, 5, nil, nil, nil, 1, 4)
 
 local berserkTimer					= mod:NewBerserkTimer(480)
-
-local countdownSunderingDoom		= mod:NewCountdown(24.4, 236542)
-local countdownDoomedSundering		= mod:NewCountdown(24.4, 236544)
 
 mod:AddSetIconOption("SoulIcon", 236459, true)
 mod:AddInfoFrameOption(235621, true)
@@ -212,7 +208,6 @@ function mod:SPELL_CAST_START(args)
 			specWarnSunderingDoomGather:Play("gathershare")
 		end
 		timerSunderingDoomCD:Start()
-		countdownSunderingDoom:Start()
 	elseif spellId == 236544 then--Doomed Sunering (spirit realm soaks)
 		if DBM:UnitBuff("player", spiritRealm) or DBM:UnitDebuff("player", spiritRealm) then--Figure out which it is
 			specWarnDoomedSunderingGather:Show(BOSS)
@@ -222,7 +217,6 @@ function mod:SPELL_CAST_START(args)
 			specWarnDoomedSunderingRun:Play("justrun")
 		end
 		timerDoomedSunderingCD:Start()
-		countdownDoomedSundering:Start()
 	elseif spellId == 236072 then
 		self.vb.wailingSoulsCast = self.vb.wailingSoulsCast + 1
 		timerSoulbindCD:Stop()
@@ -388,7 +382,7 @@ function mod:SPELL_AURA_REMOVED(args)
 		self.vb.soulboundCast = 0
 		--timerSoulbindCD:Start(12, 1)--5-14, too variable to start timer for first cast after souls
 		--timerWitherCD:Start(19.7)
-		timerWailingSoulsCD:Start(58, self.vb.wailingSoulsCast+1)
+		timerWailingSoulsCD:Start(50, 1)
 	elseif spellId == 235732 then
 		playersNotInSpirit[#playersNotInSpirit+1] = args.destName
 		tDeleteItem(playersInSpirit, args.destName)
@@ -409,8 +403,7 @@ function mod:UNIT_DIED(args)
 	end
 end
 
-function mod:UNIT_SPELLCAST_SUCCEEDED(uId, _, bfaSpellId, _, legacySpellId)
-	local spellId = legacySpellId or bfaSpellId
+function mod:UNIT_SPELLCAST_SUCCEEDED(uId, _, spellId)
 	--["235907-Collapsing Fissure"] = "pull:9.7, 31.5, 10.4, 2.4, 4.7, 22.2, 1.8, 9.8, 2.3, 0.9, 41.4"
 	if spellId == 235907 then--Collapsing Fissure
 		--timerCollapsingFissureCD:Start()
@@ -426,8 +419,6 @@ function mod:UNIT_SPELLCAST_SUCCEEDED(uId, _, bfaSpellId, _, legacySpellId)
 		timerSoulbindCD:Start(10, self.vb.soulboundCast+1)
 		--New Phase Timers
 		timerSunderingDoomCD:Start(7)
-		countdownSunderingDoom:Start(7)
 		timerDoomedSunderingCD:Start(18)
-		countdownDoomedSundering:Start(18)
 	end
 end

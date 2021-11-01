@@ -12,7 +12,7 @@ ClearFocus:SetScript("OnEditFocusGained", function(self)
 end);
 
 
-local DefaultSound = "sound\\doodad\\belltolltribal.ogg";
+local DefaultSound = 6675 --"sound\\doodad\\belltolltribal.ogg";
 
 local CheckButtons = {
     {Text="在聊天窗中显示错误信息", SavedVar="Messages", Default=false},
@@ -62,6 +62,7 @@ EventFuncs = {
         end
     end,
 
+    -- abyui 8.2.0 by hook DisplayInterfaceActionBlockedMessage, 9.0 not work
     ADDON_ACTION_BLOCKED = function(AddOn, FuncName)
         if Config.Taint then
             BaudErrorFrameAdd(format("插件[%s]对接口'%s'的调用导致界面行为失效", AddOn, FuncName), 4);
@@ -73,6 +74,7 @@ EventFuncs = {
             BaudErrorFrameAdd(format("宏代码对接口'%s'的调用导致界面行为失效", FuncName), 4);
         end
     end,
+    --
 
     ADDON_ACTION_FORBIDDEN = function(AddOn,FuncName)
         if Config.Taint then
@@ -103,6 +105,15 @@ function BaudErrorFrame_OnLoad(self)
         EventFuncs[event](...);
     end);
     seterrorhandler(BaudErrorFrameHandler);
+    --[[
+    if DisplayInterfaceActionBlockedMessage then
+        hooksecurefunc("DisplayInterfaceActionBlockedMessage", function()
+            if Config.Taint then
+                BaudErrorFrameAdd(date("%H:%M:%S") .. " 插件导致界面行为失效", 4);
+            end
+        end)
+    end
+    ]]
 
     UIParent:UnregisterEvent("MACRO_ACTION_BLOCKED");
     UIParent:UnregisterEvent("ADDON_ACTION_BLOCKED");
@@ -157,6 +168,7 @@ function BaudErrorFrameMinimapButton_Create()
         iconCoords = {0.09375+0.05, 0.90625+0.05, 0.46875, 0.859375},
         OnClick = BaudErrorFrameMinimapButton_OnClick,
         OnEnter = BaudErrorFrameMinimapButton_OnEnter,
+        OnLeave = BaudErrorFrameMinimapButton_OnLeave,
     })
     LibStub("LibDBIcon-1.0"):Register("BaudErrorFrame", ldb, BaudErrorFrameConfig);
 
@@ -184,6 +196,7 @@ end
 
 function BaudErrorFrameAdd(Error, Retrace)
     if Error and Error:find("StaticPopup%.lua:[0-9]+: bad argument #2 to 'SetFormattedText' %(number expected, got nil%)") then return end
+    if Error and Error:find("SetPoint would result in anchor family connection") then return end
     for Key, Value in pairs(ErrorList)do
         if(Value.Error==Error)then
             if(Value.Count < 99)then
@@ -232,6 +245,7 @@ function BaudErrorFrame_OnShow(self)
     BaudErrorFrameMinimapCount:SetText("");
     BaudErrorFrame.lastCount = #ErrorList;
     PlaySound(SOUNDKIT and SOUNDKIT.GS_TITLE_OPTION_EXIT or "gsTitleOptionExit");
+    self:ClearAllPoints()
     self:SetPoint("CENTER");
     BaudErrorFrameScrollBar_Update();
 end

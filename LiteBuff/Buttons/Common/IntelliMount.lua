@@ -14,6 +14,8 @@ button.OnTooltipText =function(self, tooltip)
     GameTooltip:AddLine("ALT-"..L["left click"]..'修理坐骑', 1, 1, 1, 1)
     GameTooltip:AddLine("ALT-"..L["right click"]..'水下坐骑', 1, 1, 1, 1)
     GameTooltip:AddLine("ALT-中键: 取消坐骑", 1, 1, 1, 1)
+    GameTooltip:AddLine("SHT-"..L["left click"]..'拍卖坐骑', 1, 1, 1, 1)
+    GameTooltip:AddLine("SHT-"..L["right click"]..'幻化坐骑', 1, 1, 1, 1)
     GameTooltip:AddLine("CTL-"..L["left click"]..'地面坐骑', 1, 1, 1, 1)
 end
 
@@ -23,6 +25,8 @@ button:SetAttribute('type3', 'macro')
 button:SetAttribute('alt-type1', 'macro')
 button:SetAttribute('alt-type2', 'macro')
 button:SetAttribute('alt-type3', 'macro')
+button:SetAttribute('shift-type1', 'macro')
+button:SetAttribute('shift-type2', 'macro')
 button:SetAttribute('ctrl-type1', 'macro')
 button:SetAttribute('macrotext1', '/run LBIntelliMountSummon("normal")')
 button:SetAttribute('macrotext2', '/run LBIntelliMountSummon("passenger")')
@@ -30,6 +34,8 @@ button:SetAttribute('macrotext3', '/run LBIntelliMountSummon("surface")')
 button:SetAttribute('alt-macrotext1', '/run LBIntelliMountSummon("vendor")')
 button:SetAttribute('alt-macrotext2', '/run LBIntelliMountSummon("underwater")')
 button:SetAttribute('alt-macrotext3', select(2, UnitClass'player') == 'DRUID' and '/cancelform\n/dismount' or '/dismount')
+button:SetAttribute('shift-macrotext1', '/run LBIntelliMountSummon("auction")')
+button:SetAttribute('shift-macrotext2', '/run LBIntelliMountSummon("transmog")')
 button:SetAttribute('ctrl-macrotext1', '/run LBIntelliMountSummon("nofly")')
 
 button:SetAttribute('dark_when_combat', "1")
@@ -64,19 +70,20 @@ local utilityMounts = {
    	{ id =  98718, underwater = 1 }, --驯服的海马
    	{ id = 118089, surface = 1 },  --天蓝水黾
    	{ id = 121820, passenger = 1 }, --黑曜夜之翼
-   	{ id = 122708, passenger = 1, vendor = 1 }, --雄壮远足牦牛
+   	{ id = 122708, passenger = 1, vendor = 1, transmog = 1, }, --雄壮远足牦牛
    	{ id = 127271, surface = 1 }, --猩红水黾
    	--{ id = 179244, passenger = 1 }, --代驾型机械路霸，只能自己坐
     { id = 214791, underwater = 1 },  --深海喂食者
     { id = 223018, underwater = 1 },  --深海水母
     { id = 278979, underwater = 1 },  --拍浪水母
+    { id = 300153, underwater = 1 },  --赤红浪骁
+    { id = 300151, underwater = 1 },  --墨鳞觅暗者
     { id = 253711, underwater = 1 },  --池塘水母
     { id = 228919, underwater = 1 },  --暗水鳐鱼
     { id = 278803, underwater = 1 },  --无尽之海鳐鱼
     { id = 245725, passenger = 1 }, --奥格瑞玛拦截飞艇
     { id = 245723, passenger = 1 }, --暴风城逐天战机
-
-
+    { id = 264058, auction = 1, vendor = 1, passenger = 1, } --雷龙
 }
 --[[获取方式
 --/print MountJournal.selectedSpellID
@@ -102,8 +109,10 @@ for _, v in ipairs(utilityMounts) do
 end
 
 --登入及关闭坐骑收藏时触发
+local maw = {}
 local function UpdateMountsData()
     local count = C_MountJournal.GetNumMounts()
+    table.wipe(maw)
     if count > 0 then gotMountsData = true end
     for i = 1, count do
         local creatureName, spellId, icon, active, summonable, source, isFavorite, isFactionSpecific, faction, hideOnChar, isCollected, mountID = C_MountJournal.GetDisplayedMountInfo(i)
@@ -135,7 +144,24 @@ local function UpdateMountsData()
                     mountsData[spellId].groundOnly = 1
                 end
             end
+            if mountID == 1304 or mountID == 1442 or mountID == 1441 then table.insert(maw, (isFavorite and -1 or 1) * mountID) end --渊誓猎魂犬 1304 --回廊潜行猎犬 1442 --被缚的影犬 1441
         end
+    end
+    --tricky if any < 0, remove x>0 and revert x<0, else all > 0, no proc
+    for i, v in ipairs(maw) do
+        if v < 0 then
+            for j=#maw, 1 do if maw[j] < 0 then maw[j] = -maw[j] else table.remove(maw, j) end end
+            break
+        end
+    end
+    if SPELL_FAILED_CUSTOM_ERROR_511 and #maw > 0 and not LB_MOUNT_MAW_FRAME then
+        local f = CreateFrame("Frame", "LB_MOUNT_MAW_FRAME")
+        f:RegisterEvent("UI_ERROR_MESSAGE")
+        f:SetScript("OnEvent", function(self, event, arg1, arg2)
+            if arg2 == SPELL_FAILED_CUSTOM_ERROR_511 then
+                C_MountJournal.SummonByID(maw[random(1, #maw)])
+            end
+        end)
     end
 end
 

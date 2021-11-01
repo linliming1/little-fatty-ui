@@ -1,10 +1,9 @@
 local mod	= DBM:NewMod(2130, "DBM-Party-BfA", 8, 1001)
 local L		= mod:GetLocalizedStrings()
 
-mod:SetRevision(("$Revision: 17752 $"):sub(12, -3))
+mod:SetRevision("20201116014239")
 mod:SetCreatureID(131383)
 mod:SetEncounterID(2112)
-mod:SetZone()
 
 mod:RegisterCombat("combat")
 
@@ -27,10 +26,10 @@ local yellUpheaval					= mod:NewYell(259718)
 local yellUpheavalFades				= mod:NewShortFadesYell(259718)
 local specWarnUpheavalNear			= mod:NewSpecialWarningClose(259718, nil, nil, nil, 1, 2)
 
-local timerFesteringHarvestCD		= mod:NewCDTimer(51, 259732, nil, nil, nil, 2, nil, DBM_CORE_DEADLY_ICON)
---local timerBoundlessRotCD			= mod:NewAITimer(13, 259830, nil, nil, nil, 3)
-local timerVolatilePodsCD			= mod:NewCDTimer(31.3, 273271, nil, nil, nil, 3)
-local timerShockwaveCD				= mod:NewCDTimer(14.6, 272457, nil, nil, nil, 5, nil, DBM_CORE_TANK_ICON)
+local timerFesteringHarvestCD		= mod:NewCDTimer(51, 259732, nil, nil, nil, 2, nil, DBM_CORE_L.DEADLY_ICON)
+--local timerBoundlessRotCD			= mod:NewCDTimer(13, 259830, nil, nil, nil, 3)
+local timerVolatilePodsCD			= mod:NewCDTimer(27.5, 273271, nil, nil, nil, 3)
+local timerShockwaveCD				= mod:NewCDTimer(14.6, 272457, nil, nil, nil, 5, nil, DBM_CORE_L.TANK_ICON)
 local timerUpheavalCD				= mod:NewCDTimer(20, 259718, nil, nil, nil, 3)
 
 function mod:OnCombatStart(delay)
@@ -51,11 +50,11 @@ function mod:SPELL_AURA_APPLIED(args)
 			specWarnUpheaval:Play("runout")
 			yellUpheaval:Yell()
 			yellUpheavalFades:Countdown(6)
-		elseif self:CheckNearby(8, args.destName) then
-			specWarnUpheavalNear:Show(args.destName)
-			specWarnUpheavalNear:Play("runaway")
+		elseif self:CheckNearby(8, args.destName) and not DBM:UnitDebuff("player", spellId) then
+			specWarnUpheavalNear:CombinedShow(0.3, args.destName)
+			specWarnUpheavalNear:ScheduleVoice(0.3, "runaway")
 		else
-			warnUpheaval:Show(args.destName)
+			warnUpheaval:CombinedShow(0.3, args.destName)
 		end
 	end
 end
@@ -100,7 +99,7 @@ function mod:SPELL_CAST_SUCCESS(args)
 	end
 end
 
-function mod:UNIT_SPELLCAST_SUCCEEDED(uId, _, spellId)
+function mod:UNIT_SPELLCAST_SUCCEEDED(_, _, spellId)
 	if spellId == 273271 then--Volatile Pods
 		specWarnVolatilePods:Show()
 		specWarnVolatilePods:Play("watchstep")

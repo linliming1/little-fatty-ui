@@ -3,14 +3,7 @@
 --------------------------------------------------------------------------
 --[[
 GTFO Ignore List
-Author: Zensunim of Malygos
 ]]--
-
-GTFO.IgnoreSpellCategory["HagaraWateryEntrenchment"] = {
-	-- mobID = 55689; -- Hagara the Stormbinder
-	spellID = 110317,
-	desc = "Watery Entrenchment"
-}
 
 GTFO.IgnoreSpellCategory["Fatigue"] = {
 	spellID = 3271, -- Not really the spell, but a good placeholder
@@ -19,13 +12,29 @@ GTFO.IgnoreSpellCategory["Fatigue"] = {
 	override = true
 }
 
-GTFO.IgnoreSpellCategory["GarroshDesecrated"] = {
-	-- Garrosh Hellscream
-	spellID = 144762,
-	desc = "Desecrated Axe (Garrosh Phase 1 & 2)",
-	tooltip = "Alert from the Desecrated Axe from Garrosh Hellscream (Phase 1 & 2)",
-	override = true
-}
+if (not (GTFO.ClassicMode or GTFO.BurningCrusadeMode)) then
+
+	GTFO.IgnoreSpellCategory["HagaraWateryEntrenchment"] = {
+		-- mobID = 55689; -- Hagara the Stormbinder
+		spellID = 110317,
+		desc = "Watery Entrenchment (Hagara)"
+	}
+
+	GTFO.IgnoreSpellCategory["GarroshDesecrated"] = {
+		-- Garrosh Hellscream
+		spellID = 144762,
+		desc = "Desecrated Axe (Garrosh Phase 1 & 2)",
+		tooltip = "Alert from the Desecrated Axe from Garrosh Hellscream (Phase 1 & 2)",
+		override = true
+	}
+
+	GTFO.IgnoreSpellCategory["EyeOfCorruption2"] = {
+		-- 8.3 Corruption
+		spellID = 315161,
+		desc = "Eye of Corruption (8.3 BFA)",
+		isDefault = true,
+	}
+end
 
 -- Scanner ignore list
 GTFO.IgnoreScan["124255"] = true; -- Monk's Stagger
@@ -58,6 +67,26 @@ GTFO.IgnoreScan["218508"] = true; -- Recursive Strikes
 GTFO.IgnoreScan["186416"] = true; -- Torment of Flames
 GTFO.IgnoreScan["80354"] = true; -- Time Warp
 GTFO.IgnoreScan["258018"] = true; -- Sense of Dread
+GTFO.IgnoreScan["294856"] = true; -- Unstable Mixture
+GTFO.IgnoreScan["287769"] = true; -- N'Zoth's Awareness
+GTFO.IgnoreScan["306583"] = true; -- Leaden Foot
+GTFO.IgnoreScan["326788"] = true; -- Chilling Winds
+GTFO.IgnoreScan["329961"] = true; -- Lycara's Bargain
+GTFO.IgnoreScan["322757"] = true; -- Wrath of Zolramus
+GTFO.IgnoreScan["325184"] = true; -- Loose Anima
+GTFO.IgnoreScan["334909"] = true; -- Oppressive Atmosphere
+GTFO.IgnoreScan["332444"] = true; -- Crumbling Foundation
+GTFO.IgnoreScan["335298"] = true; -- Giant Fists
+GTFO.IgnoreScan["326469"] = true; -- Torment: Soulforge heat
+GTFO.IgnoreScan["347668"] = true; -- Grasp of Death
+GTFO.IgnoreScan["358198"] = true; -- Black Heat
+GTFO.IgnoreScan["355786"] = true; -- Blackened Armor
+GTFO.IgnoreScan["356846"] = true; -- Lingering Flames
+GTFO.IgnoreScan["357231"] = true; -- Anguish
+GTFO.IgnoreScan["356253"] = true; -- Dreadbugs
+GTFO.IgnoreScan["356447"] = true; -- Dreadbugs
+GTFO.IgnoreScan["209858"] = true; -- Necrotic Wound
+GTFO.IgnoreScan["355951"] = true; -- Unworthy
 
 
 

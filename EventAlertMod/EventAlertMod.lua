@@ -1,4 +1,5 @@
-﻿-- Prevent tainting global _.
+﻿local CreateFrame = CreateFrameAby
+-- Prevent tainting global _.
 local _
 local _G = _G
 -----------------------------------------------------------------
@@ -317,7 +318,7 @@ function EventAlert_InitArrayConfig()
 		end
 	end	
 
-	if EA_Config.AlertSound == nil then EA_Config.AlertSound = "Sound\\Spells\\ShaysBell.ogg" end;
+	if EA_Config.AlertSound == nil then EA_Config.AlertSound = 6555 end; --"Sound\\Spells\\ShaysBell.ogg"
 	if EA_Config.AlertSoundValue == nil then EA_Config.AlertSoundValue = 1 end;
 	if EA_Config.DoAlertSound == nil then EA_Config.DoAlertSound = true end;
 	if EA_Config.LockFrame == nil then EA_Config.LockFrame = false end;
@@ -1856,10 +1857,10 @@ function EventAlert_SlashHandler(msg)
 
 	if (cmdtype == "options" or cmdtype == "opt") then
 		if not EA_Options_Frame:IsVisible() then
-			-- ShowUIPanel(EA_Options_Frame);
+			-- EA_Options_Frame:Show();
 			EA_Options_Frame:Show();
 		else
-			-- HideUIPanel(EA_Options_Frame);
+			-- EA_Options_Frame:Hide();
 			EA_Options_Frame:Hide();
 		end
 
@@ -2126,7 +2127,7 @@ function EAFun_CreateVersionFrame_ScrollEditBox()
 	local frameheight = EA_Version_Frame:GetHeight()-70;
 	local panel3 = _G["EA_Version_ScrollFrame"];
 	if panel3 == nil then
-		panel3 = CreateFrame("ScrollFrame", "EA_Version_ScrollFrame", EA_Version_Frame, "UIPanelScrollFrameTemplate");
+		panel3 = CreateFrameAby("ScrollFrame", "EA_Version_ScrollFrame", EA_Version_Frame, "UIPanelScrollFrameTemplate");
 	end
 	local scc = _G["EA_Version_ScrollFrame_List"];
 	if scc == nil then
@@ -2803,7 +2804,7 @@ function EventAlert_UpdateLifeBloom(EA_Unit)
 				local SfontName, SfontSize = "", 0;
 
 				for i=1,40 do
-					local _, _, count, _, _, expirationTime, unitCaster, _, _, spellID = UnitBuff(EA_Unit, i) --aby8
+					local _, _, count, _, _, expirationTime, unitCaster, _, _, spellID = UnitBuff(EA_Unit, i) --abyui8
 					if (not spellID) then
 						break;
 					end
@@ -3092,7 +3093,7 @@ end
 -----------------------------------------------------------------
 function EAFun_HookTooltips()
 	hooksecurefunc(GameTooltip, "SetUnitBuff", function(self,...)
-        if IsAddOnLoaded("TipTac") then return end
+        if IsAddOnLoaded("TipTacItemRef") then return end
 		local id = select(11,UnitBuff(...))
 		if id then
 			self:AddDoubleLine(EX_XCLSALERT_SPELL,id)
@@ -3101,8 +3102,8 @@ function EAFun_HookTooltips()
 	end)
 
 	hooksecurefunc(GameTooltip, "SetUnitDebuff", function(self,...)
-        if IsAddOnLoaded("TipTac") then return end
-		local id = select(10,UnitDebuff(...)) --aby8
+        if IsAddOnLoaded("TipTacItemRef") then return end
+		local id = select(10,UnitDebuff(...)) --abyui8
 		if id then
 			self:AddDoubleLine(EX_XCLSALERT_SPELL,id)
 			self:Show()
@@ -3110,7 +3111,7 @@ function EAFun_HookTooltips()
 	end)
 
 	hooksecurefunc(GameTooltip, "SetUnitAura", function(self,...)
-        if IsAddOnLoaded("TipTac") then return end
+        if IsAddOnLoaded("TipTacItemRef") then return end
 		local id = select(10,UnitAura(...))
 		if id then
 			self:AddDoubleLine(EX_XCLSALERT_SPELL,id)
@@ -3119,7 +3120,7 @@ function EAFun_HookTooltips()
 	end)
 
 	hooksecurefunc("SetItemRef", function(link, text, button, chatFrame)
-        if IsAddOnLoaded("TipTac") then return end
+        if IsAddOnLoaded("TipTacItemRef") then return end
 		if string.find(link,"^spell:") then
 			local id = string.sub(link,7)
 			ItemRefTooltip:AddDoubleLine(EX_XCLSALERT_SPELL,id)
@@ -3128,7 +3129,7 @@ function EAFun_HookTooltips()
 	end)
 
 	GameTooltip:HookScript("OnTooltipSetSpell", function(self)
-        if IsAddOnLoaded("TipTac") then return end
+        if IsAddOnLoaded("TipTacItemRef") then return end
 		local id = select(2,self:GetSpell())
 		if id then
 			self:AddDoubleLine(EX_XCLSALERT_SPELL,id)
@@ -3991,7 +3992,7 @@ EA_EventList={
 		["UNIT_DISPLAYPOWER"]			=EventAlert_DISPLAYPOWER,
 		["UNIT_HEALTH"]					=EventAlert_UNIT_HEALTH	,
 		["UNIT_POWER_UPDATE"]			=EventAlert_UNIT_POWER,
-		--["RUNE_TYPE_UPDATE"]			=EventAlert_UpdateRunes, --aby8
+		--["RUNE_TYPE_UPDATE"]			=EventAlert_UpdateRunes, --abyui8
 		["RUNE_POWER_UPDATE"]			=EventAlert_UpdateRunes,
 		["UNIT_SPELLCAST_SUCCEEDED"]	=EventAlert_UNIT_SPELLCAST_SUCCEEDED,
 		--["UNIT_SPELLCAST_CAST"]			=EventAlert_UNIT_SPELLCAST_CAST	,

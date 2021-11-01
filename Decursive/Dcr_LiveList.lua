@@ -1,14 +1,21 @@
 --[[
     This file is part of Decursive.
 
-    Decursive (v 2.7.6.2) add-on for World of Warcraft UI
-    Copyright (C) 2006-2018 John Wellesz (Decursive AT 2072productions.com) ( http://www.2072productions.com/to/decursive.php )
+    Decursive (v 2.7.8.3) add-on for World of Warcraft UI
+    Copyright (C) 2006-2019 John Wellesz (Decursive AT 2072productions.com) ( http://www.2072productions.com/to/decursive.php )
 
-    Starting from 2009-10-31 and until said otherwise by its author, Decursive
-    is no longer free software, all rights are reserved to its author (John Wellesz).
+    Decursive is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
 
-    The only official and allowed distribution means are www.2072productions.com, www.wowace.com and curse.com.
-    To distribute Decursive through other means a special authorization is required.
+    Decursive is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Decursive.  If not, see <https://www.gnu.org/licenses/>
 
 
     Decursive is inspired from the original "Decursive v1.9.4" by Patrick Bohnet (Quu).
@@ -17,7 +24,7 @@
     Decursive is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY.
 
-    This file was last updated on 2018-08-09T22:29:16Z
+    This file was last updated on 2020-03-08T20:44:24Z
 
 --]]
 -------------------------------------------------------------------------------
@@ -161,15 +168,15 @@ function LiveList:DisplayItem (ID, UnitID, Debuff) -- {{{
     --D:Debug("XXXX => Updating ll item %d for %s", ID, UnitID);
 
     if not LVItem.IsShown then
-        --[===[@debug@--[===[
+        --[==[@debug@--
         D:Debug("(LiveList) Showing LVItem %d", ID);
-        --@end-debug@]===]
+        --@end-debug@]==]
 
         LVItem.Frame:Show();
 
-        --[===[@debug@--[===[
+        --[==[@debug@--
         D:Debug("(LiveList) done", ID);
-        --@end-debug@]===]
+        --@end-debug@]==]
 
         self.NumberShown = self.NumberShown + 1;
         LVItem.IsShown = true;
@@ -206,7 +213,7 @@ end -- }}}
 
 
 function LiveList.prototype:init(Container,ID) -- {{{
-    
+
     --LiveList.super.prototype.init(self); -- needed
     D:Debug("(LiveList) Initializing LiveList object '%s'", ID);
 
@@ -223,7 +230,7 @@ function LiveList.prototype:init(Container,ID) -- {{{
     self.PrevUnitID         = false;
     self.PrevRaidTargetIndex= false;
     self.UnitClass          = false;
-    
+
     self.Debuff             = {};
 
     self.PrevDebuffIndex    = false;
@@ -258,14 +265,14 @@ function LiveList.prototype:init(Container,ID) -- {{{
 
     -- Create the character name Fontstring
     self.UnitNameFontString = self.Frame:CreateFontString("DcrLiveListItem"..ID.."UnitName", "OVERLAY", "DcrLLUnitNameFont");
-    
+
     -- Create the unitID Fontstring
     self.UnitIDFontString = self.Frame:CreateFontString("DcrLiveListItem"..ID.."UnitID", "OVERLAY", "DcrLLUnitIDFont");
     --self.UnitIDFontString:SetHeight(3);
 
     -- Create the debuff type fontstring
     self.DebuffTypeFontString = self.Frame:CreateFontString("DcrLiveListItem"..ID.."Type", "OVERLAY", "DcrLLDebuffTypeFont");
-    
+
     -- Create the Raid Target Icon Texture
     self.RaidIconTexture = self.Frame:CreateTexture("DcrLiveListItem"..ID.."RaidIcon", "ARTWORK", "DcrLVRaidIconTemplate");
 
@@ -332,15 +339,15 @@ function LiveList.prototype:SetDebuff(UnitID, Debuff, IsCharmed) -- {{{
     end
 
     -- Debuff Type Name
-    if self.PrevDebuffTypeName ~= Debuff.TypeName then
+    --if self.PrevDebuffTypeName ~= Debuff.TypeName then
         if Debuff.Type then
-            self.DebuffTypeFontString:SetText(D:ColorText(L[str_upper(Debuff.TypeName)], "FF" .. DC.TypeColors[Debuff.Type] ));
-            --self.DebuffTypeFontString:SetTextColor(DC.TypeColors[Debuff.Type]);
+            self.DebuffTypeFontString:SetText(D:ColorText(L[str_upper(Debuff.TypeName)], D.profile.TypeColors[Debuff.Type] ));
+            --self.DebuffTypeFontString:SetTextColor(D.profile.TypeColors[Debuff.Type]);
         else
             self.DebuffTypeFontString:SetText("Unknown");
         end
         self.PrevDebuffTypeName = Debuff.TypeName;
-    end
+    --end
 
     -- Debuff Name
     if self.PrevDebuffName ~= Debuff.Name then
@@ -398,7 +405,7 @@ function LiveList:Update_Display() -- {{{
         return;
     end
 
-    -- 
+    --
     self:PreCreate();
 
     Index = 0;
@@ -586,4 +593,4 @@ function LiveList:Onclick() -- {{{
     D:Println(L["HLP_LL_ONCLICK_TEXT"]);
 end -- }}}
 
-T._LoadedFiles["Dcr_LiveList.lua"] = "2.7.6.2";
+T._LoadedFiles["Dcr_LiveList.lua"] = "2.7.8.3";

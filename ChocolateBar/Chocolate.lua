@@ -2,29 +2,19 @@
 local LSM = LibStub("LibSharedMedia-3.0")
 local ChocolatePiece = ChocolateBar.ChocolatePiece
 local Drag = ChocolateBar.Drag
-local Debug = ChocolateBar.Debug
+local debug = ChocolateBar and ChocolateBar.Debug or function() end
 local _G, unpack, ipairs = _G, unpack, ipairs
 local GameTooltip, CreateFrame = GameTooltip, CreateFrame
 local tempAutoHide, db
 
 local function resizeFrame(self)
+    if self:IsProtected() then return end
 	local settings = self.settings
 	local width = db.gap
 	local textOffset = settings.textOffset or db.textOffset
 	if self.icon and settings.showIcon then
 		width = width + self.icon:GetWidth() + textOffset
 	end
-	if settings.showText then
-		if settings.widthBehavior == "fixed" then
-			width = width + settings.width
-		elseif settings.widthBehavior == "max" then
-			local textWidth = self.text:GetStringWidth()
-			width = width + min(textWidth, settings.width)
-		else
-			local textWidth = self.text:GetStringWidth()
-			width = width + textWidth
-		end
-    end
 
     -- XXX 163
     -- preventing the width changing too often
@@ -36,7 +26,18 @@ local function resizeFrame(self)
     end
     self.__163_oldwidth = width
     -- XXX 163 end
+	
+	local textWidth = (settings.showText or settings.showLabel) and self.text:GetStringWidth() or 0
+	--local labelWidth = settings.showLabel and self.label:GetStringWidth() or 0
 
+	if settings.widthBehavior == "fixed" then
+		width = width + settings.width
+	elseif settings.widthBehavior == "max" then
+		width = width + min(textWidth, settings.width)
+	else
+		width = width + textWidth
+	end
+	
 	self:SetWidth(width)
 	if self.bar then self.bar:UpdateCenter() end
 end
@@ -46,17 +47,57 @@ function findpattern(text, pattern, start)
 end
 
 local function TextUpdater(frame, value)
+	value = value and value or ""
 	if db.forceColor then
 		value = string.gsub(value, "|c........", "")
 		value = string.gsub(value, "|r", "")
 	end
-	frame.text:SetText(value)
+
+	if frame.settings.showText then
+		frame.text:SetText(frame.labelText..value)
+	else
+		frame.text:SetText(frame.labelText)
+	end
+
 	resizeFrame(frame)
+end
+
+local function isCustomLabel(frame)
+	return frame.settings.customLabel and frame.settings.customLabel ~= ""
+end
+
+local function getLabelFromObjOrSettings(frame, value)
+	if isCustomLabel(frame) then
+		return frame.settings.customLabel
+	else
+		if db.forceColor then
+			value = string.gsub(value, "|c........", "")
+			value = string.gsub(value, "|r", "")
+		end
+		return value and value or "";
+	end
+end
+
+local function tableToHex(t)
+	local r,g,b = t.r, t.g, t.b
+	return ("%02x%02x%02x%02x"):format(1*255,r*255, g*255, b*255)
+end
+
+local function LabelUpdater(frame, value)
+	if frame.settings.showLabel then
+		local delimiter = frame.settings.showText and ":" or ""
+		frame.labelText = string.format("|c%s%s%s|r ", tableToHex(db.labelColor), getLabelFromObjOrSettings(frame, value), delimiter)
+	else 
+		frame.labelText = ""
+	end
+
+	TextUpdater(frame, frame.obj.text)
 end
 
 local function SettingsUpdater(self, value)
 	local settings = self.settings
-	if not settings.showText then
+	
+	if not settings.showText and not settings.showLabel then
 		self.text:Hide()
 	else
 		self.text:Show()
@@ -84,7 +125,8 @@ local function SettingsUpdater(self, value)
 	else -- no icon
 		self.text:SetPoint("LEFT", self, 0, 0)
 	end
-
+	
+	LabelUpdater(self, self.obj.label)
 	resizeFrame(self)
 end
 
@@ -123,7 +165,7 @@ end
 -- updaters code taken with permission from fortress
 local updaters = {
 	text = TextUpdater,
-	label  = TextUpdater,
+	label  = LabelUpdater,
 	resizeFrame = resizeFrame,
 
 	icon = function(frame, value, name)
@@ -139,7 +181,8 @@ local updaters = {
 	end,
 
 	updatefont = function(self)
-		self.text:SetFont(db.fontPath,db.fontSize)
+        local fontPath = db.fontPath == " " and (GetLocale() == 'zhCN' and LSM:Fetch('font', '聊天') or LSM:GetDefault("font")) or db.fontPath
+		self.text:SetFont(fontPath, db.fontSize)
 		resizeFrame(self)
 	end,
 	updateSettings = SettingsUpdater,
@@ -223,7 +266,6 @@ local function OnEnter(self)
 		PrepareTooltip(GameTooltip, self)
 		GameTooltip:SetText(obj.tooltiptext)
 		GameTooltip:Show()
-
 	elseif obj.OnEnter then
 		obj.OnEnter(self)
 	end
@@ -295,7 +337,6 @@ local function OnDragStart(frame)
 				for i = 1, child:GetNumPoints() do
 					local _,relativeTo,_,_,_ = child:GetPoint(i)
 					if relativeTo == frame then
-						Debug(i,child:GetName())
 						child:Hide()
 					end
 				end
@@ -334,11 +375,15 @@ local function highlightBackground(frame, r, g, b, a)
 		frame:SetBackdropColor(r, g, b, a)
 end
 
+local function isLauncherAndHasNoText(obj)
+	return obj.type and obj.type == "launcher" and (obj.text == nil or obj.text == "")
+end
+
 function ChocolatePiece:New(name, obj, settings, database)
 	db = database
-	local text = obj.text
+
 	local icon = obj.icon
-	local chocolate = CreateFrame("Button", "Chocolate" .. name)
+	local chocolate = CreateFrame("Button", "Chocolate" .. name, _G.UIParent, BackdropTemplateMixin and "BackdropTemplate")
 	chocolate.highlight = highlightBackground
 
 	--set update function
@@ -348,17 +393,16 @@ function ChocolatePiece:New(name, obj, settings, database)
 	chocolate:EnableMouse(true)
 	chocolate:RegisterForDrag("LeftButton")
 
+    -- XXX hack by 163
+	local fontPath = db.fontPath == " " and (GetLocale() == 'zhCN' and LSM:Fetch('font', '聊天') or LSM:GetDefault("font")) or db.fontPath
+
 	chocolate.text = chocolate:CreateFontString(nil, nil, "GameFontHighlight")
-    if db.fontPath == " " then
-		chocolate.text:SetFont(LSM:GetDefault("font"), db.fontSize)
-        -- XXX hack by 163
-        if(GetLocale() == 'zhCN') then
-            chocolate.text:SetFont(LSM:Fetch('font', '聊天'), db.fontSize)
-        end
-	else
-		chocolate.text:SetFont(db.fontPath, db.fontSize) --will onl be set when db.fontPath is valid
-	end
+	chocolate.text:SetFont(fontPath, db.fontSize)
 	chocolate.text:SetJustifyH("LEFT")
+
+	if isLauncherAndHasNoText(obj) then
+		obj.text = obj.label and obj.label or name
+	end
 
 	if icon then
 		CreateIcon(chocolate, icon)
@@ -373,11 +417,8 @@ function ChocolatePiece:New(name, obj, settings, database)
 	chocolate:Show()
 	chocolate.settings = settings
 
-	if text then
-		chocolate.text:SetText(text)
-	else
-		obj.text = name
-		chocolate.text:SetText(name)
+	if not obj.label then
+		obj.label = name
 	end
 
 	chocolate.name = name
@@ -385,6 +426,7 @@ function ChocolatePiece:New(name, obj, settings, database)
 	chocolate:SetScript("OnDragStart", OnDragStart)
 	chocolate:SetScript("OnDragStop", OnDragStop)
 	SettingsUpdater(chocolate, settings.showText)
+	LabelUpdater(chocolate, obj.label)	
 	return chocolate
 end
 

@@ -105,31 +105,32 @@ function CoreUIAddNewbieTooltip(self, newbieText, r, g, b)
 end
 
 --tooltipTitle,tooltipText,tooltipLines,tooltipAnchorPoint
-function CoreUIShowTooltip(self, anchor)
+function CoreUIShowTooltip(self, anchor, tip)
     if(self.tooltipTitle or self.tooltipText or self.tooltipLines) then
-        GameTooltip:SetOwner(self, anchor or self.tooltipAnchorPoint);
-        GameTooltip:ClearLines();
+        tip = tip or GameTooltip
+        tip:SetOwner(self, anchor or self.tooltipAnchorPoint);
+        tip:ClearLines();
         if(self.tooltipLines)then
             if(type(self.tooltipLines)=="string")then
                 self.tooltipLines = {strsplit("`", self.tooltipLines) }
             end
             if(type(self.tooltipLines)=="table" and #self.tooltipLines > 0)then
-                GameTooltip:AddLine(self.tooltipLines[1],1,1,1)
+                tip:AddLine(self.tooltipLines[1],1,1,1)
                 for i=2, #self.tooltipLines do
-                    GameTooltip:AddLine(self.tooltipLines[i],nil,nil,nil,true); --最后一个参数是换行
+                    tip:AddLine(self.tooltipLines[i],nil,nil,nil,true); --最后一个参数是换行
                 end
             end
         else
-            if(self.tooltipTitle)then GameTooltip:AddLine(self.tooltipTitle,1,1,1); end
+            if(self.tooltipTitle)then tip:AddLine(self.tooltipTitle,1,1,1); end
         end
 
         if(type(self._tooltipText)=="function") then
-            self._tooltipText(self, GameTooltip);
+            self._tooltipText(self, tip);
         else
-            GameTooltip:AddLine(self.tooltipText,nil,nil,nil,true); --最后一个参数是换行
+            tip:AddLine(self.tooltipText,nil,nil,nil,true); --最后一个参数是换行
         end
 
-        GameTooltip:Show();
+        tip:Show();
     end
 end
 
@@ -150,7 +151,7 @@ end
 ---创建一个包含标题框的对话框, 层次为DIALOG
 --@return wrapped, 具有title属性.
 function CoreUICreateDialog(name,parent,width,height)
-    local f = WW:Frame(name,parent):Size(width,height)
+    local f = WW:Frame(name,parent,ABY_BD_TPL):Size(width,height)
     f:SetFrameStrata("DIALOG");
     -- wrapped:Backdrop(bgFile, edgeFile, edgeSize, insets, tileSize)
     f:Backdrop("Interface\\DialogFrame\\UI-DialogBox-Background-Dark","Interface\\DialogFrame\\UI-DialogBox-Border",32,{11,11,12,10},32);
@@ -343,22 +344,11 @@ function CoreUICreateFlash(frame, texture, ...)
     return frame.__flash;
 end
 
-function CoreUISetEditText(text, insert)
-    local chatFrame = GetCVar("chatStyle")=="im" and SELECTED_CHAT_FRAME or DEFAULT_CHAT_FRAME
-    if insert then
-        chatFrame.editBox:Insert(text);
-    else
-        chatFrame.editBox:SetText(text);
-    end
-    chatFrame.editBox:Show();
-    chatFrame.editBox:HighlightText()
-    chatFrame.editBox:SetFocus()
-end
-
 CoreDependCall("Blizzard_BindingUI", function()
     KeyBindingFrameScrollFrame:HookScript("OnVerticalScroll", CoreUIHideCallOut)
 end)
 
+--No use, can't find header
 function CoreUIShowKeyBindingFrame(scrollTo)
     if not IsAddOnLoaded("Blizzard_BindingUI") then KeyBindingFrame_LoadUI(); end
 
@@ -422,7 +412,7 @@ function CoreUISetScale(frame, scale)
         local y = frame:GetTop() * frame:GetScale() / scale;
         frame:SetScale(scale);
         frame:ClearAllPoints();
-        frame:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", x, y);
+        frame:SetPoint("TOPLEFT", anchor, "BOTTOMLEFT", x, y);
     else
         frame:SetScale(scale)
     end
@@ -442,4 +432,60 @@ function CoreUIShowCallOut(parent, relative1, relative2, x1, y1, x2, y2)
 end
 function CoreUIHideCallOut()
     if U1CallOut then U1CallOut:Hide() end
+end
+
+function CoreUIChatEdit_Insert(text, clear, no_highlight)
+    -- see ChatEdit_InsertLink
+    local eb = ChatEdit_GetActiveWindow();
+    if not eb then
+        local chatFrame = GetCVar("chatStyle")=="im" and SELECTED_CHAT_FRAME or DEFAULT_CHAT_FRAME
+        eb = chatFrame and chatFrame.editBox
+        if eb then
+            eb:Show()
+        end
+    end
+    if clear then
+        eb:SetText(text);
+    else
+        eb:Insert(text)
+    end
+    if not no_highlight then eb:HighlightText() end
+    eb:SetFocus()
+    return eb
+end
+
+function CoreUIShowUIPanel(frame)
+    if not frame then return end
+    local frameName = frame:GetName()
+    if not frameName then return end
+    if not InCombatLockdown() then
+        ShowUIPanel(frame)
+    else
+        frame:Show()
+        tDeleteItem(UISpecialFrames, frameName)
+        table.insert(UISpecialFrames, frameName)
+        if not frame._abyHookRemoveSpecial then
+            frame._abyHookRemoveSpecial = true
+            hooksecurefunc(frame, "Hide", function()
+                tDeleteItem(UISpecialFrames, frameName)
+            end)
+        end
+    end
+end
+
+function CoreUIHideUIPanel(frame)
+    if not frame then return end
+    local frameName = frame:GetName()
+    if not frameName then return end
+    frame:Hide()
+    tDeleteItem(UISpecialFrames, frameName)
+end
+
+function CoreUIToggleFrame(frame)
+    if not frame then return end
+	if ( frame:IsShown() ) then
+        CoreUIHideUIPanel(frame);
+	else
+        CoreUIShowUIPanel(frame);
+	end
 end

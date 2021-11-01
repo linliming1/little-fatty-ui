@@ -409,13 +409,19 @@ end
 local function UnitFrame_UpdateVehicleStatus(self)
 	local unit = self.unit
 	if not unit then return end
-	if UnitHasVehicleUI(unit) then
-		self.inVehicle = 1
-		if unit == "player" then
-			self.displayedUnit = "vehicle"
+	
+	if addon.db.showVehicleHealthBar then
+		if UnitHasVehicleUI(unit) then
+			self.inVehicle = 1
+			if unit == "player" then
+				self.displayedUnit = "vehicle"
+			else
+				local prefix, id, suffix = strmatch(unit, "([^%d]+)([%d]*)(.*)")
+				self.displayedUnit = prefix.."pet"..id..suffix
+			end
 		else
-			local prefix, id, suffix = strmatch(unit, "([^%d]+)([%d]*)(.*)")
-			self.displayedUnit = prefix.."pet"..id..suffix
+			self.inVehicle = nil
+			self.displayedUnit = unit
 		end
 	else
 		self.inVehicle = nil
@@ -884,7 +890,7 @@ local function UnitFrame_RegisterEvents(self)
 	self:RegisterEvent("GROUP_ROSTER_UPDATE")
 	self:RegisterEvent("UNIT_HEALTH")
 	self:RegisterEvent("UNIT_MAXHEALTH")
-	self:RegisterEvent("UNIT_POWER_UPDATE")
+	self:RegisterEvent("UNIT_POWER_FREQUENT")
 	self:RegisterEvent("UNIT_MAXPOWER")
 	self:RegisterEvent("UNIT_DISPLAYPOWER")
 	self:RegisterEvent("UNIT_POWER_BAR_SHOW")
@@ -903,7 +909,6 @@ local function UnitFrame_RegisterEvents(self)
 	self:RegisterEvent("READY_CHECK_CONFIRM")
 	self:RegisterEvent("PARTY_MEMBER_DISABLE")
 	self:RegisterEvent("PARTY_MEMBER_ENABLE")
-	self:RegisterEvent("UNIT_HEALTH_FREQUENT")
 	self:RegisterEvent("INCOMING_RESURRECT_CHANGED")
 	self:RegisterEvent("RAID_TARGET_UPDATE")
 	self:RegisterEvent("UNIT_FLAGS")
@@ -1043,7 +1048,7 @@ local function UnitFrame_OnEvent(self, event, unit)
 			UnitFrame_UpdateShieldAbsorbs(self)
 			UnitFrame_UpdateHealthAbsorbs(self)
 			UnitFrame_UpdateHealthText(self)
-		elseif event == "UNIT_HEALTH" or event == "UNIT_HEALTH_FREQUENT" then
+		elseif event == "UNIT_HEALTH" then
 			UnitFrame_UpdateHealth(self)
 			UnitFrame_UpdateHealthPrediction(self)
 			UnitFrame_UpdateShieldAbsorbs(self)
@@ -1057,7 +1062,7 @@ local function UnitFrame_OnEvent(self, event, unit)
 		elseif event == "UNIT_MAXPOWER" then
 			UnitFrame_UpdatePowerMax(self)
 			UnitFrame_UpdatePower(self)
-		elseif event == "UNIT_POWER_UPDATE" then
+		elseif event == "UNIT_POWER_FREQUENT" then
 			UnitFrame_UpdatePower(self)
 		elseif event == "UNIT_DISPLAYPOWER" or event == "UNIT_POWER_BAR_SHOW" or event == "UNIT_POWER_BAR_HIDE" then
 			UnitFrame_UpdatePowerMax(self)
@@ -1202,6 +1207,15 @@ local optionTable = {
 	invertColor = function(frame, value)
 		UnitFrame_UpdateHealthColor(frame)
 		UnitFrame_UpdatePowerType(frame)
+	end,
+	
+    showVehicleHealthBar = function(frame, value)
+		if value then 
+			frame:SetAttribute("toggleForVehicle", true)
+		else 
+			frame:SetAttribute("toggleForVehicle", false)
+		end
+		UnitFrame_UpdateVehicleStatus(frame)
 	end,
 
 	showBuffs = function(frame, value)

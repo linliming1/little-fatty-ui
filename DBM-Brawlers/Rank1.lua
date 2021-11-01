@@ -1,9 +1,8 @@
 local mod	= DBM:NewMod("BrawlRank1", "DBM-Brawlers")
 local L		= mod:GetLocalizedStrings()
 
-mod:SetRevision(("$Revision: 18464 $"):sub(12, -3))
+mod:SetRevision("20201102223314")
 --mod:SetModelID(46327)--Last Boss of Rank 1
-mod:SetZone()
 
 mod:RegisterEvents(
 	"SPELL_CAST_START 135342 290486 140983"
@@ -19,11 +18,11 @@ local specWarnChomp				= mod:NewSpecialWarningDodge(135342, nil, nil, nil, 3, 2)
 local specWarnDaFifHammer		= mod:NewSpecialWarningDodge(290486, nil, nil, nil, 1, 2)--Thog Hammerspace
 local specWarnCantataofFlooting	= mod:NewSpecialWarningInterrupt(140983, "HasInterrupt", nil, nil, 1, 2)--Grandpa Grumplefloot
 
-local timerChompCD				= mod:NewCDTimer(8, 135342, nil, nil, nil, 3, nil, DBM_CORE_DEADLY_ICON)--Bruce
+local timerChompCD				= mod:NewCDTimer(8, 135342, nil, nil, nil, 3, nil, DBM_CORE_L.DEADLY_ICON)--Bruce
 local timerDaFifHammerCD		= mod:NewCDTimer(22.6, 290486, nil, nil, nil, 3)--Thog Hammerspace
---local timerCantataofFlootingCD	= mod:NewCDTimer(8, 140983, nil, nil, nil, 4, nil, DBM_CORE_INTERRUPT_ICON)
+--local timerCantataofFlootingCD	= mod:NewCDTimer(8, 140983, nil, nil, nil, 4, nil, DBM_CORE_L.INTERRUPT_ICON)
 
-local brawlersMod = DBM:GetModByName("Brawlers")
+local brawlersMod = DBM:GetModByName("BrawlersGeneral")
 
 function mod:SPELL_CAST_START(args)
 	if not brawlersMod.Options.SpectatorMode and not brawlersMod:PlayerFighting() then return end--Spectator mode is disabled, do nothing.
@@ -35,6 +34,7 @@ function mod:SPELL_CAST_START(args)
 			specWarnChomp:Play("shockwave")
 		else
 			warnChomp:Show()--Give reg warnings for spectators
+			timerChompCD:SetSTFade(true)
 		end
 	elseif spellId == 290486 then
 		timerDaFifHammerCD:Start()
@@ -43,6 +43,7 @@ function mod:SPELL_CAST_START(args)
 			specWarnDaFifHammer:Play("shockwave")
 		else
 			warnDaFifHammer:Show()--Give reg warnings for spectators
+			timerDaFifHammerCD:SetSTFade(true)
 		end
 	elseif spellId == 140983 then
 		--timerCantataofFlootingCD:Start()
@@ -51,6 +52,7 @@ function mod:SPELL_CAST_START(args)
 			specWarnCantataofFlooting:Play("kickcast")
 		else
 			warnCantataofFlooting:Show()--Give reg warnings for spectators
+			--timerCantataofFlootingCD:SetSTFade(true)
 		end
 	end
 end

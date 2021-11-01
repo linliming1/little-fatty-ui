@@ -1,10 +1,9 @@
 local mod	= DBM:NewMod(1713, "DBM-Nighthold", nil, 786)
 local L		= mod:GetLocalizedStrings()
 
-mod:SetRevision(("$Revision: 2 $"):sub(12, -3))
+mod:SetRevision("20211011150938")
 mod:SetCreatureID(101002)
 mod:SetEncounterID(1842)
-mod:SetZone()
 --mod:SetUsedIcons(8, 7, 6, 3, 2, 1)
 mod:SetHotfixNoticeRev(15740)
 mod.respawnTime = 29--or 30
@@ -37,14 +36,11 @@ local specWarnFelBurst				= mod:NewSpecialWarningInterrupt(206351, "HasInterrupt
 
 local timerSearingBrand				= mod:NewTargetTimer(20, 206677, nil, "Tank", nil, 5)
 local timerFelBeamCD				= mod:NewNextCountTimer(16, 205368, 173303, nil, nil, 3)--Short text "Beam"
-local timerOrbDestroCD				= mod:NewNextCountTimer(16, 205344, DBM_CORE_ORB, nil, nil, 3, nil, DBM_CORE_DEADLY_ICON)--Shor timer text "Orb"
+local timerOrbDestroCD				= mod:NewNextCountTimer(16, 205344, DBM_CORE_L.ORB, nil, nil, 3, nil, DBM_CORE_L.DEADLY_ICON, nil, 3, 4)--Shor timer text "Orb"
 local timerBurningPitchCD			= mod:NewNextCountTimer(16, 205420, nil, nil, 2, 5)
-local timerSlamCD					= mod:NewNextCountTimer(30, 205862, nil, nil, nil, 3, nil, DBM_CORE_DEADLY_ICON)
+local timerSlamCD					= mod:NewNextCountTimer(30, 205862, nil, nil, nil, 3, nil, DBM_CORE_L.DEADLY_ICON, nil, 1, 4)
 
 local berserkTimer					= mod:NewBerserkTimer(360)--technically not a berserk, but raid instantly wipes during final bridge smash, at 6 minutes.
-
-local countdownBigSlam				= mod:NewCountdown(90, 205862)
-local countdownOrbDestro			= mod:NewCountdownFades("AltTwo5", 205344)
 
 mod:AddRangeFrameOption(5, 206351)
 mod:AddSetIconOption("SetIconOnAdds", "ej12914", true, true)
@@ -76,7 +72,7 @@ mod.vb.firstBeam = 0--0 Not sent, 1 Left, 2 Right
 --/run DBMUpdateKrosusBeam(wasLeft)
 --Global on purpose for external mod support
 --DBM:GetModByName("1713"):SendBigWigsSync("firstBeamWasLeft")
-function DBMUpdateKrosusBeam(wasLeft)
+_G["DBMUpdateKrosusBeam"] = function(wasLeft)
 	if wasLeft then
 		mod.vb.firstBeam = 1
 		if not mod:IsLFR() then
@@ -91,7 +87,7 @@ function DBMUpdateKrosusBeam(wasLeft)
 end
 
 function mod:OnCombatStart(delay)
-	if self:IsTrivial(120) or self:IsLFR() then
+	if self:IsTrivial() or self:IsLFR() then
 		minAmount, maxAmount = 8, 16
 	elseif self:IsNormal() then
 		minAmount, maxAmount = 4, 8
@@ -109,7 +105,6 @@ function mod:OnCombatStart(delay)
 	self.vb.firstBeam = 0
 	warnSlamSoon:Countdown(90)
 	timerSlamCD:Start(-delay, 1)
-	countdownBigSlam:Start(-delay)
 	berserkTimer:Start(-delay)
 	if self:IsMythic() then
 		timerFelBeamCD:Start(6-delay, 1)
@@ -198,7 +193,7 @@ function mod:SPELL_CAST_START(args)
 				DBM.RangeCheck:Show(5)
 			end
 			if self.Options.SetIconOnAdds then
-				self:ScanForMobs(args.sourceGUID, 0, 8, 8, 0.1, 15, "SetIconOnAdds")
+				self:ScanForMobs(args.sourceGUID, 0, 8, 8, nil, 15, "SetIconOnAdds")
 			end
 		end
 		if self:CheckInterruptFilter(args.sourceGUID, false, true) then
@@ -211,7 +206,6 @@ function mod:SPELL_CAST_START(args)
 		if self.vb.slamCount % 3 == 0 then
 			specWarnSlam:Show()
 			specWarnSlam:Play("justrun")
-			countdownBigSlam:Start()
 			warnSlamSoon:Countdown(90)
 		else
 			warnSlam:Show(self.vb.slamCount)
@@ -260,7 +254,6 @@ function mod:SPELL_AURA_APPLIED(args)
 			yellOrbDestro:Schedule(4, 1)
 			yellOrbDestro:Schedule(3, 2)
 			yellOrbDestro:Schedule(2, 3)
-			countdownOrbDestro:Start()
 		else
 			warnExpelOrbDestro:Show(self.vb.orbCount, args.destName)
 		end
@@ -273,8 +266,7 @@ function mod:SPELL_AURA_REMOVED(args)
 	if spellId == 205344 then
 		if args:IsPlayer() then
 			yellOrbDestro:Cancel()
-			countdownOrbDestro:Cancel()
-		end		
+		end
 	end
 end
 
@@ -289,8 +281,7 @@ function mod:UNIT_DIED(args)
 	end
 end
 
-function mod:UNIT_SPELLCAST_SUCCEEDED(uId, _, bfaSpellId, _, legacySpellId)
-	local spellId = legacySpellId or bfaSpellId
+function mod:UNIT_SPELLCAST_SUCCEEDED(uId, _, spellId)
 	if spellId == 205383 then--Fel Beam (fires for left and right) Does not fire for double beams
 		DBM:Debug("Single Beam", 2)
 	elseif spellId == 215961 then--Double Beam (fires for the double beam sequence where you get both beams back to back. Only fires at start of it not each beam*)
@@ -308,4 +299,3 @@ function mod:OnBWSync(msg)
 		DBM:Debug("Recieved Right Beam Sync")
 	end
 end
-	

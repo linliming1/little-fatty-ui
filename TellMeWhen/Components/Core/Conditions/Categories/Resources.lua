@@ -22,6 +22,8 @@ local Env = CNDT.Env
 
 local _, pclass = UnitClass("Player")
 
+local wow_900 = select(4, GetBuildInfo()) >= 90000
+
 Env.UnitHealth = UnitHealth
 Env.UnitHealthMax = UnitHealthMax
 Env.UnitPower = UnitPower
@@ -41,6 +43,7 @@ TMW:RegisterUpgrade(62032, {
 
 local ConditionCategory = CNDT:GetCategory("RESOURCES", 1, L["CNDTCAT_RESOURCES"], false, false)
 
+local healthEvent = wow_900 and "UNIT_HEALTH" or "UNIT_HEALTH_FREQUENT"
 
 ConditionCategory:RegisterCondition(1.0, "HEALTH", {
 	text = HEALTH .. " - " .. L["CONDITIONPANEL_PERCENT"],
@@ -54,7 +57,7 @@ ConditionCategory:RegisterCondition(1.0, "HEALTH", {
 	events = function(ConditionObject, c)
 		return
 			ConditionObject:GetUnitChangedEventString(CNDT:GetUnit(c.Unit)),
-			ConditionObject:GenerateNormalEventString("UNIT_HEALTH_FREQUENT", CNDT:GetUnit(c.Unit)),
+			ConditionObject:GenerateNormalEventString(healthEvent, CNDT:GetUnit(c.Unit)),
 			ConditionObject:GenerateNormalEventString("UNIT_MAXHEALTH", CNDT:GetUnit(c.Unit))
 	end,
 })
@@ -62,21 +65,21 @@ ConditionCategory:RegisterCondition(1.1, "HEALTH_ABS", {
 	text = HEALTH .. " - " .. L["CONDITIONPANEL_ABSOLUTE"],
 	formatter = TMW.C.Formatter.COMMANUMBER,
 	min = 0,
-	range = 1000000,
+	range = 100000,
 	icon = "Interface\\Icons\\inv_alchemy_elixir_05",
 	tcoords = CNDT.COMMON.standardtcoords,
 	funcstr = [[UnitHealth(c.Unit) c.Operator c.Level]],
 	events = function(ConditionObject, c)
 		return
 			ConditionObject:GetUnitChangedEventString(CNDT:GetUnit(c.Unit)),
-			ConditionObject:GenerateNormalEventString("UNIT_HEALTH_FREQUENT", CNDT:GetUnit(c.Unit))
+			ConditionObject:GenerateNormalEventString(healthEvent, CNDT:GetUnit(c.Unit))
 	end,
 })
 ConditionCategory:RegisterCondition(1.2, "HEALTH_MAX", {
 	text = HEALTH .. " - " .. L["CONDITIONPANEL_MAX"],
 	formatter = TMW.C.Formatter.COMMANUMBER,
 	min = 0,
-	range = 1000000,
+	range = 100000,
 	icon = "Interface\\Icons\\inv_alchemy_elixir_05",
 	tcoords = CNDT.COMMON.standardtcoords,
 	funcstr = [[UnitHealthMax(c.Unit) c.Operator c.Level]],
@@ -189,7 +192,7 @@ ConditionCategory:RegisterCondition(26.1, "STAGGER", {
 	Env = {
 		UnitStagger = UnitStagger,
 	},
-	funcstr = [[UnitStagger("player") / (UnitHealthMax("player")+epsilon) c.Operator c.Level]],
+	funcstr = [[(UnitStagger("player") or 0) / (UnitHealthMax("player")+epsilon) c.Operator c.Level]],
 	events = function(ConditionObject, c)
 		return
 			ConditionObject:GenerateNormalEventString("UNIT_ABSORB_AMOUNT_CHANGED", "player"),
@@ -209,11 +212,11 @@ ConditionCategory:RegisterCondition(26.15, "STAGGER_CURPCT", {
 	Env = {
 		UnitStagger = UnitStagger,
 	},
-	funcstr = [[UnitStagger("player") / (UnitHealth("player")+epsilon) c.Operator c.Level]],
+	funcstr = [[(UnitStagger("player") or 0) / (UnitHealth("player")+epsilon) c.Operator c.Level]],
 	events = function(ConditionObject, c)
 		return
 			ConditionObject:GenerateNormalEventString("UNIT_ABSORB_AMOUNT_CHANGED", "player"),
-			ConditionObject:GenerateNormalEventString("UNIT_HEALTH_FREQUENT", "player")
+			ConditionObject:GenerateNormalEventString(healthEvent, "player")
 	end,
 	hidden = pclass ~= "MONK",
 })
@@ -227,7 +230,7 @@ ConditionCategory:RegisterCondition(26.2, "STAGGER_ABS", {
 	Env = {
 		UnitStagger = UnitStagger,
 	},
-	funcstr = [[UnitStagger("player") c.Operator c.Level]],
+	funcstr = [[(UnitStagger("player") or 0) c.Operator c.Level]],
 	events = function(ConditionObject, c)
 		return
 			ConditionObject:GenerateNormalEventString("UNIT_ABSORB_AMOUNT_CHANGED", "player")

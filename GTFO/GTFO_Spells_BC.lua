@@ -3,8 +3,9 @@
 --------------------------------------------------------------------------
 --[[
 GTFO Spell List - Burning Crusade
-Author: Zensunim of Malygos
 ]]--
+
+if (not GTFO.ClassicMode) then
 
 GTFO.SpellID["40611"] = {
 	--desc = "Blaze (Illidan)";
@@ -249,6 +250,18 @@ GTFO.SpellID["32251"] = {
 	trivialLevel = 80;
 };
 
+GTFO.SpellID["30927"] = {
+	--desc = "Blaze (Vazruden - Hellfire Ramparts)";
+	sound = 1;
+	trivialLevel = 80;
+};
+
+GTFO.SpellID["32492"] = {
+	--desc = "Blaze (Vazruden - Hellfire Ramparts - Heroic)";
+	sound = 1;
+	trivialLevel = 80;
+};
+
 GTFO.SpellID["35057"] = {
 	--desc = "Netherbomb (Mechanar Tinkerer - Mechanar)";
 	sound = 2;
@@ -309,9 +322,18 @@ GTFO.SpellID["36175"] = {
 };
 
 GTFO.SpellID["35767"] = {
-	--desc = "Felfire (Wrath-Scryer Soccothrates - Arcatraz)";
+	--desc = "Felfire (Wrath-Scryer Soccothrates - Arcatraz - Heroic)";
 	sound = 1;
 	trivialLevel = 80;
+};
+
+GTFO.SpellID["36829"] = {
+	--desc = "Hell Rain (Sargeron Hellcaller - Arcatraz - Normal)";
+	sound = 1;
+};
+GTFO.SpellID["38917"] = {
+	--desc = "Hell Rain (Sargeron Hellcaller - Arcatraz - Heroic)";
+	sound = 1;
 };
 
 GTFO.SpellID["44198"] = {
@@ -375,12 +397,6 @@ GTFO.SpellID["34435"] = {
 	trivialLevel = 80;
 };
 
-GTFO.SpellID["36449"] = {
-	--desc = "Debris (Magtheridon)";
-	sound = 1;
-	trivialLevel = 80;
-};
-
 GTFO.SpellID["36240"] = {
 	--desc = "Cave In (Gruul)";
 	sound = 1;
@@ -420,11 +436,6 @@ GTFO.SpellID["30860"] = {
 	sound = 1;
 };
 
-GTFO.SpellID["35383"] = {
-	--desc = "Flame Patch (Al'ar - Tempest Keep)";
-	sound = 1;
-};
-
 GTFO.SpellID["138561"] = {
 	--desc = "Kanrethad Ebonlocke (Black Temple)";
 	sound = 1;
@@ -434,3 +445,91 @@ GTFO.SpellID["40841"] = {
   --desc = "Flame Crash (Black Temple)";
   sound = 1;
 };
+
+
+-- **********************
+-- * Magtheridon's Lair *
+-- **********************
+
+
+GTFO.SpellID["30757"] = {
+  --desc = "Conflagration (Magtheridon)";
+  sound = 1;
+};
+
+GTFO.SpellID["36449"] = {
+	--desc = "Debris (Magtheridon)";
+	sound = 1;
+	trivialLevel = 80;
+};
+
+-- ***********
+-- * The Eye *
+-- ***********
+
+GTFO.SpellID["35383"] = {
+	--desc = "Flame Patch (Al'ar - Tempest Keep)";
+	sound = 1;
+};
+
+GTFO.SpellID["37124"] = {
+  --desc = "Starfall (Star Scryer)";
+  sound = 1;
+  test = true;
+  trivialLevel = 80;
+};
+
+GTFO.SpellID["15589"] = {
+  --desc = "Whirlwind (Bloodwarder Marshal)";
+  sound = 1;
+  tankSound = 0;
+  test = true;
+  trivialLevel = 80;
+};
+
+GTFO.SpellID["37279"] = {
+  --desc = "Rain of Fire (Novice Astromancer)";
+  sound = 1;
+  test = true;
+  trivialLevel = 80;
+};
+
+GTFO.SpellID["37263"] = {
+  --desc = "Blizzard (Crimson Hand Battle Mage)";
+  sound = 1;
+  test = true;
+  trivialLevel = 80;
+};
+
+GTFO.SpellID["36731"] = {
+  --desc = "Flame Strike (Kael'thas)";
+  sound = 1;
+  test = true;
+  trivialLevel = 80;
+};
+
+
+-- ************************
+-- * Serpentshrine Cavern *
+-- ************************
+
+
+GTFO.SpellID["38635"] = {
+  --desc = "Rain of Fire (Greyheart Nether-Mage)";
+  applicationOnly = true;
+  sound = 1;
+};
+
+GTFO.SpellID["37641"] = {
+  --desc = "Whirlwind (Leotheras the Blind)";
+  sound = 1;
+  tankSound = 0;
+  test = true;
+};
+
+GTFO.SpellID["38575"] = {
+  --desc = "Toxic Spores (Lady Vashj)";
+  sound = 1;
+};
+
+end

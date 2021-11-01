@@ -1,10 +1,9 @@
 local mod	= DBM:NewMod("BrawlChallenges", "DBM-Brawlers")
 local L		= mod:GetLocalizedStrings()
 
-mod:SetRevision(("$Revision: 18461 $"):sub(12, -3))
+mod:SetRevision("20201102223314")
 --mod:SetCreatureID(60491)
 --mod:SetModelID(48465)
-mod:SetZone()
 
 mod:RegisterEvents(
 	"CHAT_MSG_RAID_BOSS_EMOTE",
@@ -48,14 +47,14 @@ local timerSmolderingHeatCD			= mod:NewCDTimer(20, 142400)--Anthracite
 local timerCooled					= mod:NewTargetTimer(20, 141371, nil, nil, nil, 6)--Anthracite
 local timerRockpaperScissorsCD		= mod:NewCDTimer(42, 141206, nil, nil, nil, 6)--Ro-Shambo
 local timerPowerCrystalCD			= mod:NewCDTimer(13, 133398)--Millhouse Manastorm
-local timerBlueCrushCD				= mod:NewCDTimer(19.4, 133262, nil, nil, nil, 4, nil, DBM_CORE_INTERRUPT_ICON)--Epicus Maximus
+local timerBlueCrushCD				= mod:NewCDTimer(19.4, 133262, nil, nil, nil, 4, nil, DBM_CORE_L.INTERRUPT_ICON)--Epicus Maximus
 local timerDestructolaserCD			= mod:NewNextTimer(30, 133250, nil, nil, nil, 3)--Epicus Maximus
-local timerConsumeEssenceCD			= mod:NewCDTimer(22.3, 294665, nil, nil, nil, 4, nil, DBM_CORE_INTERRUPT_ICON)--Xan-Sallish
+local timerConsumeEssenceCD			= mod:NewCDTimer(22.3, 294665, nil, nil, nil, 4, nil, DBM_CORE_L.INTERRUPT_ICON)--Xan-Sallish
 
 mod:AddBoolOption("ArrowOnBoxing")--Ro-Shambo
 
-local brawlersMod = DBM:GetModByName("Brawlers")
-local lastRPS = DBM_CORE_UNKNOWN
+local brawlersMod = DBM:GetModByName("BrawlersGeneral")
+local lastRPS = DBM_CORE_L.UNKNOWN
 
 --"<39.8 01:37:33> [CHAT_MSG_RAID_BOSS_EMOTE] CHAT_MSG_RAID_BOSS_EMOTE#|TInterface\\Icons\\inv_inscription_scroll.blp:20|t %s Chooses |cFFFF0000Paper|r! You |cFF00FF00Win|r!#Ro-Shambo
 function mod:CHAT_MSG_RAID_BOSS_EMOTE(msg)
@@ -69,7 +68,7 @@ function mod:CHAT_MSG_RAID_BOSS_EMOTE(msg)
 end
 
 brawlersMod:OnMatchStart(function()
-	lastRPS = DBM_CORE_UNKNOWN
+	lastRPS = DBM_CORE_L.UNKNOWN
 end)
 
 function mod:SPELL_AURA_APPLIED(args)
@@ -80,9 +79,15 @@ function mod:SPELL_AURA_APPLIED(args)
 		if args:IsPlayer() then
 			specWarnSmolderingHeat:Show()
 		end
+		if not brawlersMod:PlayerFighting() then
+			timerSmolderingHeatCD:SetSTFade(true)
+		end
 	elseif args.spellId == 134650 then
 		warnShieldWaller:Show()
 		timerShieldWaller:Start()
+		if not brawlersMod:PlayerFighting() then
+			timerShieldWaller:SetSTFade(true)
+		end
 	elseif args.spellId == 141206 then
 		warnRockPaperScissors:Show()
 		timerRockpaperScissorsCD:Start()
@@ -94,10 +99,15 @@ function mod:SPELL_AURA_APPLIED(args)
 			elseif lastRPS == L.scissors then--he's using rock this time
 				specWarnRPS:Show(L.paper)
 			end
+		else
+			timerRockpaperScissorsCD:SetSTFade(true)
 		end
 	elseif args.spellId == 141371 then
 		warnCooled:Show(args.destName)
 		timerCooled:Start(args.destName)
+		if not brawlersMod:PlayerFighting() then
+			timerCooled:SetSTFade(true, args.destName)
+		end
 	elseif args.spellId == 141388 then
 		warnOnFire:Show(args.destName)
 	elseif args.spellId == 134624 then
@@ -111,7 +121,7 @@ mod.SPELL_AURA_REMOVED_DOSE = mod.SPELL_AURA_APPLIED_DOSE
 function mod:SPELL_AURA_REMOVED(args)
 	if not brawlersMod.Options.SpectatorMode and not brawlersMod:PlayerFighting() then return end
 	if args.spellId == 134650 then
-		timerShieldWaller:Cancel()
+		timerShieldWaller:Stop()
 	end
 end
 
@@ -139,6 +149,9 @@ function mod:SPELL_CAST_START(args)
 	elseif args.spellId == 133398 then
 		warnPowerCrystal:Show()
 		timerPowerCrystalCD:Start()
+		if not brawlersMod:PlayerFighting() then
+			timerPowerCrystalCD:SetSTFade(true)
+		end
 	elseif args.spellId == 133262 then
 		timerBlueCrushCD:Start()
 		if brawlersMod:PlayerFighting() then
@@ -146,6 +159,7 @@ function mod:SPELL_CAST_START(args)
 			specWarnBlueCrush:Play("kickcast")
 		else
 			warnBlueCrush:Show()
+			timerBlueCrushCD:SetSTFade(true)
 		end
 	elseif args.spellId == 294665 then
 		timerConsumeEssenceCD:Start()
@@ -153,7 +167,7 @@ function mod:SPELL_CAST_START(args)
 			specWarnConsumeEssence:Show(args.sourceName)
 			specWarnConsumeEssence:Play("kickcast")
 		else
-			warnBlueCrush:Show()
+			timerConsumeEssenceCD:SetSTFade(true)
 		end
 	elseif args.spellId == 294638 then
 		if brawlersMod:PlayerFighting() then
@@ -170,6 +184,9 @@ function mod:SPELL_CAST_SUCCESS(args)
 	if args.spellId == 132670 then
 		warnSummonTwister:Show()
 		timerSummonTwisterCD:Start()--22 seconds after combat start?
+		if not brawlersMod:PlayerFighting() then
+			timerSummonTwisterCD:SetSTFade(true)
+		end
 	elseif args.spellId == 133250 then
 		timerDestructolaserCD:Start()
 		if brawlersMod:PlayerFighting() then
@@ -177,6 +194,7 @@ function mod:SPELL_CAST_SUCCESS(args)
 			specWarnDestructolaser:Play("watchstep")
 		else
 			warnDestructolaser:Show()
+			timerDestructolaserCD:SetSTFade(true)
 		end
 	end
 end
@@ -191,6 +209,7 @@ function mod:UNIT_SPELLCAST_CHANNEL_START(uId, _, spellId)
 			specWarnLumberingCharge:Show()
 		else
 			warnLumberingCharge:Show()
+			timerLumberingChargeCD:SetSTFade(true)
 		end
 	end
 end

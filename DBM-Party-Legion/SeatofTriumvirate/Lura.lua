@@ -1,10 +1,9 @@
 local mod	= DBM:NewMod(1982, "DBM-Party-Legion", 13, 945)
 local L		= mod:GetLocalizedStrings()
 
-mod:SetRevision(("$Revision: 2 $"):sub(12, -3))
+mod:SetRevision("20210905144759")
 mod:SetCreatureID(124870)--124745 Greater Rift Warden
 mod:SetEncounterID(2068)
-mod:SetZone()
 
 mod:RegisterCombat("combat")
 
@@ -28,16 +27,12 @@ local specWarnFragmentOfDespair			= mod:NewSpecialWarningSpell(245164, nil, nil,
 local specWarnGrandShift				= mod:NewSpecialWarningDodge(249009, nil, nil, nil, 2, 2)
 
 --local timerCalltoVoidCD					= mod:NewAITimer(12, 247795, nil, nil, nil, 1)
-local timerGrandShiftCD					= mod:NewCDTimer(14.6, 249009, nil, nil, nil, 3, nil, DBM_CORE_HEROIC_ICON)
-local timerUmbralCadenceCD				= mod:NewCDTimer(10.9, 247930, nil, nil, nil, 2, nil, DBM_CORE_HEALER_ICON)
+local timerGrandShiftCD					= mod:NewCDTimer(14.6, 249009, nil, nil, nil, 3, nil, DBM_CORE_L.HEROIC_ICON)
+local timerUmbralCadenceCD				= mod:NewCDTimer(10.9, 247930, nil, nil, nil, 2, nil, DBM_CORE_L.HEALER_ICON)
 local timerBacklash						= mod:NewBuffActiveTimer(12.5, 247816, nil, nil, nil, 6)
 
---local countdownBreath					= mod:NewCountdown(22, 227233)
-
-mod.vb.phase = 1
-
 function mod:OnCombatStart(delay)
-	self.vb.phase = 1
+	self:SetStage(1)
 	--timerCalltoVoidCD:Start(1-delay)--Done instantly
 end
 
@@ -90,8 +85,7 @@ function mod:CHAT_MSG_RAID_BOSS_EMOTE(msg)
 	end
 end
 
-function mod:UNIT_SPELLCAST_SUCCEEDED(uId, _, bfaSpellId, _, legacySpellId)
-	local spellId = legacySpellId or bfaSpellId
+function mod:UNIT_SPELLCAST_SUCCEEDED(uId, _, spellId)
 	if spellId == 250011 then--Alleria Describes L'ura Conversation
 
 	end

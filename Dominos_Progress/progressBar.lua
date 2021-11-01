@@ -2,7 +2,24 @@ local _, Addon = ...
 local Dominos = LibStub('AceAddon-3.0'):GetAddon('Dominos')
 local ProgressBar = Dominos:CreateClass('Frame', Dominos.ButtonBar)
 
+-- remove any modes from a list that are not currently loaded
+local function cleanupModes(modes)
+	for i = #modes, 1, -1 do
+		local mode = modes[i]
+		if not Addon.progressBarModes[mode] then
+			tremove(modes, i)
+		end
+	end
+
+	return modes
+end
+
 function ProgressBar:New(id, modes, ...)
+	modes = cleanupModes(modes)
+	if #modes == 0 then
+		return
+	end
+
 	local bar = ProgressBar.proto.New(self, id, ...)
 
 	if not bar.sets.display then
@@ -15,43 +32,49 @@ function ProgressBar:New(id, modes, ...)
 	end
 
 	bar.modes = modes
-	bar:SetFrameStrata(bar.sets.strata or 'BACKGROUND')
 	bar:UpdateFont()
 	bar:UpdateAlwaysShowText()
-	bar:UpdateMode(true)
+	bar:UpdateMode()
 
 	return bar
 end
 
-function ProgressBar:Create(...)
-	local bar = ProgressBar.proto.Create(self, ...)
+function ProgressBar:OnCreate(...)
+	ProgressBar.proto.OnCreate(self, ...)
 
-	bar:SetFrameStrata('BACKGROUND')
-
-	bar.colors = {
+	self.colors = {
 		base = {0, 0, 0},
 		bonus = {0, 0, 0, 0},
 		bg = {0, 0, 0, 1}
 	}
 
-	local bg = bar.header:CreateTexture(nil, 'BACKGROUND')
+	local bg = self:CreateTexture(nil, 'BACKGROUND')
 	bg:SetColorTexture(0, 0, 0, 1)
-	bg:SetAllPoints(bar)
-	bar.bg = bg
+	bg:SetAllPoints(self)
+	self.bg = bg
 
-	local click = CreateFrame('Button', nil, bar.header)
-	click:SetScript('OnClick', function(_, ...) bar:OnClick(...) end)
-	click:SetScript('OnEnter', function(_, ...) bar:OnEnter(...) end)
-	click:SetScript('OnLeave', function(_, ...) bar:OnLeave(...) end)
+	local click = CreateFrame('Button', nil, self)
+	click:SetScript('OnClick', function(_, ...) self:OnClick(...) end)
+	click:SetScript('OnEnter', function(_, ...) self:OnEnter(...) end)
+	click:SetScript('OnLeave', function(_, ...) self:OnLeave(...) end)
 	click:RegisterForClicks('anyUp')
-	click:SetAllPoints(bar)
-	click:SetFrameStrata('LOW')
+	click:SetAllPoints(self)
+
+	-- push the click frame higher so that it shows up over the
+	-- status bar segments
+	click:SetFrameLevel(7)
 
 	local text = click:CreateFontString(nil, 'OVERLAY', 'GameFontHighlightSmall')
 	text:SetPoint('CENTER')
-	bar.text = text
+	self.text = text
+end
 
-	return bar
+function ProgressBar:OnRelease(...)
+	ProgressBar.proto.OnRelease(self, ...)
+
+	self.value = nil
+	self.max = nil
+	self.bonus = nil
 end
 
 function ProgressBar:GetDefaults()
@@ -73,6 +96,7 @@ function ProgressBar:GetDefaults()
 			bonus = true
 		},
         width = 600,
+		displayLayer = 'BACKGROUND',		
 		alwaysShowText = true,
 		lockMode = true
 	}
@@ -114,7 +138,7 @@ do
 		buffer = buffer or {}
 		twipe(buffer)
 
-		local fn = self:CompressValues() and _G.AbbreviateLargeNumbers163 or _G.AbbreviateLargeNumbers or _G.BreakUpLargeNumbers
+		local fn = (self:CompressValues() and _G.AbbreviateLargeNumbers163 or _G.AbbreviateLargeNumbers) or _G.BreakUpLargeNumbers
 
 		if label and self:Displaying('label') then
 			tinsert(buffer, ('%s:'):format(label))
@@ -156,15 +180,32 @@ end
 
 --[[ mode ]]--
 
-function ProgressBar:SetMode(mode, force)
-	if self:GetMode() ~= mode or force then
-		self.sets.mode = mode
-		self:OnModeChanged(self:GetMode())
-	end
+function ProgressBar:SetMode(mode)
+	Addon.Config:SetBarMode(self.id, mode)
+	self:OnModeChanged(self:GetMode())
 end
 
 function ProgressBar:GetMode()
-	return self.sets.mode or self.modes[1]
+	local mode = Addon.Config:GetBarMode(self.id)
+
+	-- ensure the selected mode has a progress bar display
+	if mode and Addon.progressBarModes[mode] then
+		return mode
+	end
+
+	return self.modes[1]
+end
+
+function ProgressBar:GetModeIndex()
+	local currentMode = self:GetMode()
+
+	for i, mode in pairs(self.modes) do
+		if mode == currentMode then
+			return i
+		end
+	end
+
+	return 1
 end
 
 function ProgressBar:OnModeChanged(mode)
@@ -175,50 +216,68 @@ function ProgressBar:OnModeChanged(mode)
 	end
 end
 
-function ProgressBar:UpdateMode(force)
+function ProgressBar:UpdateMode()
+	local mode
 	if self:IsModeLocked() then
-		self:SetMode(self:GetMode(), force)
+		mode = self:GetMode()
 	else
-		local newModeId = nil
-
-		for i = #self.modes, 1, -1 do
-			newModeId = self.modes[i]
-			if Addon.progressBarModes[newModeId]:IsModeActive() then
-				break
-			end
-		end
-
-		self:SetMode(newModeId, force)
+		mode = self:GetLastActiveMode()
 	end
+
+	self:SetMode(mode)
 end
 
 function ProgressBar:IsModeActive()
 	return false
 end
 
-function ProgressBar:GetModeIndex()
-	local mode = self:GetMode()
+-- iterates through all modes in reverse order
+-- and finds the first one that's active
+-- if no active modes are found, retrieves the first mode from the list
+function ProgressBar:GetLastActiveMode()
+	local modes = self.modes
 
-	for i, availableMode in ipairs(self.modes) do
-		if availableMode == mode then
-			return i
+	for i = #modes, 2, -1 do
+		local mode = modes[i]
+		if Addon.progressBarModes[mode]:IsModeActive() then
+			return mode
 		end
 	end
 
-	return 1
+	return modes[1]
 end
 
 function ProgressBar:NextMode()
-	local nextIndex = self:GetModeIndex() + 1
-	if nextIndex > #self.modes then
-		nextIndex = 1
+	local mode
+
+	if Addon.Config:SkipInactiveModes() then
+		mode = self:GetNextActiveMode()
+	else
+		mode = self:GetNextMode()
 	end
 
-	self:SetMode(self.modes[nextIndex])
+	self:SetMode(mode)
 end
 
-function ProgressBar:GetCurrentModeIndex()
-	return self.modeIndex or 1
+function ProgressBar:GetNextMode()
+	local modes = self.modes
+	return modes[Wrap(self:GetModeIndex() + 1, #modes)]
+end
+
+function ProgressBar:GetNextActiveMode()
+	local currentIndex = self:GetModeIndex()
+	local modes = self.modes
+
+	for offset = 1, #modes - 1 do
+		local index = Wrap(currentIndex + offset, #modes)
+		local mode = modes[index]
+
+		if Addon.progressBarModes[mode]:IsModeActive() then
+			return mode
+		end
+	end
+
+	return modes[currentIndex]
 end
 
 function ProgressBar:SetLockMode(lock)
@@ -241,8 +300,8 @@ end
 
 function ProgressBar:SetValues(value, max, bonus)
 	local valueChanged = false
-
 	local maxChanged = false
+	local bonusChanged = false
 
 	max = math.max(tonumber(max) or 0, 1)
 	if self.max ~= max then
@@ -250,13 +309,11 @@ function ProgressBar:SetValues(value, max, bonus)
 		maxChanged = true
 	end
 
-	value = math.min(math.max(tonumber(value) or 0, 0), max)
+	value = Clamp(tonumber(value) or 0, 0, max)
 	if self.value ~= value then
 		self.value = value
 		valueChanged = true
 	end
-
-	local bonusChanged = false
 
 	bonus = tonumber(bonus) or 0
 	if self.bonus ~= bonus then
@@ -285,7 +342,7 @@ function ProgressBar:UpdateValue()
 
 	local segmentValue = max / self:GetSegmentCount()
 	local lastFilledIndex = floor(value / segmentValue)
-	local remainder = floor(100 * (value % segmentValue) / (segmentValue * 1.0) + 0.5)
+	local remainder = Round(100 * (value % segmentValue) / (segmentValue * 1.0))
 
 	for i, segment in pairs(self.buttons) do
 		if i <= lastFilledIndex then
@@ -305,7 +362,7 @@ function ProgressBar:UpdateBonusValue()
 
 	local segmentValue = max / self:GetSegmentCount()
 	local lastFilledIndex = floor(bonus / segmentValue)
-	local remainder = floor(100 * (bonus % segmentValue) / (segmentValue * 1.0) + 0.5)
+	local remainder = Round(100 * (bonus % segmentValue) / (segmentValue * 1.0))
 
 	for i, segment in pairs(self.buttons) do
 		if i <= lastFilledIndex then
@@ -317,8 +374,6 @@ function ProgressBar:UpdateBonusValue()
 		end
 	end
 end
-
-
 
 --[[ text display ]]--
 
@@ -603,7 +658,7 @@ end
 do
 	local segmentPool = CreateFramePool('Frame')
 
-	function ProgressBar:GetButton(index)
+	function ProgressBar:AcquireButton()
 		local segment = segmentPool:Acquire()
 
 		if not segment.value then
@@ -616,7 +671,6 @@ do
 			bonus:SetValue(0)
 			bonus:EnableMouse(false)
 			bonus:SetAllPoints(segment)
-
 			segment.bonus = bonus
 
 			local value = CreateFrame('StatusBar', nil, bonus)
@@ -624,7 +678,6 @@ do
 			value:SetValue(0)
 			value:EnableMouse(false)
 			value:SetAllPoints(bonus)
-
 			segment.value = value
 		end
 
@@ -642,23 +695,24 @@ do
 
 		return segment
 	end
+
+	function ProgressBar:ReleaseButton(button) --from ButtonBar:DetachButton
+		segmentPool:Release(button)
+	end
 end
 
 
 --[[ menu ]]--
 
 do
-	function ProgressBar:CreateMenu()
-		local menu = Dominos:NewMenu(self.id)
-
+	function ProgressBar:OnCreateMenu(menu)
 		self:AddLayoutPanel(menu)
 		self:AddTextPanel(menu)
 		self:AddTexturePanel(menu)
 		self:AddFontPanel(menu)
 
-		self.menu = menu
-
-		return menu
+		menu:AddFadingPanel()
+		menu:AddAdvancedPanel(true)
 	end
 
 	function ProgressBar:AddLayoutPanel(menu)
@@ -728,10 +782,8 @@ do
         }
 
 		panel.spacingSlider = panel:NewSpacingSlider()
-		panel.paddingSlider = panel:NewPaddingSlider()
-		panel.scaleSlider = panel:NewScaleSlider()
-		panel.opacitySlider = panel:NewOpacitySlider()
-		panel.fadeSlider = panel:NewFadeSlider()
+
+		panel:AddBasicLayoutOptions()
 	end
 
 	function ProgressBar:AddTextPanel(menu)

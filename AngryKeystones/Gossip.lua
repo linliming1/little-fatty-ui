@@ -4,6 +4,7 @@ local Mod = Addon:NewModule('Gossip')
 local npcBlacklist = {
 	[107435] = true, [112697] = true, [112699] = true, [107486] = true, -- Suspicous Noble
 	[101462] = true, -- Reaves
+	[166663] = true, -- Kyrian Steward
 }
 
 local function GossipNPCID()
@@ -40,21 +41,24 @@ local function IsInActiveChallengeMode()
 end
 
 function Mod:GOSSIP_SHOW()
+    do return end --TODO: 暂时屏蔽，请神选项有点危险
 	local npcId = GossipNPCID()
+	if C_GossipInfo.GetNumOptions() ~= 1 then return end
+
 	if Addon.Config.autoGossip and IsInActiveChallengeMode() and not npcBlacklist[npcId] then
-		local options = {GetGossipOptions()}
-		for i = 1, GetNumGossipOptions() do
-			if options[i*2] == "gossip" then
+		local options = C_GossipInfo.GetOptions()
+		for i = 1, C_GossipInfo.GetNumOptions() do
+			if options[i]["type"] == "gossip" then
 				local popupWasShown = IsStaticPopupShown()
-				SelectGossipOption(i)
+				C_GossipInfo.SelectOption(i)
 				local popupIsShown = IsStaticPopupShown()
 				if popupIsShown then
 					if not popupWasShown then
 						StaticPopup1Button1:Click()
-						CloseGossip()
+						C_GossipInfo.CloseGossip()
 					end
 				else
-					CloseGossip()
+					C_GossipInfo.CloseGossip()
 				end
 				break
 			end

@@ -24,6 +24,7 @@ rematch.queueNeedsProcessed = nil -- true when queue needs processed at next opp
 rematch.breedNames = {} -- names of breeds in a list indexed 1-10 for use in menu (and lookup for BPBID) and filter
 rematch.breedLookup = {} -- for BPBID, translates name of breed ("B/B") to an index to breedNames to filter
 rematch.timeUIChanged = nil -- GetTime() when a major frame is shown, menu item clicked, etc; to supress OnEnters
+rematch.wasInPVP = nil -- true when player is leaving a pvp battle
 
 -- constants
 rematch.levelingIcon = "Interface\\AddOns\\Rematch\\Textures\\levelingicon"
@@ -36,6 +37,7 @@ rematch.LMB = "\124TInterface\\TutorialFrame\\UI-Tutorial-Frame:12:12:0:0:512:51
 rematch.RMB = "\124TInterface\\TutorialFrame\\UI-Tutorial-Frame:12:12:0:0:512:512:10:65:330:385\124t" -- right mouse button
 rematch.NMB = "\124TInterface\\TutorialFrame\\UI-Tutorial-Frame:12:12:0:0:512:512:89:144:228:283\124t" -- no mouse button
 
+-- key bindings
 BINDING_HEADER_REMATCH = L["Rematch"]
 BINDING_NAME_REMATCH_WINDOW = L["Toggle Window"]
 BINDING_NAME_REMATCH_AUTOLOAD = L["Auto Load"]
@@ -43,6 +45,28 @@ BINDING_NAME_REMATCH_NOTES = L["Team Notes"]
 BINDING_NAME_REMATCH_PETS = L["Pets Tab"]
 BINDING_NAME_REMATCH_TEAMS = L["Teams Tab"]
 BINDING_NAME_REMATCH_QUEUE = L["Queue Tab"]
+
+-- backdrop definitions (used in templates.xml)
+REMATCH_BORDER_BACKGROUND_COLOR = CreateColor(0.5, 0.5, 0.5)
+REMATCH_SOLID_BACKDROP_COLOR = CreateColor(0.05,0.05,0.05)
+REMATCH_SOLID_BACKDROP_STYLE = {
+	bgFile = "Interface\\ChatFrame\\ChatFrameBackground",
+	edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+	tile = true,
+	tileEdge = true,
+	tileSize = 16,
+	edgeSize = 16,
+	insets = { left = 3, right = 3, top = 3, bottom = 3 },
+}
+REMATCH_SLIDER_BACKDROP_STYLE = {
+	bgFile = "Interface\\Buttons\\UI-SliderBar-Background",
+	edgeFile = "Interface\\Buttons\\UI-SliderBar-Border",
+	tile = true,
+	tileSize = 8,
+	edgeSize = 8,
+	insets = { left = 3, right = 3, top = 6, bottom = 6 },
+
+}
 
 -- the following hint tables describe whether an attack is strong/weak vs a pet type
 -- 1=Humanoid 2=Dragonkin 3=Flying 4=Undead 5=Critter 6=Magic 7=Elemental 8=Beast 9=Aquatic 10=Mechanical
@@ -75,7 +99,7 @@ function rematch:UpdateUI()
 
 	rematch.petInfo:Reset() -- reset any petInfo from previous execution
 
-	-- some stuff is only done while the rematch is on screen
+	-- some stuff is only done while rematch is on screen
 	local isVisible = rematch.Frame:IsVisible() or rematch.Journal:IsVisible()
 
 	if isVisible then
@@ -151,9 +175,9 @@ function rematch:Start()
 
 	-- check for the existence of an object that's in a new file and shut down rematch if it's not accessible.
 	-- this is caused by new files added and user updates the addon while logged in to the game
-	if rematch:AddonDidntCompletelyLoad(rematch.ShowTextureHighlight) then
-		return
-	end
+	-- if rematch:AddonDidntCompletelyLoad(rematch.ShowTextureHighlight) then
+	-- 	return
+	-- end
 
 	rematch:InitSavedVars()
 
@@ -185,47 +209,8 @@ function rematch:Start()
 	if ldb then
 	  ldb:NewDataObject("Rematch",{ type="launcher", icon="Interface\\Icons\\PetJournalPortrait", iconCoords={0.075,0.925,0.075,0.925}, tooltiptext=L["Toggle Rematch"], OnClick=rematch.Frame.Toggle	})
 	end
-	-- some partial reskinning if Aurora exists (TODO: do a proper reskin in a separate module like ElvUI, except the relationship between Aurora+RealUI and the optional nature of Aurora Missing Textures is a mess)
-	if type(Aurora)=="table" then
-		local F,C = unpack(Aurora)
-		if type(F)=="table" and F.CreateBD then
-			for k,v in pairs({rematch.Journal,rematch.Frame,rematch.PetCard,rematch.PetCard.Front.Middle,RematchAbilityCard,RematchWinRecordCard,rematch.Dialog,rematch.Notes}) do
-				F.CreateBD(v)
-			end
-			for k,v in pairs({rematch.Frame.TitleBar.MinimizeButton,rematch.Frame.TitleBar.SinglePanelButton,rematch.Frame.TitleBar.LockButton,rematch.Notes.LockButton,rematch.PetCard.PinButton}) do
-				v:SetBackdrop({})
-			end
-		end
-	end
-	if IsAddOnLoaded("miirGUI") then
-		for k,v in pairs({rematch.Frame.TitleBar.MinimizeButton,rematch.Frame.TitleBar.SinglePanelButton,rematch.Frame.TitleBar.LockButton,rematch.Notes.LockButton,rematch.PetCard.PinButton}) do
-			v:SetBackdrop({})
-		end
-		RematchJournalPortrait:SetTexture("Interface\\Icons\\PetJournalPortrait")
-		RematchJournalPortrait:SetTexCoord(0.1,0.9,0.1,0.9)
-		rematch.PetCard.Back.Middle.LoreBG:SetColorTexture(1,0.82,0.5)
-	end
 	-- watch for player forfeiting a match (playerForfeit is nil'ed during PET_BATTLE_OPENING_START)
 	hooksecurefunc(C_PetBattles,"ForfeitGame",function() rematch.playerForfeit=true end)
-
-	-- on login, notify mac users of the experimental version if the popup hasn't been shown before
-	if not settings.NotifiedExperimental then
-		settings.NotifiedExperimental = true -- whether on pc or mac, don't bother with this on future logins
-		if IsMacClient() then
-			settings.NotifiedExperimental = true
-			local dialog = rematch:ShowDialog("Experimental", 320, 260, "Rematch", nil, nil, nil, OKAY)
-			dialog:ClearAllPoints()
-			dialog:SetPoint("CENTER",0,64)
-			dialog:ShowText("\124cffffffffAttention MacOS users:\124r\n\nIf the game occasionally crashes when you open Rematch, and you'd like to help troubleshoot, an experimental version of the addon is available at the URL below for testing solutions.\n\nThank you for your patience!", 280, 140, "TOP", 0, -32)
-			dialog.MultiLine:SetSize(280,40)
-			dialog.MultiLine:SetPoint("BOTTOM",0,40)
-			dialog.MultiLine.EditBox:SetText("http://www.wowinterface.com/downloads/info24832-Rematch-Experimental.html")
-			dialog.MultiLine:Show()
-			dialog.MultiLine.EditBox:SetFocus()
-			dialog.MultiLine.EditBox:HighlightText()
-		end
-	end
-
 end
 
 function rematch:InitSavedVars()
@@ -240,7 +225,7 @@ function rematch:InitSavedVars()
 	settings = RematchSettings
 	saved = RematchSaved
 	-- create settings sub-tables and default values if they don't exist
-	for k,v in pairs({"TeamGroups","Filters","FavoriteFilters","Sort","Sanctuary","LevelingQueue","PetNotes","ScriptFilters","SpecialSlots"}) do
+	for k,v in pairs({"TeamGroups","Filters","FavoriteFilters","Sort","Sanctuary","LevelingQueue","PetNotes","ScriptFilters","SpecialSlots","QueueSanctuary"}) do
 		if type(settings[v])~="table" then
 			if v=="TeamGroups" then -- TeamGroups starts with a default entry
 				settings[v] = {{GENERAL,"Interface\\Icons\\PetJournalPortrait"}}
@@ -307,6 +292,49 @@ function rematch:ValidateTeams()
 		rematch:print("- If there's a Rematch.lua.bak, make a backup of it and rename it Rematch.lua")
 		rematch:print("- If there is not a Rematch.lua.bak, you will need to restore teams from a prior backup.")
 		rematch:print("- If you have no prior backup, you can try continuing with the current data but it may cause severe problems.")
+	end
+end
+
+-- intended to run during PLAYER_LOGOUT, this will recreate the queue sanctuary from the contents of the queue
+function rematch:UpdateQueueSanctuary()
+	local queue = settings.LevelingQueue
+	local sanctuary = settings.QueueSanctuary
+	wipe(sanctuary)
+	for _,petID in ipairs(queue) do
+		sanctuary[petID] = rematch:CreatePetTag(petID,"forQueue")
+	end
+end
+
+-- this goes trough each pet and the queue and confirms it's a valid petID; if not, it will see if there's
+-- a petTag in QueueSanctuary for the invalid petID and find a new petID from it; otherwise the invalid pet
+-- is removed from the queue
+function rematch:ValidateQueue()
+	local queue = settings.LevelingQueue
+	local found = {} -- lookup table of found pets, indexed by speciesID and then an array of petIDs of that speciesID found
+	for i=#queue,1,-1 do
+		local petID = queue[i]
+		local petInfo = rematch.petInfo:Fetch(petID)
+		if not petInfo.valid then -- pet is not valid
+			if settings.QueueSanctuary[petID] then -- but the pet is in the sancutary
+				local speciesID = rematch:GetSpeciesFromTag(settings.QueueSanctuary[petID]) -- get speciesID from the tag
+				local newPetID
+				if found[speciesID] then -- if previous pets of this speciesID were found, exclude them when finding a new pet from the tag
+					newPetID = rematch:FindPetFromPetTag(settings.QueueSanctuary[petID],unpack(found[speciesID]))
+				else -- otherwise use any pet from the tag
+					newPetID = rematch:FindPetFromPetTag(settings.QueueSanctuary[petID])
+				end
+				if type(newPetID)=="string" and not tContains(queue,newPetID) then -- if a replacement found, change petID in queue
+					queue[i] = newPetID
+					local speciesID = rematch.petInfo:Fetch(newPetID).speciesID
+					found[speciesID] = found[speciesID] or {}
+					tinsert(found[speciesID],newPetID)
+				else -- no replacement found, remove pet from queue
+					tremove(queue,i)
+				end
+			else -- pet wasn't in sanctuary, remove pet from queue
+					tremove(queue,i)
+			end
+		end
 	end
 end
 
@@ -500,7 +528,7 @@ function rematch:PET_BATTLE_CLOSE()
 		if frame.showAfterBattle then
 			frame:Show() -- this is for standalone being open and dismissed when battle started
 		end
-		if settings.ShowAfterBattle then
+		if settings.ShowAfterBattle and (not settings.ShowAfterPVEOnly or not rematch.wasInPVP) then
 			rematch:AutoShow() -- this is the "Show After Pet Battle" option
 		end
 		if rematch.Notes:IsVisible() and not rematch.Notes.Content.ScrollFrame.EditBox:HasFocus() then
@@ -508,6 +536,12 @@ function rematch:PET_BATTLE_CLOSE()
 		end
 		C_Timer.After(0,rematch.UpdateQueue) -- waiting a frame (client thinks we can't swap pets right now)
 		rematch:UpdateAutoLoadState()
+		-- if option Load Healthiest Pets -> After Pet Battles Too is enabled (and a team is loaded)
+		if settings.LoadHealthiest and settings.LoadHealthiestAfterBattle then
+			-- then wait a bit and load healthiest pets
+			C_Timer.After(0.75,rematch.LoadHealthiestOfLoadedPets)
+		end
+		rematch.wasInPVP = nil
 		
 		C_Timer.After(0.05,function() 
 			if settings.AutoLoad then 
@@ -520,12 +554,13 @@ end
 -- logging out
 function rematch:PLAYER_LOGOUT()
 	settings.ShowOnLogin = (settings.LockWindow and settings.StayOnLogout) and rematch.Frame:IsVisible() and true
+	rematch:UpdateQueueSanctuary()
 end
 
 -- when learning a new pet, or when attempting to send a team to someone offline
 local patternPlayerOffline = format("^%s$",ERR_CHAT_PLAYER_NOT_FOUND_S:gsub("%%s","(.+)"))
 local patternNewPet = format("^%s$",BATTLE_PET_NEW_PET:gsub("%%s","(.+)"))
-function rematch:CHAT_MSG_SYSTEM(message)
+function rematch:CHAT_MSG_SYSTEM(message,...)
 	-- pattern matching for offling players only happens while there's a sideline with recipient context
 	local recipient = rematch:GetSidelineContext("recipient")
 	if recipient then
@@ -540,7 +575,7 @@ function rematch:CHAT_MSG_SYSTEM(message)
 		-- if "%s has been added to your pet journal!" and %s is a pet link
 		local petLink = message:match(patternNewPet)
 		if petLink then
-			local _,petID = petLink:match("battlepet:(%d+):.+:(BattlePet%-.-)\124h")
+			local _,petID = petLink:match("battlepet:(%d+):.+:(BattlePet%-.-):(%d+)\124h") -- 1/20/20 added :(%d+) before |h
 			if petID and rematch:PetCanLevel(petID) then
 				local addID
 				local speciesID,_,level,_,_,_,_,name = C_PetJournal.GetPetInfoByPetID(petID)
@@ -564,8 +599,15 @@ function rematch:CHAT_MSG_SYSTEM(message)
 				end
 				if addID then
 					rematch:InsertPetToQueue(#settings.LevelingQueue+1,addID)
-					local info = ChatTypeInfo["SYSTEM"]
-					print(format("%s \124cff%02x%02x%02x%s",petLink,info.r*255,info.g*255,info.b*255,L["has also been added to your leveling queue!"]))
+					--local info = ChatTypeInfo["SYSTEM"]
+					--print(format("%s \124cff%02x%02x%02x%s",petLink,info.r*255,info.g*255,info.b*255,L["has also been added to your leveling queue!"]))
+					local text = format(L["%s has also been added to your leveling queue!"],petLink)
+					for i=1,NUM_CHAT_WINDOWS do
+						local frame = _G["ChatFrame"..i]
+						if frame and frame:IsEventRegistered("CHAT_MSG_SYSTEM") then
+							ChatFrame_MessageEventHandler(frame,"CHAT_MSG_SYSTEM",text,"","","","","",0,0,"",0,0,nil,0)
+						end
+					end
 				end
 			end
 		end
@@ -580,7 +622,9 @@ end
 
 function rematch:PET_BATTLE_FINAL_ROUND(winner)
 
-	if settings.AutoWinRecord and (not settings.AutoWinRecordPVPOnly or not C_PetBattles.IsPlayerNPC(2)) then
+	rematch.wasInPVP = not C_PetBattles.IsPlayerNPC(2)
+
+	if settings.AutoWinRecord and (not settings.AutoWinRecordPVPOnly or rematch.wasInPVP) then
 		local key = settings.loadedTeam
 		if key and saved[key] then
 			local team = saved[key]
@@ -707,7 +751,8 @@ function rematch.SlashHandler(msg)
 		-- going to desensitize the passed name so "aki the chosen" works for "Aki the Chosen"
 		local name = format("^%s$",rematch:DesensitizeText(msg))
 		for k,v in pairs(saved) do -- and this necessitates going through the table instead of a lookup
-			if rematch:GetTeamTitle(k):match(name) then
+			if rematch:match(rematch:GetTeamTitle(k),name) then
+			--if rematch:GetTeamTitle(k):match(name) then
 				rematch:LoadTeam(k) -- team found, load it
 				return -- and leave
 			end

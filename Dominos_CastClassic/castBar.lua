@@ -11,7 +11,14 @@ function CastingBar:New()
 
 	bar:Layout()
 
+    bar:ShowInOverrideUI(true)
+
 	return bar
+end
+
+function CastingBar:GetDisplayName()
+    local L = LibStub('AceLocale-3.0'):GetLocale('Dominos')
+    return L.CastingBarDisplayName
 end
 
 function CastingBar:Create(...)
@@ -21,9 +28,9 @@ function CastingBar:Create(...)
 
 	local cbf = _G.CastingBarFrame
 
-	cbf:SetParent(bar.header)
+	cbf:SetParent(bar)
 	cbf:ClearAllPoints()
-	cbf:SetPoint('CENTER', bar.header, 'CENTER', 0, -2)
+	cbf:SetPoint('CENTER', bar, 'CENTER', 0, -2)
 
 	self.__cbf = cbf
 
@@ -35,6 +42,7 @@ function CastingBar:GetDefaults()
 		point = 'BOTTOM',
 		x = 0,
 		y = 180,
+        showInOverrideUI = true,
 	}
 end
 

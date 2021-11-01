@@ -1,6 +1,6 @@
 U1RegisterAddon("Grid", {
     title = "团队框架Grid",
-    defaultEnable = 1,
+    defaultEnable = 0,
     load = "NORMAL",
     minimap = "LibDBIcon10_Grid",
 
@@ -44,11 +44,11 @@ U1RegisterAddon("GridBuffIcons", {
         tip = "说明`状态图标模块是显示全部状态还是只显示自己可释放/移除的。",
         default = true,
         getvalue = function()
-            local mod = Grid:GetModule("GridBuffIconStatus", true);
+            local mod = Grid:GetModule("GridBuffIcons", true);
             return mod.db.profile.bufffilter
         end,
         callback = function(cfg, v, loading)
-            local mod = Grid:GetModule("GridBuffIconStatus", true);
+            local mod = Grid:GetModule("GridBuffIcons", true);
             if mod then
                 mod.db.profile.bufffilter = v;
                 mod:UpdateAllUnitsBuffs();
@@ -61,11 +61,11 @@ U1RegisterAddon("GridBuffIcons", {
         tip = "说明`开启状态图标后，可以方便的在BUFF和DEBUFF之间切换，既可检查团队状态信息，又可关注战斗减益。",
         default = false,
         getvalue = function()
-            local mod = Grid:GetModule("GridBuffIconStatus", true);
+            local mod = Grid:GetModule("GridBuffIcons", true);
             return mod.db.profile.showbuff
         end,
         callback = function(cfg, v, loading)
-            local mod = Grid:GetModule("GridBuffIconStatus", true);
+            local mod = Grid:GetModule("GridBuffIcons", true);
             if mod then
                 mod.db.profile.showbuff = v;
                 mod:UpdateAllUnitsBuffs();
@@ -93,13 +93,14 @@ U1RegisterAddon("GridStatusHots", {title = "状态：HoTs(持续治疗)", protec
 U1RegisterAddon("GridStatusTankCooldown", {title = "状态：坦克救命技能", protected = nil, hide = nil, load = "NORMAL",
     desc = "提供一些救场技能的提示，例如盾墙、破釜沉舟等。默认显示在右侧图标中。"
 });
-U1RegisterAddon("GridStatusRaidDebuff", {title = "状态：团队减益", protected = nil, hide = false, load="NORMAL",
+
+U1RegisterAddon("PlexusStatusRaidDebuff", {title = "状态：团队减益", protected = nil, hide = false, load="NORMAL", parent="Grid", defaultEnable=1,
     desc = "提供副本Boss的主要Debuff技能的提示。"
 });
-U1RegisterAddon("GridStatusRD_BfA", {title = "争霸艾泽拉斯", protected = nil, hide = nil, load="NORMAL",});
-U1RegisterAddon("GridStatusRD_Legion", {title = "军团再临", protected = nil, hide = nil, load="NORMAL",});
-U1RegisterAddon("GridStatusRD_WoD", {title = "德拉诺之王", protected = nil, hide = nil, load="NORMAL",});
-U1RegisterAddon("GridStatusRD_MoP", {title = "熊猫人之谜", defaultEnable = 0, protected = nil, hide = nil, load="NORMAL",});
+U1RegisterAddon("PlexusStatusRD_SL", {title = "团队减益：暗影之地", protected = nil, hide = nil, load="NORMAL",});
+U1RegisterAddon("PlexusStatusRD_BfA", {title = "团队减益：争霸艾泽拉斯", protected = nil, hide = nil, load="NORMAL",});
+U1RegisterAddon("PlexusStatusRD_Legion", {title = "团队减益：军团再临", protected = nil, hide = nil, load="NORMAL",});
+U1RegisterAddon("PlexusStatusRD_Dungeon", {title = "团队减益：五人副本", protected = nil, hide = nil, load="NORMAL",});
 
 
 
@@ -115,44 +116,100 @@ function U1CfgGridConfigOmniCC()
     end
 end
 CoreDependCall("OmniCC", function()
-    local KEY = '163UI_Grid'
-    local VERSION = "20160728"
-    hooksecurefunc(OmniCC, "StartupSettings", function()
-        local gid = OmniCC:GetGroupIndex(KEY)
-        if not gid then
-            OmniCC:AddGroup('163UI_Grid')
-            gid = OmniCC:GetGroupIndex(KEY)
-        end
-        if OmniCC.sets.groups[gid].version ~= VERSION then
-            OmniCC.sets.groups[gid].version = VERSION
-            OmniCC.sets.groups[gid].rules = {
-                "GridLayoutHeader"
-            }
-            OmniCC.sets.groupSettings[KEY] = {
-                enabled = true,
-                scaleText = true,
-                spiralOpacity = 0.6,
-                fontFace = STANDARD_TEXT_FONT,
-                fontSize = 26,
-                fontOutline = 'OUTLINE',
-                minDuration = 3,
-                minSize = 0.1,
-                effect = 'none',
-                tenthsDuration = 0,
-                mmSSDuration = 0,
-                minEffectDuration=30,
-                xOff = 10,
-                yOff = 5,
-                anchor = 'TOPRIGHT',
-                styles = {
-                    soon = { r = 1, g = .1, b = .1, a = 1, scale = 1 },
-                    seconds = { r = 1, g = 1, b = .1, a = .9, scale = 1 },
-                    minutes = { r = 1, g = 1, b = 1, a = .8, scale = 1 },
-                    hours = { r = .7, g = .7, b = .7, a = .7, scale = 1 },
-                    charging = { r = 0.8, g = 1, b = .3, a = .9, scale = 1 },
-                    controlled = { r = 1, g = .1, b = .1, a = 1, scale = 1 },
+    local OLD_KEY = '163UI_Grid'
+    local VERSION = "20191126"
+    if OmniCC.StartupSettings then
+        hooksecurefunc(OmniCC, "StartupSettings", function()
+            local gid = OmniCC:GetGroupIndex(OLD_KEY)
+            if not gid then
+                OmniCC:AddGroup('163UI_Grid')
+                gid = OmniCC:GetGroupIndex(OLD_KEY)
+            end
+            if OmniCC.sets.groups[gid].version ~= VERSION then
+                OmniCC.sets.groups[gid].version = VERSION
+                OmniCC.sets.groups[gid].rules = {
+                    "GridLayoutHeader"
                 }
-            }
-        end
-    end)
+                OmniCC.sets.groupSettings[OLD_KEY] = {
+                    enabled = true,
+                    scaleText = true,
+                    spiralOpacity = 0.6,
+                    fontFace = STANDARD_TEXT_FONT,
+                    fontSize = 26,
+                    fontOutline = 'OUTLINE',
+                    minDuration = 3,
+                    minSize = 0.1,
+                    effect = 'none',
+                    tenthsDuration = 0,
+                    mmSSDuration = 0,
+                    minEffectDuration=30,
+                    xOff = 10,
+                    yOff = 5,
+                    anchor = 'TOPRIGHT',
+                    styles = {
+                        soon = { r = 1, g = .1, b = .1, a = 1, scale = 1 },
+                        seconds = { r = 1, g = 1, b = .1, a = .9, scale = 1 },
+                        minutes = { r = 1, g = 1, b = 1, a = .8, scale = 1 },
+                        hours = { r = .7, g = .7, b = .7, a = .7, scale = 1 },
+                        charging = { r = 0.8, g = 1, b = .3, a = .9, scale = 1 },
+                        controlled = { r = 1, g = .1, b = .1, a = 1, scale = 1 },
+                    }
+                }
+            end
+        end)
+    else
+        hooksecurefunc(OmniCC, "InitializeDB", function()
+            local NEW_KEY = "Aby_Grid"
+            local theme = OmniCC:HasTheme(NEW_KEY)
+            theme = theme or OmniCC:AddTheme(NEW_KEY)
+            if theme.version ~= VERSION then
+                theme.version = VERSION
+                u1copy({
+                    enableText = true,
+                    scaleText = true,
+                    spiralOpacity = 0.6,
+                    fontFace = STANDARD_TEXT_FONT,
+                    fontSize = 26,
+                    fontOutline = 'OUTLINE',
+                    minDuration = 3,
+                    minSize = 0.1,
+                    effect = 'none',
+                    tenthsDuration = 0,
+                    mmSSDuration = 0,
+                    minEffectDuration=30,
+                    xOff = 10,
+                    yOff = 5,
+                    anchor = 'TOPRIGHT',
+                    textStyles = {
+                        soon = { r = 1, g = .1, b = .1, a = 1, scale = 1 },
+                        seconds = { r = 1, g = 1, b = .1, a = .9, scale = 1 },
+                        minutes = { r = 1, g = 1, b = 1, a = .8, scale = 1 },
+                        hours = { r = .7, g = .7, b = .7, a = .7, scale = 1 },
+                        charging = { r = 0.8, g = 1, b = .3, a = .9, scale = 1 },
+                        controlled = { r = 1, g = .1, b = .1, a = 1, scale = 1 },
+                    }
+                }, theme)
+            end
+
+            local rule
+            for _, one in pairs(OmniCC.db.profile.rules) do
+                if one.id == NEW_KEY then
+                    rule = one
+                    break
+                end
+            end
+            if not rule then
+                rule = OmniCC:AddRule(NEW_KEY, NEW_KEY)
+            end
+            if rule.version ~= VERSION then
+                rule.version = VERSION
+                u1copy({
+                    enabled = true,
+                    patterns = { "GridLayoutHeader" },
+                    priority = 1,
+                    theme = NEW_KEY,
+                }, rule)
+            end
+        end)
+    end
 end)

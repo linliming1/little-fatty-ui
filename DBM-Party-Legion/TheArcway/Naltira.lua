@@ -1,13 +1,12 @@
 local mod	= DBM:NewMod(1500, "DBM-Party-Legion", 6, 726)
 local L		= mod:GetLocalizedStrings()
 
-mod:SetRevision(("$Revision: 2 $"):sub(12, -3))
+mod.statTypes = "heroic,mythic,challenge"
+
+mod:SetRevision("20210905144759")
 mod:SetCreatureID(98207)
 mod:SetEncounterID(1826)
-mod:SetZone()
 mod:SetUsedIcons(2, 1)
-
-mod.noNormal = true
 
 mod:RegisterCombat("combat")
 
@@ -36,7 +35,7 @@ local timerBlinkCD				= mod:NewNextTimer(30, 199811, nil, nil, nil, 3)
 local timerWebCD				= mod:NewCDTimer(21.8, 200227, nil, nil, nil, 3)--21-26
 local timerVenomCD				= mod:NewCDTimer(30, 200024, nil, nil, nil, 3)--30-33
 
-mod:AddSetIconOption("SetIconOnWeb", 200284)
+mod:AddSetIconOption("SetIconOnWeb", 200284, true, false, {1, 2})
 
 mod.vb.blinkCount = 0
 
@@ -81,8 +80,7 @@ function mod:SPELL_PERIODIC_DAMAGE(_, _, _, _, destGUID, _, _, _, spellId)
 end
 mod.SPELL_PERIODIC_MISSED = mod.SPELL_PERIODIC_DAMAGE
 
-function mod:UNIT_SPELLCAST_SUCCEEDED(uId, _, bfaSpellId, _, legacySpellId)
-	local spellId = legacySpellId or bfaSpellId
+function mod:UNIT_SPELLCAST_SUCCEEDED(uId, _, spellId)
 	if spellId == 199809 then--Blink Strikes begin
 		timerBlinkCD:Start()
 		self.vb.blinkCount = 0
@@ -91,12 +89,11 @@ end
 
 --UNIT_SPELLCAST_CHANNEL_STOP method dropped, not because it wasn't returning a valid target, but because DBMs target scanner methods don't work well with pets and fail to announce all strikes because of it
 --This method doesn't require target scanning but is 0.6 seconds slower, but won't have a chance to fail if boss targets stupid things like army or spirit beast.
-function mod:UNIT_SPELLCAST_CHANNEL_START(uId, _, bfaSpellId, _, legacySpellId)
-	local spellId = legacySpellId or bfaSpellId
+function mod:UNIT_SPELLCAST_CHANNEL_START(uId, _, spellId)
 	if spellId == 199811 then--Blink Strikes Channel ending
 		self.vb.blinkCount = self.vb.blinkCount + 1
 		local targetname = UnitExists("boss1target") and UnitName("boss1target")
-		if not targetname then 
+		if not targetname then
 			return
 		end
 		if UnitIsUnit("boss1target", "player") then

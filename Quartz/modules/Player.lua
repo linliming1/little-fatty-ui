@@ -20,13 +20,17 @@ local Quartz3 = LibStub("AceAddon-3.0"):GetAddon("Quartz3")
 local L = LibStub("AceLocale-3.0"):GetLocale("Quartz3")
 
 local MODNAME = "Player"
-local Player = Quartz3:NewModule(MODNAME)
+local Player = Quartz3:NewModule(MODNAME, "AceEvent-3.0")
+
+local UnitCastingInfo, UnitChannelInfo = UnitCastingInfo, UnitChannelInfo
+
+local WoWBC = (WOW_PROJECT_ID == WOW_PROJECT_BURNING_CRUSADE_CLASSIC)
 
 ----------------------------
 -- Upvalues
 -- GLOBALS: CastingBarFrame
 local unpack = unpack
-local UnitChannelInfo = UnitChannelInfo
+
 
 local db, getOptions, castBar
 
@@ -91,6 +95,10 @@ end
 
 
 function Player:OnEnable()
+	if not WoWBC then
+		self:RegisterEvent("PLAYER_SPECIALIZATION_CHANGED", "UpdateChannelingTicks")
+	end
+
 	self.Bar:RegisterEvents()
 	self:ApplySettings()
 
@@ -144,7 +152,7 @@ end
 -- Cast Bar Hooks
 
 function Player:OnHide()
-	local Latency = Quartz3:GetModule(L["Latency"],true)
+	local Latency = Quartz3:GetModule("Latency", true)
 	if Latency then
 		if Latency:IsEnabled() and Latency.lagbox then
 			Latency.lagbox:Hide()
@@ -188,25 +196,26 @@ local function setBarTicks(ticknum, duration, ticks)
 	end
 end
 
-local channelingTicks = {
+local channelingTicks = WoWBC and {} or
+{
 	-- warlock
-	[GetSpellInfo(234153)] = 6, -- drain life
-	[GetSpellInfo(193440)] = 3, -- demonwrath
-	[GetSpellInfo(198590)] = 6, -- drain soul
+	[GetSpellInfo(234153)] = 5, -- drain life
+	[GetSpellInfo(198590)] = 5, -- drain soul
 	-- druid
 	[GetSpellInfo(740)] = 4, -- tranquility
 	-- priest
 	[GetSpellInfo(64843)] = 4, -- divine hymn
-	[GetSpellInfo(15407)] = 4, -- mind flay
-	[GetSpellInfo(47540)] = 2, -- penance
-	[GetSpellInfo(205065)] = 4, -- void torrent
+	[GetSpellInfo(15407)] = 6, -- mind flay
+	[GetSpellInfo(47540)] = 3, -- penance
+	[GetSpellInfo(205065)] = 5, -- void torrent
+	[GetSpellInfo(48045)] = 6, -- mind sear
 	-- mage
 	[GetSpellInfo(5143)] = 5, -- arcane missiles
-	[GetSpellInfo(12051)] = 3, -- evocation
-	[GetSpellInfo(205021)] = 10, -- ray of frost
+	[GetSpellInfo(205021)] = 5, -- ray of frost
 	-- monk
 	[GetSpellInfo(117952)] = 4, -- crackling jade lightning
 	[GetSpellInfo(191837)] = 3, -- essence font
+	[GetSpellInfo(115175)] = 8, -- soothing mist
 }
 
 local function getChannelingTicks(spell)
@@ -217,8 +226,18 @@ local function getChannelingTicks(spell)
 	return channelingTicks[spell] or 0
 end
 
+local function isTalentKnown(talentID)
+	return (select(4, GetTalentInfoByID(19752, GetActiveSpecGroup())))
+end
+
 function Player:UpdateChannelingTicks()
-	-- nothing here right now
+	local playerClass = select(2, UnitClass("player"))
+	if not WoWBC then
+		if playerClass == "PRIEST" then
+			-- Castigation talent adds a tick to penance
+			channelingTicks[GetSpellInfo(47540)] = isTalentKnown(19752) and 4 or 3
+		end
+	end
 end
 
 function Player:UNIT_SPELLCAST_START(bar, unit)

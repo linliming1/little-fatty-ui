@@ -14,15 +14,15 @@ local LINK_NAME = '163chat'
 local LINK_LEN = #LINK_NAME
 
 local ts = '|cff68ccef|H'..LINK_NAME..'|h%s|h|r %s'
-
 local AddMessage = function(self, text, ...)
-    if U1Chat_TimeStampFormat then
-        if(type(text) ~= 'string') then
-            text = tostring(text)
+    if U1DBG.config_timestamp and U1DBG.config_timestamp ~= '' and CHAT_TIMESTAMP_FORMAT then
+        local date = BetterDate(CHAT_TIMESTAMP_FORMAT, time())
+        if text:sub(1, #date) == date then
+            text = format(ts, date:gsub('|c%x%x%x%x%x%x%x%x(.-)|r', '%1'), text:sub(#date + 1))
+        else
+            text = format(ts, date:gsub('|c%x%x%x%x%x%x%x%x(.-)|r', '%1'), text)
         end
-        text = format(ts, date(U1Chat_TimeStampFormat), text)
     end
-
     return origs[self](self, text, ...)
 end
 
@@ -74,25 +74,34 @@ local newSetItemRef = function(link, text, button, ...)
 
     local text = borderManipulation(SELECTED_CHAT_FRAME.FontStringContainer:GetRegions())
     if(text) then
+        text = text:gsub('||', '\\124') --text = text:gsub('||', '#!|#') --还是\124方便一些
+        text = text:gsub('|T.-|t', '')
+        text = text:gsub('|K.-|k', '*')
+        --print(text:gsub("|", "/"))
+        text = text:gsub('|c%x%x%x%x%x%x%x%x|H(item:.-)|h.-|h%s-|r', function(link) return select(2, GetItemInfo(link)) end) --特殊处理物品链接被AddMessage处理的情况
+        text = text:gsub('|c(%x%x%x%x%x%x%x%x)|H(item:.-)|h(.-)|h%s-|r', "|W%1^%2^%3|w")
+        text = text:gsub('|c(%x%x%x%x%x%x%x%x)|H(spell:.-)|h(.-)|h%s-|r', "|W%1^%2^%3|w")
+        text = text:gsub('|c(%x%x%x%x%x%x%x%x)|H(item:.-)|h(.-)|h%s-|r', "|W%1^%2^%3|w")
+        text = text:gsub('|c(%x%x%x%x%x%x%x%x)|H(clubTicket:.-)|h(.-)|h%s-|r', "|W%1^%2^%3|w")
+        text = text:gsub('|c(%x%x%x%x%x%x%x%x)|H(achievement:.-)|h(.-)|h%s-|r', "|W%1^%2^%3|w")
+        text = text:gsub('|c(%x%x%x%x%x%x%x%x)|H(quest:.-)|h(.-)|h%s-|r', "|W%1^%2^%3|w")
+        text = text:gsub('|c(%x%x%x%x%x%x%x%x)|H(trade:.-)|h(.-)|h%s-|r', "|W%1^%2^%3|w")
+        text = text:gsub('|c(%x%x%x%x%x%x%x%x)|H(battlepet:.-)|h(.-)|h%s-|r', "|W%1^%2^%3|w")
+        text = text:gsub('|c(%x%x%x%x%x%x%x%x)|H(worldmap:.-)|h(.-)|h%s-|r', "|W%1^%2^%3|w")
+        text = text:gsub('|c(%x%x%x%x%x%x%x%x)|H(pvptal:.-)|h(.-)|h%s-|r', "|W%1^%2^%3|w")
+        text = text:gsub('|c(%x%x%x%x%x%x%x%x)|H(talent:.-)|h(.-)|h%s-|r', "|W%1^%2^%3|w")
         text = text:gsub('|c%x%x%x%x%x%x%x%x(.-)|r', '%1')
         text = text:gsub('|H.-|h(.-)|h', '%1')
-		text = text:gsub('|T.-|t', '')
-
-        local chatFrame = GetCVar("chatStyle")=="im" and SELECTED_CHAT_FRAME or DEFAULT_CHAT_FRAME
-        local eb = chatFrame and chatFrame.editBox
-        if(eb) then
-            eb:Insert(text)
-            eb:Show();
-            eb:HighlightText()
-            eb:SetFocus()
-        end
+        text = text:gsub('|W(.-)%^(.-)%^(.-)|w', "|c%1|H%2|h%3|h|r")
+        --text = text:gsub('#!|#', "||")
+        CoreUIChatEdit_Insert(text)
     end
 end
 
 local NChat_SetHyperlink_Origin = ItemRefTooltip.SetHyperlink;
 ItemRefTooltip.SetHyperlink = function(self,link)
     if(strsub(link, 1, LINK_LEN)==LINK_NAME) then
-        HideUIPanel(self);
+        self:Hide();
         return;
     end
     return NChat_SetHyperlink_Origin(self,link);

@@ -19,14 +19,14 @@
             UUI.OpenToAddon('dominos', true)
         end
 
-        --对DebuffCaster的支持
+        Dominos.OWNER_NAME = {artifact="神器",exp="经验声望",page="翻\n页",vehicle="离开\n载具",pet="宠物技能",menu="菜单",bags="背包",roll="掷骰框",alerts="提示框",extra="特殊\n动作",encounter="战斗能量",cast="施法条",cast_new="美化施法条",zone="区域\n技能",class="职业", talk="剧情对话"}
+        --[[对DebuffCaster的支持
         Dominos.ActionButton.oriCreate = Dominos.ActionButton.Create;
-        Dominos.OWNER_NAME = {artifact="神器",exp="经验声望",page="翻\n页",vehicle="离开\n载具",pet="宠物技能",menu="菜单",bags="背包",roll="掷骰框",alerts="提示框",extra="特殊\n动作",encounter="战斗能量",cast="施法条",cast_new="美化施法条"}
         function Dominos.ActionButton:Create(id)
             local b = self:oriCreate(id)
             if b and b.cooldown then b.cooldown.DCFlag=nil end
             return b;
-        end
+        end--]]
     end,
 
     toggle = function(name, info, enable, justload)
@@ -47,13 +47,16 @@
         callback = function(cfg, v, loading)
             if(loading) then return end
             Dominos:Unload()
+            Dominos.ignoreResetCalback = true
             Dominos.db:ResetProfile()
+            Dominos.ignoreResetCalback = nil
             -- insert out diff
             Dominos:U1_InitPreset(true)
             Dominos.isNewProfile = nil
             Dominos:Load()
-            local masque = U1GetMasqueCore and U1GetMasqueCore()
-            if masque then masque:Group("Dominos"):ReSkinWithSub() end
+            --local masque = U1GetMasqueCore and U1GetMasqueCore()
+            --if masque then masque:Group("Dominos"):ReSkinWithSub() end
+            Dominos:GetModule("ButtonThemer"):Reskin() --LibStub("AceAddon-3.0"):GetAddon("Dominos")
         end
     },
 
@@ -72,9 +75,11 @@
         callback = function()
             if(not IsAddOnLoaded'Dominos_Config') then
                 LoadAddOn'Dominos_Config'
-            end
-            if(_G['DominosOptions']) then
-                InterfaceOptionsFrame_OpenToCategory(_G['DominosOptions'])
+                C_Timer.After(GetTickTime()*2, function()
+                    LibStub("AceConfigDialog-3.0"):Open("Dominos")
+                end)
+            else
+                LibStub("AceConfigDialog-3.0"):Open("Dominos")
             end
         end,
     },
@@ -168,8 +173,12 @@
 local function dominoModuleToggle(name, info, enable, justload)
     if info.dominoModule and justload then
         if IsLoggedIn() then
-            Dominos:GetModule(info.dominoModule):Load()
-            Dominos.Frame:ForAll('Reanchor')
+            local module = Dominos:GetModule(info.dominoModule, true) --EncounterBar 在开启BlizzMove的时候不加载
+            if module then
+                pcall(module.Unload, module) --没有统一的是否加载机制，所以只能强制Unload一下试试了
+                module:Load()
+                Dominos.Frame:ForAll('Reanchor')
+            end
         end
     end
     return true
@@ -200,7 +209,7 @@ U1RegisterAddon("Dominos_Cast", { title = "美化施法条模块", defaultEnable
         end
     end,
 });
-U1RegisterAddon("Dominos_Roll", { title = "拾取提示模块", defaultEnable = 1, load="NORMAL", dominoModule = 'ContainerFrames', toggle = dominoModuleToggle, desc = "让装备掷骰界面和提示获取装备的框体可以移动的多米诺模块", });
+U1RegisterAddon("Dominos_Roll", { title = "拾取提示模块", defaultEnable = 1, load="NORMAL", dominoModule = 'RollBars', toggle = dominoModuleToggle, desc = "让装备掷骰界面和提示获取装备的框体可以移动的多米诺模块", });
 U1RegisterAddon("Dominos_Encounter", { title = "特殊能量条模块", defaultEnable = 1, load="NORMAL", dominoModule = 'EncounterBar', toggle = dominoModuleToggle, desc = "移动某些BOSS战斗时玩家特殊能量槽的多米诺模块", });
 U1RegisterAddon("Dominos_Progress", { title = "经验和神器进度模块", defaultEnable = 1, load="NORMAL", dominoModule = 'ProgressBars', toggle = dominoModuleToggle, desc = "一个可移动的进度条，右键点击可以切换经验/声望/荣誉。7.0新增指示神器能量的进度条。", });
 U1RegisterAddon("Dominos_ActionSets", {title = "动作条保存模块", defaultEnable = 1, load="NORMAL", desc = "可以在配置方案中保存动作条上的技能" });

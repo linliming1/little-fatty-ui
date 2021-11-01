@@ -2,76 +2,55 @@ if GetLocale() ~= "zhTW" then return end
 local L
 
 -----------------------
--- Ana-Mouz --
+-- Inquisitor Meto --
 -----------------------
-L= DBM:GetModLocalization(1790)
+L= DBM:GetModLocalization(2012)
+
+L:SetMiscLocalization({
+	Pull				= "你注定會死！"
+})
 
 -----------------------
--- Apocron --
+-- Occularus --
 -----------------------
-L= DBM:GetModLocalization(1956)
+L= DBM:GetModLocalization(2013)
+
+L:SetMiscLocalization({
+	Pull				= "我看到你靈魂的弱點了！"
+})
 
 -----------------------
--- Brutallus --
+-- Sotanathor --
 -----------------------
-L= DBM:GetModLocalization(1883)
+L= DBM:GetModLocalization(2014)
+
+L:SetMiscLocalization({
+	Pull				= "來吧，小傢伙，讓我殺了你們！"
+})
 
 -----------------------
--- Calamir --
+-- Mistress Alluradel --
 -----------------------
-L= DBM:GetModLocalization(1774)
+L= DBM:GetModLocalization(2011)
+
+L:SetMiscLocalization({
+	Pull				= "新的玩具嗎？真是難以抗拒啊！"
+})
 
 -----------------------
--- Drugon the Frostblood --
+-- Matron Folnuna --
 -----------------------
-L= DBM:GetModLocalization(1789)
+L= DBM:GetModLocalization(2010)
+
+L:SetMiscLocalization({
+	Pull				= "對…小傢伙，靠近一點！"
+})
 
 -----------------------
--- Flotsam --
+-- Pit Lord Vilemus --
 -----------------------
-L= DBM:GetModLocalization(1795)
+L= DBM:GetModLocalization(2015)
 
------------------------
--- Humongris --
------------------------
-L= DBM:GetModLocalization(1770)
-
------------------------
--- Levantus --
------------------------
-L= DBM:GetModLocalization(1769)
-
------------------------
--- Malificus --
------------------------
-L= DBM:GetModLocalization(1884)
-
------------------------
--- Na'zak the Fiend --
------------------------
-L= DBM:GetModLocalization(1783)
-
------------------------
--- Nithrogg --
------------------------
-L= DBM:GetModLocalization(1749)
-
------------------------
--- Shar'thos --
------------------------
-L= DBM:GetModLocalization(1763)
-
------------------------
--- Si'vash --
------------------------
-L= DBM:GetModLocalization(1885)
-
------------------------
--- The Soultakers --
------------------------
-L= DBM:GetModLocalization(1756)
-
------------------------
--- Withered J'im --
------------------------
-L= DBM:GetModLocalization(1796)
+L:SetMiscLocalization({
+	Pull				= "魔火會燒盡所有世界！"
+})

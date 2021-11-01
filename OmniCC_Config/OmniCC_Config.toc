@@ -1,14 +1,17 @@
-## Interface: 80100
+## Interface: 90100
 ## Title: OmniCC Config
 ## Notes: OmniCC's configuration menu
 ## Notes-koKR: OmniCC의 설정 메뉴
 ## Author: Tuller
 ## Dependencies: OmniCC
 ## LoadOnDemand: 1
+#embeds.xml
 localization\localization.xml
-widgets\widgets.xml
-mainPanel.lua
-panels\panels.xml
+preview.lua
+themes.lua
+rules.lua
+options.lua
+
 
 ## Title-zhCN: |cff880303[爱不易]|r OmniCC 配置界面
 ## Notes-zhCN: 技能冷却计时-配置界面模块

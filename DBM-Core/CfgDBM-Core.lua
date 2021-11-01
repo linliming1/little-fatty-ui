@@ -30,7 +30,7 @@ U1RegisterAddon("DBM-Core", {
         tip="说明`显示一个窗口显示和其他团员之间的距离。右键点击窗口可以设置距离、雷达模式等选项。",
         callback = function(cfg, v, loading) if(v)then DBM.RangeCheck:Show(nil, nil, true) else DBM.RangeCheck:Hide(true) end end,
     },
-    {
+    --[[ 9.1没有DBM.Bars了, 在DBT里统一设置, 暂时不好改 {
         var="hugebar",
         text="开启大型计时条",
         default = nil,
@@ -39,7 +39,7 @@ U1RegisterAddon("DBM-Core", {
         callback = function(cfg, v, loading)
             DBM.Bars:SetOption("HugeBarsEnabled", not not v)
         end,
-    },
+    },]]
     {
         var="voice",
         text="使用额外语音包",
@@ -82,17 +82,18 @@ U1RegisterAddon("DBM-Core", {
 --模块插件必须设置成protected否则加载DBM时如果模块未启用，则无法显示选项
 U1RegisterAddon("DBM-StatusBarTimers", { title = "状态条计时器", load = "NORMAL", protected = nil, defaultEnable = 1, hide = 1, });
 U1RegisterAddon("DBM-GUI", { title = "配置选项模块", });
-U1RegisterAddon("DBM-DefaultSkin", { title = "默认皮肤", load = "NORMAL" });
 U1RegisterAddon("DBM-Brawlers", { title = '搏击俱乐部', });
 U1RegisterAddon("DBM-DMF", { title = '暗月马戏团', });
 U1RegisterAddon("DBM-WorldEvents", { title = "世界事件模块", });
+U1RegisterAddon("DBM-Challenges", { title = "个人挑战模块", });
+U1RegisterAddon("DBM-TimelessIsle", { title = "永恒岛模块", });
 
 U1RegisterAddon("DBM-VPYike", { title = "夏一可語音包", load = "NORMAL", protected = 1 });
-U1RegisterAddon("DBM-Azeroth-BfA", { title = "争霸艾泽拉斯世界BOSS", });
-U1RegisterAddon("DBM-Party-BfA", { title = "争霸艾泽拉斯5人副本", });
-U1RegisterAddon("DBM-Uldir", { title = "奥迪尔副本模块", });
-U1RegisterAddon("DBM-ZuldazarRaid", { title = "达萨罗之战模块", });
-U1RegisterAddon("DBM-CrucibleofStorms", { title = "风暴熔炉模块", });
+
+U1RegisterAddon("DBM-Party-Shadowlands", { title = "暗影国度5人副本", });
+U1RegisterAddon("DBM-Shadowlands", { title = "暗影国度世界BOSS", });
+U1RegisterAddon("DBM-CastleNathria", { title = "纳斯利亚堡模块", });
+U1RegisterAddon("DBM-SanctumOfDomination", { title = "统御圣所模块", });
 
 --第三方开发的
 U1RegisterAddon("DBM-SpellTimers", { title = "冷却监控", load = "NORMAL", defaultEnable = 0 });

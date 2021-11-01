@@ -1,6 +1,6 @@
 --[[
 Name: RangeDisplay
-Revision: $Revision: 387 $
+Revision: $Revision: 403 $
 Author(s): mitch0
 Website: http://www.wowace.com/projects/range-display/
 SVN: svn://svn.wowace.com/wow/range-display/mainline/trunk
@@ -10,9 +10,9 @@ License: Public Domain
 
 local AppName, RangeDisplay = ...
 local OptionsAppName = AppName .. "_Options"
-local VERSION = AppName .. "-v4.8.4"
+local VERSION = AppName .. "-v4.9.8"
 --[===[@debug@
-local VERSION = AppName .. "-r" .. ("$Revision: 387 $"):match("%d+")
+local VERSION = AppName .. "-r" .. ("$Revision: 403 $"):match("%d+")
 --@end-debug@]===]
 
 local rc = LibStub("LibRangeCheck-2.0")
@@ -29,6 +29,7 @@ local mute = nil
 -- cached stuff
 
 local _G = _G
+local IsClassic = (_G.WOW_PROJECT_ID == _G.WOW_PROJECT_CLASSIC) or (_G.WOW_PROJECT_ID == _G.WOW_PROJECT_BURNING_CRUSADE_CLASSIC)
 local UnitExists = _G.UnitExists
 local UnitIsDeadOrGhost = _G.UnitIsDeadOrGhost
 local UnitCanAttack = _G.UnitCanAttack
@@ -497,7 +498,7 @@ end
 local function createFrame(ud)
     local unit = ud.unit
     ud.isMoving = false
-    ud.mainFrame = CreateFrame("Frame", "RangeDisplayMainFrame_" .. unit, UIParent)
+    ud.mainFrame = CreateFrame("Frame", "RangeDisplayMainFrame_" .. unit, UIParent, BackdropTemplateMixin and "BackdropTemplate" or nil)
     ud.mainFrame:SetFrameStrata(ud.db.strata)
     ud.mainFrame:EnableMouse(false)
     ud.mainFrame:SetClampedToScreen()
@@ -506,7 +507,7 @@ local function createFrame(ud)
     ud.mainFrame:SetHeight(ud.db.frameHeight)
     ud.mainFrame:SetPoint(ud.db.point, UIParent, ud.db.relPoint, ud.db.x, ud.db.y)
 
-    ud.rangeFrame = CreateFrame("Frame", "RangeDisplayFrame_" .. unit, ud.mainFrame)
+    ud.rangeFrame = CreateFrame("Frame", "RangeDisplayFrame_" .. unit, ud.mainFrame, BackdropTemplateMixin and "BackdropTemplate" or nil)
     ud.rangeFrame:SetPoint("CENTER", ud.mainFrame, "CENTER", 0, 0)
     ud.rangeFrame:SetAllPoints()
     ud.rangeFrame:Hide()
@@ -609,11 +610,6 @@ local units = {
         event = "PLAYER_TARGET_CHANGED",
     },
     {
-        unit = "focus",
-        name = L["focus"],
-        event = "PLAYER_FOCUS_CHANGED",
-    },
-    {
         unit = "pet",
         name = L["pet"],
         event = "UNIT_PET",
@@ -677,6 +673,15 @@ local units = {
     },
 }
 
+if not IsClassic then
+    local fu = {
+        unit = "focus",
+        name = L["focus"],
+        event = "PLAYER_FOCUS_CHANGED",
+    }
+    tinsert(units, fu)
+end
+
 local arenaUnits
 
 local arenaMasterUnit = {
@@ -715,7 +720,7 @@ function RangeDisplay:OnInitialize()
         LibDualSpec:EnhanceDatabase(self.db, AppName)
     end
 
-    if self.db.global.enableArena and not arenaUnits then
+    if not IsClassic and self.db.global.enableArena and not arenaUnits then
         arenaUnits = {}
         tinsert(arenaUnits, arenaMasterUnit)
         tinsert(units, arenaMasterUnit)

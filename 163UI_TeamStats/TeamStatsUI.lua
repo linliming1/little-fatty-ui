@@ -78,10 +78,11 @@ function TS.SetTab(index)
     local left = 2
     local header_id = 0
     for i, col in ipairs(TS.cols) do
+        local hide = index ~= 1 and col.onlyTab1 --需要隐藏，且header不记录col宽度
         if col.header then
             header_id = header_id + 1
             local btn = f.headers[header_id]
-            if header_id > #tab.ids + TS.NUM_FIX_HEADERS then
+            if hide or header_id > #tab.ids + TS.NUM_FIX_HEADERS then
                 btn:Hide()
             else
                 if header_id > TS.NUM_FIX_HEADERS then
@@ -95,29 +96,42 @@ function TS.SetTab(index)
                             or "显示成就达成的天数,或者副本的进度和总击杀次数"
 
                     col.width = tab.widths and tab.widths[bossId] or TS.DEFAULT_COL_WIDTH
+                else
+                    btn:Show()
+                    if type(col.header)=="string" then
+                        btn:SetText(col.header) --是字符串则设置上不动了
+                    elseif type(col.header)=="function" then
+                        col.header(btn, col)
+                    end
                 end
-            end
 
-             --一个表头可以跨多个元素, 要计算其宽度
-            local width = 0
-            for j=1,col.headerSpan or 1 do
-                local includeCol = TS.cols[i+j-1]
-                width = width + includeCol.width + includeCol.offset[1]
-                --includeCol.headerIdx = #f.cols
+                 --一个表头可以跨多个元素, 要计算其宽度
+                local width = 0
+                for j=1,col.headerSpan or 1 do
+                    local includeCol = TS.cols[i+j-1]
+                    width = width + includeCol.width + includeCol.offset[1]
+                end
+                --todo: 这里需要考虑最左侧没有的情况
+                WW(btn):BL("$parentInset","TL", left, 1-22):un()
+                btn.width = width - TAB_OFFSET --跨多个表头只减去一次
+                btn:SetWidth(btn.width)
             end
-            WW(btn):BL("$parentInset","TL", left, 1-22):un()
-            btn.width = width - TAB_OFFSET --跨多个表头只减去一次
-            btn:SetWidth(btn.width)
         end
-        left = left+col.offset[1]+col.width
+        if not hide then
+            left = left+col.offset[1]+col.width
+        end
     end
 
     local minWidth
     for i=1, #f.scroll.buttons do
         local btn = f.scroll.buttons[i]
         local left = 0
+        local onlyTab1 = 0
         for j, col in ipairs(TS.cols) do
-            if j > TS.NUM_FIX_COLUMNS + #tab.ids then
+            if index ~= 1 and col.onlyTab1 then
+                btn.widgets[j]:Hide()
+                onlyTab1 = onlyTab1 + 1
+            elseif j > TS.NUM_FIX_COLUMNS + #tab.ids then
                 btn.widgets[j]:Hide()
                 btn.widgets[j].ids = nil
             elseif j > TS.NUM_FIX_COLUMNS then
@@ -131,7 +145,8 @@ function TS.SetTab(index)
                 btn.widgets[j]:Show()
                 minWidth = btn.widgets[j].right
                 btn.widgets[j].ids = TS.TABS[f.tabIdx].ids[j-TS.NUM_FIX_COLUMNS]
-            else
+            else -- fix columns
+                btn.widgets[j]:Show()
                 left = left + col.offset[1] + col.width
             end
         end
@@ -246,12 +261,19 @@ function TS.CreateButtons(f)
         if player and player.selected and (player.gsGot or player.compared) then
             tinsert(annLine, "★");
             tinsert(annLine, player.name);
+            if f.tabIdx == 1 then
             tinsert(annLine, " ");
             tinsert(annLine, player.talent1);
             tinsert(annLine, " ");
             tinsert(annLine, "装等")
             tinsert(annLine, player.gsGot and player.bad and "*" or "")
             tinsert(annLine, player.gsGot and player.gs or "未知")
+            tinsert(annLine, " 大秘评分")
+            tinsert(annLine, player.mscore or "未知")
+            end
+            --tinsert(annLine, " 腐蚀")
+            --local corrupt = tostring(math.max(0, (player.c_total or 0) - (player.c_resist or 0) - 10))
+            --tinsert(annLine, player.c_total and corrupt or "未知")
             --tinsert(annLine, " ");
             --tinsert(annLine, "橙装:")
             --local slot1, link1, slot2, link2 = strsplit("^", player.legends or "")
@@ -275,20 +297,22 @@ function TS.CreateButtons(f)
                 end
                 --]]
                 for i, ids in ipairs(tab.ids) do
-                    if type(ids) == "table" then
-                        local progress, max, total = GetAchievementOrStaticText(player, ids)
-                        if progress and progress ~= 0 then
-                            tinsert(annLine, " ");
-                            tinsert(annLine, tab.names[i])
-                            tinsert(annLine, tab.any_done and "★" or "" .. progress .. "/" .. max .."(" .. total .. ")")
-                        end
-                    else
-                        local text = GetAchievementOrStaticText(player, ids)
-                        if text ~= "?" and text ~= "-" then
-                            tinsert(annLine, " ");
-                            tinsert(annLine, tab.names[i])
-                            tinsert(annLine, "")
-                            tinsert(annLine, text)
+                    if tab.reports == nil or tab.reports[i] then
+                        if type(ids) == "table" then
+                            local progress, max, total = GetAchievementOrStaticText(player, ids)
+                            if progress and progress ~= 0 then
+                                tinsert(annLine, " ");
+                                tinsert(annLine, tab.names[i])
+                                tinsert(annLine, tab.any_done and "★" or "" .. progress .. "/" .. max)
+                            end
+                        else
+                            local text = GetAchievementOrStaticText(player, ids)
+                            if text ~= "?" and text ~= "-" then
+                                tinsert(annLine, " ");
+                                tinsert(annLine, tab.names[i])
+                                tinsert(annLine, "")
+                                tinsert(annLine, text)
+                            end
                         end
                     end
                 end
@@ -305,11 +329,11 @@ function TS.CreateButtons(f)
         button2 = TEXT(CANCEL),
         OnAccept = function(self)
             local tab = TS.TABS[f.tabIdx]
-            SendChatMessage("【爱不易：团员信息统计】 - "..tab.tab.."：", self.data);
+            SendChatMessage("【爱不易：团员信息统计】 - "..tab.tab.."：", self.data[1], nil, self.data[2]);
             for i=1,#names do
                 local line = GetPlayerAnnText(names[i])
                 if line then
-                    SendChatMessage(line, self.data);
+                    SendChatMessage(line, self.data[1], nil, self.data[2]);
                 end
             end
         end,
@@ -327,7 +351,7 @@ function TS.CreateButtons(f)
         end
         if(count==0) then message(L["BtnAnnNoSelect"]); return; end
         -- local channel = GetNumRaidMembers()>0 and "RAID" or GetNumPartyMembers()>0 and "PARTY" or "SAY";
-        local channel = 'SAY'
+        local channel, target = 'SAY', nil
         if(IsInGroup()) then
             if(IsInRaid()) then
                 channel = 'RAID'
@@ -337,25 +361,30 @@ function TS.CreateButtons(f)
         end
 
         --只选中一个的时候复制到输入框，打开聊天输入框时，使用相关的方式
-        local chatFrame = GetCVar("chatStyle")=="im" and SELECTED_CHAT_FRAME or DEFAULT_CHAT_FRAME
-        local eb = chatFrame and chatFrame.editBox
-        if eb and eb:IsVisible() and count == 1 then
+        if count == 1 then
             for i=1,#names do
                 local line = GetPlayerAnnText(names[i])
                 if line then
-                    eb:Insert(GetPlayerAnnText(names[i]));
-                    break;
+                    CoreUIChatEdit_Insert(line)
+                    return
                 end
             end
-            eb:HighlightText()
-            eb:SetFocus()
-            return
-        elseif eb and eb:IsVisible() then
+        else
+            local chatFrame = GetCVar("chatStyle")=="im" and SELECTED_CHAT_FRAME or DEFAULT_CHAT_FRAME
+            local eb = chatFrame and chatFrame.editBox
             local chatType = eb:GetAttribute("chatType")
-            channel = (chatType == "RAID" or chatType == "PARTY" or chatType == "SAY" or chatType == "INSTANCE") and chatType or channel
+            if (chatType == "RAID" or chatType == "PARTY" or chatType == "SAY" or chatType == "INSTANCE") then
+                channel = chatType
+            elseif chatType == "WHISPER" then
+                target = eb:GetAttribute("tellTarget")
+                if target and target ~= "" then channel = chatType end
+            elseif chatType == "CHANNEL" then
+                target = eb:GetAttribute("channelTarget")
+                if target and target ~= "" then channel = chatType end
+            end
         end
-        local channelName = channel=="RAID" and "团队" or channel=="PARTY" and "小队" or "说";
-        StaticPopup_Show("TEAMSTATS_ANN", count, channelName, channel);
+        local channelName = channel=="RAID" and "团队" or channel=="PARTY" and "小队" or channel=="INSTANCE" and "副本" or channel=="WHISPER" and "密语:%s" or channel=="CHANNEL" and "频道:%s" or "说";
+        StaticPopup_Show("TEAMSTATS_ANN", count, format(channelName, target), {channel, target});
     end)
     CoreUIEnableTooltip(btnAnn(), L["BtnAnnTipTitle"], L["BtnAnnTip"]);
 
@@ -497,7 +526,7 @@ local BossCountTextUpdater = function(line, widget, idx, colIdx)
 end
 
 --current sort id, currSort < 0 stands for reverse
-local currSort = nil
+local currSort,currSortFunc
 local function compare(n1, n2, prop)
     if TS.names[n1] and not TS.names[n2] then return true, nil, true end
     if TS.names[n2] and not TS.names[n1] then return false, nil, true end
@@ -510,6 +539,9 @@ local function compare(n1, n2, prop)
     if prop == "realm" then
         v1 = select(3, n1:find("%-(.+)$"))
         v2 = select(3, n2:find("%-(.+)$"))
+    --elseif prop == "corrupt" then
+    --    v1 = (p1["c_total"] or 0) - (p1["c_resist"] or 0)
+    --    v2 = (p2["c_total"] or 0) - (p2["c_resist"] or 0)
     else
         v1, v2 = p1[prop], p2[prop]
     end
@@ -518,36 +550,13 @@ local function compare(n1, n2, prop)
     if v1 ~= nil and v2 == nil then return true, nil, true end
     return v1 < v2
 end
-local sortFuncs = {
-    [2] = function(a,b)
-        local r, equal, force = compare(a, b, "realm")
-        if equal then
-            r, equal, force = compare(a, b, "name")
-        end
-        if currSort > 0 or force then return r else return not r end
-    end,
-    [3] = function(a,b)
-        local r, equal, force = compare(a, b, "class")
-        if equal then
-            r, equal, force = compare(a, b, "talent1")
-        end
-        if currSort > 0 or force then return r else return not r end
-    end,
-    [4] = function(a,b)
-        local r, equal, force = compare(a, b, "gs")
-        if currSort > 0 or force then return r else return not r end
-    end,
-    [5] = function(a,b)
-        local r, equal, force = compare(a, b, "health")
-        if currSort > 0 or force then return r else return not r end
-    end,
-}
 
 local function sortNames(self)
     local id = self.id
-    if sortFuncs[id] then
+    if self.sortFunc then
         if (currSort==id) then currSort=-id else currSort=id end
-        table.sort(names, sortFuncs[id])
+        currSortFunc = self.sortFunc
+        table.sort(names, self.sortFunc)
         f.scroll.update()
     end
 end
@@ -556,7 +565,13 @@ function TS.SetupColumns(f)
     local targetBtnOnEnter = function(self)
         for n, v in pairs(TS.db.players) do
             if v == self.line.player then
-                self.tooltipText = n
+                self.tooltipLines = self.tooltipLines or {}
+                self.tooltipLines[1] = n
+                self.tooltipLines[2] = "Ctrl点击观察"
+                --self.tooltipLines[2] = "披风抗性    (-" .. (v.c_resist or 0) .. ")"
+                --self.tooltipLines[3] = v.c_text and "|cff946cd0" .. v.c_text .. "|r" or ""
+                --local corrupt = tostring(math.max(0, (v.c_total or 0) - (v.c_resist or 0) - 10))
+                --self.tooltipLines[4] = "腐蚀合计：" .. corrupt
                 CoreUIShowTooltip(self, "ANCHOR_LEFT")
                 break
             end
@@ -578,6 +593,7 @@ function TS.SetupColumns(f)
         if ShoppingTooltip1:GetOwner() == self then ShoppingTooltip1:Hide() end
         self.line:UnlockHighlight()
     end
+    local DomiSetColor, DomiSetNameLong, _, DomiShardName = U1GetDominationSetData()
     TS.cols = {
         {
             --复选框
@@ -613,6 +629,11 @@ function TS.SetupColumns(f)
             header = L["HeaderPlayerName"],
             headerSpan = 2,
             width = 100,
+            sort = function(a,b)
+                local r, equal, force = compare(a, b, "realm")
+                if equal then r, equal, force = compare(a, b, "name") end
+                if currSort > 0 or force then return r else return not r end
+            end,
             create = function(col,btn,idx) return btn:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall"):SetJustifyH("CENTER"):Size(col.width, 24) end,
             update = function(line, widget, idx, colIdx)
                 if(not InCombatLockdown())then
@@ -621,6 +642,7 @@ function TS.SetupColumns(f)
                         target = CreateFrame("Button", nil, UIParent, "SecureActionButtonTemplate")
                         target.line = line
                         target:SetAttribute("type", "macro")
+                        target:SetAttribute("ctrl-type1", "macro")
                         target:SetFrameStrata("HIGH")
                         line.target = target
                         target:SetScript("OnEnter", targetBtnOnEnter)
@@ -633,6 +655,7 @@ function TS.SetupColumns(f)
                     target:SetPoint("BOTTOMRIGHT", line, 0, 0)
                     if line.player.name then
                         target:SetAttribute("macrotext", "/target "..line.player.name)
+                        target:SetAttribute("ctrl-macrotext1", "/cleartarget\n/target "..line.player.name .. "\n/inspect")
                     end
                     target:Show();
                 end
@@ -646,7 +669,7 @@ function TS.SetupColumns(f)
                     end
                     widget:SetTextColor(0.5, 0.5, 0.5)
                 end
-            end
+            end,
         },
         {
             -- 服务器
@@ -668,6 +691,11 @@ function TS.SetupColumns(f)
             header = L["HeaderClass"],
             headerSpan = 2,
             offset = {3,-2},
+            sort = function(a,b)
+                local r, equal, force = compare(a, b, "class")
+                if equal then r, equal, force = compare(a, b, "talent1") end
+                if currSort > 0 or force then return r else return not r end
+            end,
             create = function(col,btn,idx) return btn:Texture(nil, "ARTWORK", "Interface\\Glues\\CharacterCreate\\UI-CharacterCreate-Classes"):Size(16, 16) end,
             update = function(line, widget, idx, colIdx)
                 local icon = line.player.class and CLASS_ICON_TCOORDS[line.player.class]
@@ -689,14 +717,44 @@ function TS.SetupColumns(f)
         {
             header = L["HeaderGS"],
             headerSpan = 1,
-            width = 50,
-            tip = "身上当前装备的平均物品等级",
+            width = 75,
+            tip = "身上当前装备的平均物品等级，括号内为插槽数量，不统计统御插槽",
+            sort = function(a,b)
+                local r, equal, force = compare(a, b, "gs")
+                if currSort > 0 or force then return r else return not r end
+            end,
             create = function(col,btn,idx) return btn:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall"):SetJustifyH("CENTER"):Size(col.width, 24) end,
             update = function(line, widget, idx, colIdx)
                 local player = line.player
-                widget:SetText(player.gs and format("%s%.1f", (player.bad and "|cffffd200*|r" or ""), player.gs) or "?")
+                local gems = "|cff7f7f7f(?)|r"
+                if player.gem_info then
+                    local _, _, count = player.gem_info:find("%d/(%d)")
+                    count = count or 0
+                    gems = "|cffffffff("..count..")|r"
+                end
+                widget:SetText(player.gs and format("%s%.1f %s", (player.bad and "|cffffd200*|r" or ""), player.gs, gems) or "?")
+                if not player.gsGot then widget:SetTextColor(0.5,0.5,0.5) else widget:SetTextColor(1,1,1) end
+
                 local r, b, g = U1GetInventoryLevelColor(player.gs)
                 if not player.gsGot then widget:SetTextColor(0.5,0.5,0.5,1) else widget:SetTextColor(r,b,g) end
+            end
+        },
+        {
+            header = "统御碎片",
+            headerSpan = 1,
+            width = 70,
+            tip = format("|cff%s紫色|r为%s碎片，%s\n|cff%s蓝色|r为%s碎片，%s\n|cff%s红色|r为%s碎片，%s|r\n未出套装效果会显示各个碎片等级",
+                DomiSetColor[1], DomiShardName[1], DomiSetNameLong[1],
+                DomiSetColor[2], DomiShardName[2], DomiSetNameLong[2],
+                DomiSetColor[3], DomiShardName[3], DomiSetNameLong[3]),
+            sort = function(a,b)
+                local r, equal, force = compare(a, b, "domi_info")
+                if currSort > 0 or force then return r else return not r end
+            end,
+            create = function(col,btn,idx) return btn:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall"):SetJustifyH("CENTER"):Size(col.width, 24) end,
+            update = function(line, widget, idx, colIdx)
+                local player = line.player
+                widget:SetText(player.domi_info or "|cff7f7f7f?|r")
             end
         },
         --[[
@@ -734,9 +792,41 @@ function TS.SetupColumns(f)
             end
         },
         ]]
+        --[[
+        {
+            header = "腐蚀",
+            headerSpan = 1,
+            width = 36,
+            tip = "当前腐蚀值，计算了披风抗性并假设有10腐蚀抗性的特质",
+            sort = function(a,b)
+                local r, equal, force = compare(a, b, "corrupt")
+                if currSort > 0 or force then return r else return not r end
+            end,
+            create = function(col,btn,idx) return btn:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall"):SetFontHeight(14):SetJustifyH("CENTER"):Size(col.width, 24) end,
+            update = function(line, widget, idx, colIdx)
+                local player = line.player
+                local corrupt = 0
+                if (player.c_total) then
+                    corrupt = math.max(0, player.c_total - player.c_resist - 10)
+                    widget:SetText(tostring(corrupt))
+                else
+                    widget:SetText("?")
+                end
+                if not player.gsGot then
+                    widget:SetTextColor(0.3,0.3,0.3)
+                else
+                    if corrupt >= 40 then
+                        widget:SetTextColor(1, 0, 0)
+                    else
+                        widget:SetTextColor(0.5804, 0.4235, 0.8157)  --hex2rgba(ff946cd0)
+                    end
+                end
+            end
+        },
         {
             header = "珠宝",
             headerSpan = 1,
+            onlyTab1 = 1,
             width = 55,
             tip = "已插宝石数/总宝石孔数 顶级宝石数+高级宝石数+其他宝石数\n \n已附魔装备数/总附魔装备数 缺失部位\n\n腰带打孔算一个附魔",
             create = function(col,btn,idx) return btn:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall"):SetFontHeight(14):SetJustifyH("CENTER"):Size(col.width, 24) end,
@@ -750,7 +840,6 @@ function TS.SetupColumns(f)
                 if not player.gsGot then widget:SetTextColor(0.5,0.5,0.5) else widget:SetTextColor(1,1,1) end
             end
         },
-        --[=[
         {
             header = "橙装",
             headerSpan = 1,
@@ -787,13 +876,14 @@ function TS.SetupColumns(f)
                 end
             end
         },
-        --]=]
+        --]]
 
         {
-            header = "引领潮流",
+            header = "引领",
             headerSpan = 1,
-            width = 64,
-            tip = "当前版本相关的副本成就，同战网共享，跨角色。绿色为有，红色为没有",
+            onlyTab1 = 1,
+            width = 48,
+            tip = "当前版本相关的英雄难度通关副本成就（引领潮流），同战网共享，跨角色。绿色为有，红色为没有",
             create = function(col,btn,idx) return btn:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall"):SetFontHeight(14):SetJustifyH("CENTER"):Size(col.width, 24) end,
             update = function(line, widget, idx, colIdx)
                 local player = line.player
@@ -814,9 +904,28 @@ function TS.SetupColumns(f)
                 end
             end
         },
+        {
+            header = "钥石评分",
+            headerSpan = 1,
+            onlyTab1 = 1,
+            width = 64,
+            tip = "角色当前赛季的史诗钥石评分",
+            sort = function(a,b)
+                local r, equal, force = compare(a, b, "mscore")
+                if currSort > 0 or force then return r else return not r end
+            end,
+            create = function(col,btn,idx) return btn:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall"):SetJustifyH("CENTER"):Size(col.width, 24) end,
+            update = function(line, widget, idx, colIdx)
+                local player = line.player
+                widget:SetText(player.mscore or "?")
+                local color = C_ChallengeMode.GetDungeonScoreRarityColor(player.mscore or 0)
+                widget:SetTextColor(color.r, color.g, color.b)
+            end
+        },
     }
 
     TS.NUM_FIX_COLUMNS = #TS.cols
+    TS.NUM_TAB1_COLUMNS = 0 for _, col in ipairs(TS.cols) do if col.onlyTab1 then TS.NUM_TAB1_COLUMNS = TS.NUM_TAB1_COLUMNS + 1 end end --部分非成就信息只在第一页显示,TS.SetTab
 
     --根据最大boss数量创建按钮
     local MAX_INFOS = 0 for _, v in next, TS.TABS do MAX_INFOS = max(MAX_INFOS, #v.ids) end
@@ -840,24 +949,8 @@ function TS.SetupColumns(f)
             local btn = TplColumnButton(f, nil, TS.COLUMN_BUTTON_HEIGHT):SetScript("OnClick", sortNames):un()
             WW(btn:GetFontString()):SetFontHeight(14):un()
             btn.id = id
+            btn.sortFunc = col.sort
             table.insert(f.headers, btn)
-            --一个表头可以跨多个元素, 要计算其宽度
-            local width = 0
-            for j=1,col.headerSpan or 1 do
-                local includeCol = TS.cols[i+j-1]
-                width = width + includeCol.width + includeCol.offset[1]
-                --includeCol.headerIdx = #f.cols
-            end
-            --todo: 这里需要考虑最左侧没有的情况
-            WW(btn):BL("$parentInset","TL", left, 1-22):un()
-            if type(col.header)=="string" then
-                btn:SetText(col.header) --是字符串则设置上不动了
-            elseif type(col.header)=="function" then
-                col.header(btn, col)
-            end
-            btn.width = width - TAB_OFFSET --跨多个表头只减去一次
-
-            btn:SetWidth(btn.width)
 
             if i > TS.NUM_FIX_COLUMNS then
                 CoreUIEnableTooltip(btn)
@@ -931,8 +1024,8 @@ function TS:UIUpdateNames()
     for name, _ in pairs(TS.names) do
         table.insert(names, name)
     end
-    if (currSort) then
-        table.sort(names, sortFuncs[abs(currSort)])
+    if currSort and currSortFunc then
+        table.sort(names, currSortFunc)
     end
     if f():IsVisible() then
         f.scroll.update()

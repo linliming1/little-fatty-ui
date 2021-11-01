@@ -1,9 +1,8 @@
 local mod	= DBM:NewMod("BrawlRank3", "DBM-Brawlers")
 local L		= mod:GetLocalizedStrings()
 
-mod:SetRevision(("$Revision: 18464 $"):sub(12, -3))
+mod:SetRevision("20201102223314")
 --mod:SetModelID(28649)
-mod:SetZone()
 mod:SetUsedIcons(8)
 
 mod:RegisterEvents(
@@ -28,7 +27,7 @@ local specWarnDivineCircle			= mod:NewSpecialWarningDodge(142585)--Ahoo'ru
 local timerShotgunRoarCD			= mod:NewCDTimer(9.9, 234489, nil, nil, nil, 3)--Oso
 local timerDivineCircleCD			= mod:NewCDTimer(26.7, 142585)--Insufficent data to say if accurate with certainty --Ahoo'ru
 
-local brawlersMod = DBM:GetModByName("Brawlers")
+local brawlersMod = DBM:GetModByName("BrawlersGeneral")
 
 function mod:SPELL_CAST_START(args)
 	if not brawlersMod.Options.SpectatorMode and not brawlersMod:PlayerFighting() then return end--Spectator mode is disabled, do nothing.
@@ -38,6 +37,7 @@ function mod:SPELL_CAST_START(args)
 			specWarnShotgunRoar:Show()
 		else
 			warnShotgunRoar:Show()
+			timerShotgunRoarCD:SetSTFade(true)
 		end
 	elseif args.spellId == 138845 then
 		if brawlersMod:PlayerFighting() then
@@ -57,6 +57,7 @@ function mod:SPELL_CAST_START(args)
 			specWarnDivineCircle:Show()
 		else
 			warnDivineCircle:Show()
+			timerDivineCircleCD:SetSTFade(true)
 		end
 	end
 end

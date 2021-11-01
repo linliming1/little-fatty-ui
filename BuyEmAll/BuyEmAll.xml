@@ -1,4 +1,5 @@
-﻿<Ui xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xsi:schemaLocation="http://www.blizzard.com/wow/ui/ ..\UI.xsd" xmlns="http://www.blizzard.com/wow/ui/">
+<Ui xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xsi:schemaLocation="http://www.blizzard.com/wow/ui/ ..\UI.xsd" xmlns="http://www.blizzard.com/wow/ui/">
+	<GameTooltip name="BuyEmAllTooltip" inherits="GameTooltipTemplate"/>
 	<Button name="BuyEmAllButtonTemplate" virtual="true" inherits="UIPanelButtonTemplate">
 		<Size>
 			<AbsDimension x="64" y="24" />
@@ -183,11 +184,6 @@
 						<Offset x="2" y="-45" />
 					</Anchor>
 				</Anchors>
-				<Backdrop bgFile="" edgeFile="">
-					<BackgroundInsets>
-						<AbsInset left="0" right="0" top="0" bottom="0" />
-					</BackgroundInsets>
-				</Backdrop>
 				<Layers>
 					<Layer>
 						<Texture name="BuyEmAllCurrency1" file="nil">

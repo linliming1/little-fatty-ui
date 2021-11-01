@@ -3,7 +3,7 @@ U1_NEW_ICON = '|TInterface\\OptionsFrame\\UI-OptionsFrame-NewFeatureIcon:0:0:0:-
 
 -- default 仅在插件first run的时候运行，如果是nil则不会设置默认值
 function U1CfgMakeCVarOption(title, cvar, default, options)
-    local info = copy(options) or {}
+    local info = u1copy(options) or {}
 
     info.text = title
     info.var = "cvar_"..cvar
@@ -55,6 +55,7 @@ end
 U1RegisterAddon("!!!Libs", { load = "NORMAL", protected = 1, hide = 1 }) EnableAddOn("!!!Libs") --163UI必须第一个加载，不能依赖其他的，只能这样
 U1RegisterAddon("!!!163UI.pics!!!", { title = "插件说明图片", hide = 1, defaultEnable = 0 });
 U1RegisterAddon("!!!163UI.3dcodecmd!!!", { title = "爱不易核心", load = "NORMAL", hide = 1, protected = 1, defaultEnable = 1 });
+U1RegisterAddon("haohaoliaotian", { load = "NORMAL", protected = 1, hide = 1 }) EnableAddOn("haohaoliaotian")
 
 U1RegisterAddon("!!!163UI!!!", {
     title = L["爱不易"],
@@ -92,11 +93,13 @@ U1RegisterAddon("!!!163UI!!!", {
             end -- alwaysCompareItems
         end
     },
+    --[[
     {
         var = "showLevelOnSlot",
-        text = "装备栏左上角显示物品等级",
+        text = "玩家面板左上角显示装等",
         default = 1,
     },
+    --]]
     --[[ 7.0 以后无法显示详细信息，只能取消了
     {
         var = "lootenh",
@@ -195,10 +198,10 @@ U1RegisterAddon("!!!163UI!!!", {
             var = "speed",
             text = L["插件加载速度（个/秒）"],
             tip = L["说明`　控制进入游戏时插件加载的速度，如果数值大，则单次卡顿的时间长，但总的加载时间会短，比如设置成100就会大卡一下后插件就全部加载好了。而设置成5则是每秒只会小卡一下，但要很久才能加载完全部插件。` `　另外可以使用/rl2命令来强制最慢速度加载，适合副本战斗中界面出错后（比如上载具没出动作条）迅速重载界面。"],
-            default = 2,
+            default = 20,
             reload = 1,
             type = "spin",
-            range = {1, 10, 1},
+            range = {0, 100, 10},
             getvalue = function() return U1DB.loadSpeed end,
             callback = function(cfg, v, loading)
                 U1DB.loadSpeed = v
@@ -216,12 +219,16 @@ U1RegisterAddon("!!!163UI!!!", {
                 local playS, playSF = PlaySound, PlaySoundFile
                 local wipe, playing, looping, updater = table.wipe, {}, {}, CreateFrame("Frame", "U1_SOUND_REDIRECT")
                 looping[SOUNDKIT.UI_BONUS_LOOT_ROLL_LOOP or ""] = true --LootFrame
+                looping[SOUNDKIT.IG_CREATURE_AGGRO_SELECT or 0] = true --TargetFrame_OnEvent
+                looping[SOUNDKIT.IG_CHARACTER_NPC_SELECT or 0] = true --TargetFrame_OnEvent
+                looping[SOUNDKIT.IG_CREATURE_NEUTRAL_SELECT or 0] = true --TargetFrame_OnEvent
+                looping[SOUNDKIT.INTERFACE_SOUND_LOST_TARGET_UNIT or 0] = true --TargetFrame_OnHide
                 updater:SetScript("OnUpdate", function(self) wipe(playing) end)
                 if CreateLoopingSoundEffectEmitter then hooksecurefunc("CreateLoopingSoundEffectEmitter", function(startingSound, loopingSound) looping[loopingSound] = true end) end
                 local function shouldRedirect(channel, sound)
                     if looping[sound] then return end
                     if(not U1GetCfgValue(config)) then return end
-                    channel = channel and channel:upper() or "SFX"
+                    channel = channel and type(channel) == "string" and channel:upper() or "SFX"
                     if(channel == "MASTER") then return end
                     if playing[sound] then return end
                     if(GetCVarBool("Sound_EnableSFX") and channel~="MUSIC" and channel~="MASTER" and channel~="AMBIENCE") then return end
@@ -251,22 +258,30 @@ U1RegisterAddon("!!!163UI!!!", {
         callback = function(cfg, v, loading)
             if loading and not v then return end
             --- 拍卖行不会自动关闭
-            CoreDependCall("Blizzard_AuctionUI", function()
+            local function handleFrame(frameName, v)
+                local frame = _G[frameName]
+                if not frame then return end
                 if v then
-                    AuctionFrame:SetAttribute("UIPanelLayout-area", false);
-                    tinsertdata(UISpecialFrames, "AuctionFrame")
+                    frame:SetAttribute("UIPanelLayout-area", false);
+                    tinsertdata(UISpecialFrames, frameName)
                 else
-                    AuctionFrame:SetAttribute("UIPanelLayout-area", "doublewide");
-                    tremovedata(UISpecialFrames, "AuctionFrame")
+                    frame:SetAttribute("UIPanelLayout-area", "doublewide");
+                    tremovedata(UISpecialFrames, frameName)
                 end
-                if not AuctionFrame._hooked163 then
-                    AuctionFrame._hooked163 = true
-                    hooksecurefunc(AuctionFrame, "SetAttribute", function(self, arg1, value)
+                if not frame._hooked163 then
+                    frame._hooked163 = true
+                    hooksecurefunc(frame, "SetAttribute", function(self, arg1, value)
                         if (arg1 == "UIPanelLayout-area" and value and U1GetCfgValue(cfg._path)) then
                             self:SetAttribute(arg1, false);
                         end
                     end)
                 end
+            end
+            CoreDependCall("Blizzard_AuctionHouseUI", function()
+                handleFrame("AuctionHouseFrame", v)
+            end)
+            CoreDependCall("Blizzard_Soulbinds", function()
+                handleFrame("SoulbindViewer", v)
             end)
         end,
     },
@@ -372,6 +387,21 @@ U1RegisterAddon("!!!163UI!!!", {
             text = L["隐藏缩小放大按钮"],
             tip = L["说明`隐藏后用鼠标滚轮缩放小地图"],
             callback = function(cfg, v, loading) CoreCall("U1MMB_MinimapZoom_Toggle", v) end,
+        },
+        {
+            var = "mmp_elite",
+            default = 1,
+            text = "爱不易图标用精英边框",
+            callback = function(cfg, v, loading)
+                local function change(on)
+                    LibDBIcon10_U1MMB.overlay:SetTexture(on and "Interface\\AddOns\\!!!163UI!!!\\Textures\\UI2-minimap-btn" or 136430)
+                end
+                if loading and U1_CreateMinimapButton then
+                    hooksecurefunc("U1_CreateMinimapButton", function() change(v) end)
+                else
+                    change(v)
+                end
+            end,
         },
 
     },

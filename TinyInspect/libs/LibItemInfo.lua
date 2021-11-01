@@ -3,7 +3,7 @@
 -- 物品信息庫 Author: M
 ---------------------------------
 
-local MAJOR, MINOR = "LibItemInfo.7000", 2
+local MAJOR, MINOR = "LibItemInfo.7000", 4
 local lib = LibStub:NewLibrary(MAJOR, MINOR)
 
 if not lib then return end
@@ -96,7 +96,7 @@ end
 
 
 --獲取物品實際等級信息
-function lib:GetItemInfo(link, stats)
+function lib:GetItemInfo(link, stats, tooltipFunc)
     if (not link or link == "") then
         return 0, 0
     end
@@ -107,16 +107,20 @@ function lib:GetItemInfo(link, stats)
         return 1, 0
     end
     tooltip:SetOwner(UIParent, "ANCHOR_NONE")
+    if tooltipFunc then tooltipFunc(tooltip) else
     tooltip:SetHyperlink(link)
+    end
     local text, level
     for i = 2, 5 do
-        text = _G[tooltip:GetName().."TextLeft" .. i]:GetText() or ""
-        level = select(2, string.match(text, ItemLevelAltPat))
-        if (level) then break end
-        level = string.match(text, ItemLevelPattern)
-        if (level) then break end
-        level = string.match(text, ItemLevelPlusPat)
-        if (level) then break end
+        if (_G[tooltip:GetName().."TextLeft" .. i]) then
+            text = _G[tooltip:GetName().."TextLeft" .. i]:GetText() or ""
+            level = select(2, string.match(text, ItemLevelAltPat))
+            if (level) then break end
+            level = string.match(text, ItemLevelPattern)
+            if (level) then break end
+            level = string.match(text, ItemLevelPlusPat)
+            if (level) then break end
+        end
     end
     if stats then self:GetStatsViaTooltip(tooltip, stats) end
     if (level and string.find(level, "+")) then
@@ -145,11 +149,13 @@ function lib:GetContainerItemLevel(pid, id)
             tooltip:SetBagItem(pid, id)
         end
         for i = 2, 5 do
-            text = _G[tooltip:GetName().."TextLeft" .. i]:GetText() or ""
-            level = select(2, string.match(text, ItemLevelAltPat))
-            if (level) then break end
-            level = string.match(text, ItemLevelPattern)
-            if (level) then break end
+            if (_G[tooltip:GetName().."TextLeft" .. i]) then
+                text = _G[tooltip:GetName().."TextLeft" .. i]:GetText() or ""
+                level = select(2, string.match(text, ItemLevelAltPat))
+                if (level) then break end				
+                level = string.match(text, ItemLevelPattern)
+                if (level) then break end
+            end
         end
     end
     return 0, tonumber(level) or 0
@@ -169,9 +175,11 @@ function lib:GetUnitItemInfo(unit, index, stats)
     end
     local text, level
     for i = 2, 5 do
-        text = _G[unittip:GetName().."TextLeft" .. i]:GetText() or ""
-        level = string.match(text, ItemLevelPattern)
-        if (level) then break end
+        if (_G[unittip:GetName().."TextLeft" .. i]) then
+            text = _G[unittip:GetName().."TextLeft" .. i]:GetText() or ""
+            level = string.match(text, ItemLevelPattern)
+            if (level) then break end
+        end
     end
     self:GetStatsViaTooltip(unittip, stats)
     if (string.match(link, "item:(%d+):")) then
@@ -210,4 +218,11 @@ function lib:GetUnitItemLevel(unit, stats)
     end
     maxlevel = max(maxlevel, mlevel, olevel)
     return counts, total/max(16-counts,1), total, max(mlevel,olevel), (mquality == 6 or oquality == 6), maxlevel
+end
+
+--獲取任务物品實際link
+function lib:GetQuestItemlink(questType, id)
+    tooltip:SetOwner(UIParent, "ANCHOR_NONE")
+    tooltip:SetQuestLogItem(questType, id)
+    return select(2, tooltip:GetItem()) or GetQuestLogItemLink(questType, id)
 end

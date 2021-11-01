@@ -168,7 +168,9 @@ end
 function GridStatusHealth:PostEnable()
 	self:RegisterMessage("Grid_UnitJoined")
 
-	self:RegisterEvent("UNIT_AURA", "UpdateUnit")
+	--self:RegisterEvent("UNIT_AURA", "UpdateUnit") --没觉得哪个场景需要这个
+    --self:RegisterEvent("UNIT_FLAGS", "UpdateUnit")
+    self:RegisterEvent("PLAYER_FLAGS_CHANGED", "UpdateUnit")
 	self:RegisterEvent("UNIT_CONNECTION", "UpdateUnit")
 	self:RegisterEvent("UNIT_HEALTH", "UpdateUnit")
 	self:RegisterEvent("UNIT_MAXHEALTH", "UpdateUnit")
@@ -178,6 +180,11 @@ function GridStatusHealth:PostEnable()
 	self:RegisterEvent("GROUP_ROSTER_UPDATE", "UpdateAllUnits")
 
 	self:RegisterMessage("Grid_ColorsChanged", "UpdateAllUnits")
+
+    self:RegisterEvent("UNIT_CTR_OPTIONS", "UpdateAllUnits")
+    self:RegisterEvent("UNIT_FLAGS", "UpdateAllUnits")
+    self:RegisterEvent("PLAYER_ROLES_ASSIGNED", "UpdateAllUnits")
+    self:RegisterEvent("UNIT_OTHER_PARTY_CHANGED", "UpdateAllUnits")
 end
 
 function GridStatusHealth:OnStatusEnable(status)
@@ -226,6 +233,11 @@ function GridStatusHealth:UpdateUnit(event, unitid, ignoreRange)
 	local deficitSettings = self.db.profile.unit_healthDeficit
 	local healthPriority = healthSettings.priority
 	local deficitPriority = deficitSettings.priority
+
+    --if cur < 10 or cur / max < 0.01 then print(unitid, UnitName(unitid), UnitHealth(unitid), UnitHealthMax(unitid), UnitIsDeadOrGhost(unitid)) end
+    if cur <= 0 and max > 1 and not UnitIsDeadOrGhost then
+        print("调试：", unitid, UnitName(unitid), UnitHealth(unitid), UnitHealthMax(unitid), UnitIsDeadOrGhost(unitid))
+    end
 
 	if UnitIsDeadOrGhost(unitid) then
 		self:StatusDeath(guid, true)

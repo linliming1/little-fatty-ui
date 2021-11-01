@@ -1,3 +1,6 @@
+if not WeakAuras.IsCorrectVersion() then return end
+local AddonName, OptionsPrivate = ...
+
 local L = WeakAuras.L
 
 local function createOptions(id, data)
@@ -6,9 +9,30 @@ local function createOptions(id, data)
     __order = 1,
     texture = {
       type = "input",
-      width = WeakAuras.doubleWidth,
+      width = WeakAuras.doubleWidth - 0.15,
       name = L["Texture"],
       order = 1
+    },
+    chooseTexture = {
+      type = "execute",
+      name = L["Choose"],
+      width = 0.15,
+      order = 1.1,
+      func = function()
+        OptionsPrivate.OpenTexturePicker(data, {}, {
+          texture = "texture",
+          color = "color",
+          rotate = "rotate",
+          discrete_rotation = "discrete_rotation",
+          rotation = "rotation",
+          mirror = "mirror",
+          blendMode = "blendMode"
+        }, OptionsPrivate.Private.texture_types);
+      end,
+      imageWidth = 24,
+      imageHeight = 24,
+      control = "WeakAurasIcon",
+      image = "Interface\\AddOns\\WeakAuras\\Media\\Textures\\browse",
     },
     desaturate = {
       type = "toggle",
@@ -19,18 +43,9 @@ local function createOptions(id, data)
     space2 = {
       type = "execute",
       name = "",
-      width = WeakAuras.halfWidth,
+      width = WeakAuras.normalWidth,
       order = 5,
       image = function() return "", 0, 0 end,
-    },
-    chooseTexture = {
-      type = "execute",
-      name = L["Choose"],
-      width = WeakAuras.halfWidth,
-      order = 7,
-      func = function()
-        WeakAuras.OpenTexturePicker(data, "texture", WeakAuras.texture_types);
-      end
     },
     color = {
       type = "color",
@@ -44,7 +59,7 @@ local function createOptions(id, data)
       width = WeakAuras.normalWidth,
       name = L["Blend Mode"],
       order = 12,
-      values = WeakAuras.blend_types
+      values = OptionsPrivate.Private.blend_types
     },
     mirror = {
       type = "toggle",
@@ -89,16 +104,28 @@ local function createOptions(id, data)
       order = 35,
       hidden = function() return data.rotate end
     },
+    textureWrapMode = {
+      type = "select",
+      width = WeakAuras.normalWidth,
+      name = L["Texture Wrap"],
+      order = 36,
+      values = OptionsPrivate.Private.texture_wrap_types
+    },
+    endHeader = {
+      type = "header",
+      order = 100,
+      name = "",
+    },
   };
 
   return {
     texture = options,
-    position = WeakAuras.PositionOptions(id, data),
+    position = OptionsPrivate.commonOptions.PositionOptions(id, data),
   };
 end
 
-local function createThumbnail(parent)
-  local borderframe = CreateFrame("FRAME", nil, parent);
+local function createThumbnail()
+  local borderframe = CreateFrame("FRAME", nil, UIParent);
   borderframe:SetWidth(32);
   borderframe:SetHeight(32);
 
@@ -127,7 +154,7 @@ local function modifyThumbnail(parent, region, data, fullModify, size)
     region.texture:SetHeight(scale * data.height);
   end
 
-  WeakAuras.SetTextureOrAtlas(region.texture, data.texture);
+  WeakAuras.SetTextureOrAtlas(region.texture, data.texture, data.textureWrapMode, data.textureWrapMode);
   region.texture:SetVertexColor(data.color[1], data.color[2], data.color[3], data.color[4]);
   region.texture:SetBlendMode(data.blendMode);
 
@@ -160,7 +187,7 @@ local function createIcon()
   local data = {
     height = 40,
     width = 40,
-    texture = "Textures\\SpellActivationOverlays\\Eclipse_Sun",
+    texture = "Interface\\Addons\\WeakAuras\\PowerAurasMedia\\Auras\\Aura3",
     color = {1, 1, 1, 1},
     blendMode = "ADD",
     rotate = true;
@@ -182,7 +209,7 @@ local templates = {
   {
     title = L["Star"],
     data = {
-      texture = "Spells\\T_Star3",
+      texture = "241049", -- Spells\\T_Star3
       blendMode = "ADD",
       width = 200,
       height = 200,
@@ -192,7 +219,7 @@ local templates = {
   {
     title = L["Leaf"],
     data = {
-      texture = "Spells\\Nature_Rune_128",
+      texture = "166606", -- Spells\\Nature_Rune_128
       blendMode = "ADD",
       width = 200,
       height = 200,
@@ -202,7 +229,7 @@ local templates = {
   {
     title = L["Hawk"],
     data = {
-      texture = "Spells\\Aspect_Hawk",
+      texture = "165609", -- Spells\\Aspect_Hawk
       blendMode = "ADD",
       width = 200,
       height = 200,
@@ -221,4 +248,12 @@ local templates = {
   },
 }
 
-WeakAuras.RegisterRegionOptions("texture", createOptions, createIcon, L["Texture"], createThumbnail, modifyThumbnail, L["Shows a custom texture"], templates);
+if WeakAuras.IsClassic() then
+  table.remove(templates, 2)
+end
+
+local function GetAnchors(data)
+  return OptionsPrivate.Private.default_types_for_anchor
+end
+
+WeakAuras.RegisterRegionOptions("texture", createOptions, createIcon, L["Texture"], createThumbnail, modifyThumbnail, L["Shows a custom texture"], templates, GetAnchors);

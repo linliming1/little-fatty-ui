@@ -23,7 +23,7 @@ local strlowerCache = TMW.strlowerCache
 local _, pclass = UnitClass("Player")
 
 
-local Module = SUG:NewModule("talents", SUG:GetModule("spell"))
+local Module = SUG:NewModule("talents", SUG:GetModule("default"))
 Module.noMin = true
 Module.showColorHelp = false
 Module.helpText = L["SUG_TOOLTIPTITLE_GENERIC"]
@@ -48,9 +48,6 @@ function Module:Table_Get()
 
 	return self.table
 end
-function Module:Table_GetSorter()
-	return nil
-end
 function Module:Entry_AddToList_1(f, id)
 	local id, name, iconTexture = GetTalentInfoByID(id) -- restore case
 
@@ -68,7 +65,6 @@ end
 Module.Entry_Colorize_1 = TMW.NULLFUNC
 
 
--- TODO: Redo this for the new pvp talent system.
 local Module = SUG:NewModule("pvptalents", SUG:GetModule("talents"))
 Module.table = {}
 
@@ -105,3 +101,103 @@ function Module:Entry_AddToList_1(f, id)
 
 	f.Icon:SetTexture(iconTexture)
 end
+
+
+
+
+local Module = SUG:NewModule("azerite_essence", SUG:GetModule("default"))
+Module.noMin = true
+Module.showColorHelp = false
+Module.helpText = L["SUG_TOOLTIPTITLE_GENERIC"]
+Module.table = {}
+
+function Module:OnInitialize()
+	-- nothing
+end
+function Module:Table_Get()
+	wipe(self.table)
+	local essences = C_AzeriteEssence.GetEssences()
+	if not essences then  
+		return self.table
+	end
+	
+	for _, info in pairs(essences) do
+		self.table[info.ID] = strlowerCache[info.name]
+	end
+
+	return self.table
+end
+function Module:Table_GetSorter()
+	if SUG.inputType == "number" then
+		return nil -- use the default sort func
+	else
+		SUG.SortTable = self:Table_Get()
+		return self.Sorter_ByName
+	end
+end
+function Module:Entry_AddToList_1(f, id)
+	local info = C_AzeriteEssence.GetEssenceInfo(id)
+
+	f.Name:SetText(info.name)
+	f.ID:SetText(id)
+
+	f.tooltipmethod = "SetAzeriteEssence"
+	f.tooltiparg = id
+
+	f.insert = info.name
+	f.insert2 = id
+
+	f.Icon:SetTexture(info.icon)
+end
+
+
+
+
+local Module = SUG:NewModule("soulbind", SUG:GetModule("default"))
+Module.noMin = true
+Module.showColorHelp = false
+Module.helpText = L["SUG_TOOLTIPTITLE_GENERIC"]
+Module.table = {}
+function Module:OnInitialize()
+	-- nothing
+end
+function Module:Table_Get()
+	wipe(self.table)
+
+	for id = 1, 30 do
+		local data = C_Soulbinds.GetSoulbindData(id)
+		if data.name and data.name ~= "" then
+			self.table[id] = strlowerCache[data.name]
+		end
+	end
+
+	return self.table
+end
+function Module.Sorter(a, b)
+	local nameA, nameB = C_Soulbinds.GetSoulbindData(a), C_Soulbinds.GetSoulbindData(b)
+	if nameA.covenantID == nameB.covenantID then
+		--sort identical names by ID
+		return a < b
+	else
+		--sort by name
+		return nameA.covenantID < nameB.covenantID
+	end
+end
+function Module:Table_GetSorter()
+	return self.Sorter
+end
+function Module:Entry_AddToList_1(f, id)
+	local info = C_Soulbinds.GetSoulbindData(id)
+
+	f.Name:SetText(info.name)
+	f.ID:SetText(id)
+
+	f.tooltiptitle = info.name
+	f.tooltiptext = info.description
+
+	f.insert = info.name
+	f.insert2 = id
+
+	f.Icon:SetTexture(TMW.CovenantIcons[info.covenantID])
+end
+Module.Entry_Colorize_1 = TMW.NULLFUNC

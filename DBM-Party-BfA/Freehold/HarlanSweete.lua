@@ -1,10 +1,9 @@
 local mod	= DBM:NewMod(2095, "DBM-Party-BfA", 2, 1001)
 local L		= mod:GetLocalizedStrings()
 
-mod:SetRevision(("$Revision: 18026 $"):sub(12, -3))
+mod:SetRevision("20210614230033")
 mod:SetCreatureID(126983)
 mod:SetEncounterID(2096)
-mod:SetZone()
 
 mod:RegisterCombat("combat")
 
@@ -26,18 +25,15 @@ local specWarnBlackPowder			= mod:NewSpecialWarningRun(257314, nil, nil, nil, 4,
 local yellBlackPowder				= mod:NewYell(257314)
 local specWarnAvastye				= mod:NewSpecialWarningSwitch(257316, "Dps", nil, nil, 1, 2)
 local specWarnSwiftwindSaber		= mod:NewSpecialWarningDodge(257278, nil, nil, nil, 2, 2)
-local specWarnCannonBarrage			= mod:NewSpecialWarningRun(257305, nil, nil, nil, 4, 2)
+local specWarnCannonBarrage			= mod:NewSpecialWarningDodge(257305, nil, nil, nil, 3, 2)
 local yellCannonBarrage				= mod:NewYell(257305)
---local specWarnGTFO				= mod:NewSpecialWarningGTFO(238028, nil, nil, nil, 1, 8)
 
-local timerAvastyeCD				= mod:NewCDTimer(13, 257316, nil, nil, nil, 1, nil, DBM_CORE_DAMAGE_ICON)
-local timerSwiftwindSaberCD			= mod:NewCDTimer(15.8, 257316, nil, nil, nil, 3)
+local timerAvastyeCD				= mod:NewCDTimer(13, 257316, nil, nil, nil, 1, nil, DBM_CORE_L.DAMAGE_ICON)
+local timerSwiftwindSaberCD			= mod:NewCDTimer(15.8, 257278, nil, nil, nil, 3)
 local timerCannonBarrageCD			= mod:NewCDTimer(17.4, 257305, nil, nil, nil, 3)
 
-mod.vb.phase = 1
-
 function mod:OnCombatStart(delay)
-	self.vb.phase = 1
+	self:SetStage(1)
 	timerSwiftwindSaberCD:Start(10.4-delay)
 	timerCannonBarrageCD:Start(20-delay)
 	timerAvastyeCD:Start(31.6-delay)
@@ -61,7 +57,7 @@ function mod:SPELL_AURA_APPLIED(args)
 		end
 		if args:IsPlayer() then
 			specWarnCannonBarrage:Show()
-			specWarnCannonBarrage:Play("justrun")
+			specWarnCannonBarrage:Play("watchstep")
 			--specWarnCannonBarrage:ScheduleVoice(1.5, "keepmove")
 			yellCannonBarrage:Yell()
 		else
@@ -75,7 +71,7 @@ end
 function mod:SPELL_CAST_START(args)
 	local spellId = args.spellId
 	if spellId == 257402 or spellId == 257458 then
-		self.vb.phase = self.vb.phase + 1
+		self:SetStage(0)
 		timerSwiftwindSaberCD:Stop()
 		timerAvastyeCD:Stop()
 		timerCannonBarrageCD:Stop()
@@ -100,23 +96,6 @@ function mod:SPELL_CAST_SUCCESS(args)
 		timerSwiftwindSaberCD:Start()
 	end
 end
-
---[[
-function mod:SPELL_PERIODIC_DAMAGE(_, _, _, _, destGUID, _, _, _, spellId)
-	if spellId == 228007 and destGUID == UnitGUID("player") and self:AntiSpam(2, 4) then
-		specWarnGTFO:Show()
-		specWarnGTFO:Play("watchfeet")
-	end
-end
-mod.SPELL_PERIODIC_MISSED = mod.SPELL_PERIODIC_DAMAGE
-
-function mod:UNIT_DIED(args)
-	local cid = self:GetCIDFromGUID(args.destGUID)
-	if cid == 124396 then
-		
-	end
-end
---]]
 
 function mod:UNIT_SPELLCAST_SUCCEEDED(uId, _, spellId)
 	if spellId == 257453 or spellId == 257304 then--Cannon Barrage (Stage 1), Cannon Barrage (Stage 2/3)

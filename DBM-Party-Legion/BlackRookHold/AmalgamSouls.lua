@@ -1,10 +1,9 @@
 local mod	= DBM:NewMod(1518, "DBM-Party-Legion", 1, 740)
 local L		= mod:GetLocalizedStrings()
 
-mod:SetRevision(("$Revision: 2 $"):sub(12, -3))
+mod:SetRevision("20210905144759")
 mod:SetCreatureID(98542)
 mod:SetEncounterID(1832)
-mod:SetZone()
 
 mod:RegisterCombat("combat")
 
@@ -13,7 +12,7 @@ mod:RegisterEventsInCombat(
 	"SPELL_CAST_START 195254 194966 194956 196078"
 )
 
-local warnSwirlingScythe			= mod:NewTargetAnnounce(195254, 2)
+local warnSwirlingScythe			= mod:NewTargetNoFilterAnnounce(195254, 2)
 local warnSoulEchoes				= mod:NewTargetAnnounce(194966, 2)
 local warnCallSouls					= mod:NewSpellAnnounce(196078, 2)--Change to important warning if it becomes more relevant.
 
@@ -25,13 +24,13 @@ local specWarnSwirlingScytheNear	= mod:NewSpecialWarningClose(195254, nil, nil, 
 
 local timerSwirlingScytheCD			= mod:NewCDTimer(20.5, 195254, nil, nil, nil, 3)--20-27
 local timerSoulEchoesCD				= mod:NewNextTimer(27.5, 194966, nil, nil, nil, 3)
-local timerReapSoulCD				= mod:NewNextTimer(13, 194956, nil, nil, nil, 5, nil, DBM_CORE_TANK_ICON..DBM_CORE_DEADLY_ICON)
+local timerReapSoulCD				= mod:NewNextTimer(13, 194956, nil, nil, nil, 5, nil, DBM_CORE_L.TANK_ICON..DBM_CORE_L.DEADLY_ICON)
 
 --mod:AddRangeFrameOption(5, 194966)
 
 function mod:ScytheTarget(targetname, uId)
 	if not targetname then
-		warnSwirlingScythe:Show(DBM_CORE_UNKNOWN)
+		warnSwirlingScythe:Show(DBM_CORE_L.UNKNOWN)
 		return
 	end
 	if targetname == UnitName("player") then

@@ -222,7 +222,7 @@ Formatter{
 ---------------------------------
 
 local cacheMetatable = {
-	__mode == 'kv'
+	__mode = 'kv'
 }
 
 function TMW:MakeFunctionCached(obj, method)
@@ -252,6 +252,93 @@ function TMW:MakeFunctionCached(obj, method)
 
 		return ret1
 	end
+
+	if type(obj) == "table" then
+		obj[method] = wrapper
+	end
+
+	return wrapper, cache
+end
+
+function TMW:MakeNArgFunctionCached(argCount, obj, method)
+	local func
+	if type(obj) == "table" and type(method) == "string" then
+		func = obj[method]
+		argCount = argCount + 1 -- account for self
+	elseif type(obj) == "function" then
+		func = obj
+	else
+		error("Usage: TMW:MakeNArgFunctionCached(argCount, object/function [, method])")
+	end
+
+	-- Build up a function that works on the exact number of args expected.
+	-- This function stores the return value in a series of nested tables,
+	-- thereby requiring no string coersions or concatenations
+	-- to form a cache key, making this a fair bit faster
+	-- than the more general MakeFunctionCached.
+	--[[
+		In the following test, NArgFunctionCached performed 3.5x faster than MakeFunctionCached.
+		At a 100% hit rate, it was about 3.6x better.
+		At a very high miss rate (index = 10000000000), it was 3x better.
+		With 4 arguments at high miss rate, it was 2.4x better.
+		With 4 arguments at 100% hit rate, it was 4.3x better.
+
+
+		function Baseline()
+			return 1
+		end
+
+		local index = 10000
+		local f1 = TMW:MakeFunctionCached(Baseline)
+		local f2 = TMW:MakeNArgFunctionCached(1, Baseline)
+
+		function Test1()
+			f1(floor(random()*index))
+		end
+		function Test2()
+			f2(floor(random()*index))
+		end
+
+	]]
+
+	local funcStr = [[
+			local cachemeta = { __mode = 'kv' }
+			local cache = setmetatable({}, cachemeta)
+			local nilKey = {}
+			local func = ...
+			return function(]]
+
+	for i = 1, argCount do
+		if i > 1 then funcStr = funcStr .. "," end
+		funcStr = funcStr .. "arg" .. i
+	end
+
+	funcStr = funcStr .. [[)
+	local next, prev, key = cache
+	]]
+
+	for i = 1, argCount do
+		funcStr = funcStr .. "\n key = arg" .. i .. " == nil and nilKey or arg" .. i
+		funcStr = funcStr .. "\n prev = next; next = prev[key]"
+		if i < argCount then
+			funcStr = funcStr .. "\n if not next then next = setmetatable({}, cachemeta) prev[key] = next end"
+		end
+	end
+
+	funcStr = funcStr .. [[
+	if next ~= nil then return next end
+	local ret = func(]]
+	for i = 1, argCount do
+		if i > 1 then funcStr = funcStr .. "," end
+		funcStr = funcStr .. "arg" .. i
+	end
+	funcStr = funcStr .. [[)
+		prev[key] = ret
+		return ret;
+	end, cache
+	]]
+
+	local wrapper, cache = loadstring(funcStr)(func)
 
 	if type(obj) == "table" then
 		obj[method] = wrapper
@@ -421,7 +508,13 @@ function TMW:CleanString(text)
 	text = replace(text, "[^:] ;", "; ") -- remove all spaces before semicolons
 	text = replace(text, "; ", ";") -- remove all spaces after semicolons
 	text = replace(text, ";;", ";") -- remove all double semicolons
-	text = replace(text, " :", ":") -- remove all single spaces before colons
+
+	-- Don't do this on the French client.
+	-- https://www.iwillteachyoualanguage.com/learn/french/french-tips/french-punctuation
+	if GetLocale() ~= "frFR" then
+		text = replace(text, " :", ":") -- remove all single spaces before colons
+	end
+
 	text = replace(text, ":  ", ": ") -- remove all double spaces after colons (DONT REMOVE ALL DOUBLE SPACES EVERYWHERE, SOME SPELLS HAVE TYPO'd NAMES WITH 2 SPACES!)
 	text = gsub(text, ";", "; ") -- add spaces after all semicolons. Never used to do this, but it just looks so much better (DONT USE replace!).
 	if frame then
@@ -587,7 +680,7 @@ function TMW:StringToCachedRGBATable(str)
 	local r, g, b, a, flags = TMW:StringToRGBA(str)
 	return {r=r,g=g,b=b,a=a, flags=flags}
 end
-TMW:MakeFunctionCached(TMW, "StringToCachedRGBATable")
+TMW:MakeSingleArgFunctionCached(TMW, "StringToCachedRGBATable")
 
 
 -- Adapted from https://github.com/mjackson/mjijackson.github.com/blob/master/2008/02/rgb-to-hsl-and-rgb-to-hsv-color-model-conversion-algorithms-in-javascript.txt
@@ -667,7 +760,7 @@ function TMW:ColorStringToCachedHSVATable(str)
 	local h, s, v = TMW:RGBToHSV(r, g, b)
 	return {h=h, s=s, v=v, a=a, flags=flags}
 end
-TMW:MakeFunctionCached(TMW, "ColorStringToCachedHSVATable")
+TMW:MakeSingleArgFunctionCached(TMW, "ColorStringToCachedHSVATable")
 
 function TMW:HSVAToColorString(h, s, v, a, flags)
 	local r, g, b = TMW:HSVToRGB(h, s, v)
@@ -681,6 +774,15 @@ end
 ---------------------------------
 -- Table Utilities
 ---------------------------------
+
+function TMW.map(t, func)
+	local new = {}
+	for k, v in pairs(t) do
+		local newV, newK = func(v, k, t)
+		new[newK or k] = newV or v
+	end
+	return new
+end
 
 function TMW.approachTable(t, ...)
 	for i=1, select("#", ...) do
@@ -1480,7 +1582,8 @@ end
 local fixedRaceAtlasNames = {
 	["highmountaintauren"] = "highmountain",
 	["lightforgeddraenei"] = "lightforged",
-	["scourge"] = "undead"
+	["scourge"] = "undead",
+	["zandalaritroll"] = "zandalari",
 };
 function TMW:GetRaceIconInfo(race)
 	race = race:lower()
@@ -1500,6 +1603,10 @@ end
 
 -- From Blizzard_TutorialLogic.lua
 function TMW:FormatAtlasString(atlasName, trimPercent)
+	if not GetAtlasInfo then
+		-- Tex coords aren't supported by the new atlas string escape format
+		return string.format("|A:%s:0:0:0:0|a", atlasName);
+	end
 	local filename, width, height, txLeft, txRight, txTop, txBottom = GetAtlasInfo(atlasName);
 	trimPercent = trimPercent or 0
 

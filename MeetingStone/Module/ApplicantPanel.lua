@@ -56,9 +56,29 @@ local APPLICANT_LIST_HEADER = {
     },
     {
         key = 'Level',
-        text = L['等级'],
-        width = 40,
+        text = L['等级或分数'],
+        width = 40 + 56,
         showHandler = function(applicant)
+            --abyui
+            local score = applicant:GetDungeonScore()
+            if score > 0 then
+                if applicant:GetResult() and score > 0 then
+                    local colorAll = C_ChallengeMode.GetDungeonScoreRarityColor(score) or HIGHLIGHT_FONT_COLOR
+                    local scoreText
+                    local info = applicant:GetBestDungeonScore()
+                    if info and info.mapScore and info.mapScore > 0 then
+                        local color = C_ChallengeMode.GetSpecificDungeonOverallScoreRarityColor(info.mapScore) or HIGHLIGHT_FONT_COLOR
+                        --local levelText = format(info.finishedSuccess and "|cff00ff00%d层|r" or "|cff7f7f7f%d层|r", info.bestRunLevel or 0)
+                        scoreText = format("%s / %s", colorAll:WrapTextInColorCode(score), color:WrapTextInColorCode(info.mapScore))
+                    else
+                        scoreText = format("%s / %s", colorAll:WrapTextInColorCode(score), "|cff7f7f7f无|r")
+                    end
+                    return scoreText
+                else
+                    return NONE, GRAY_FONT_COLOR.r, GRAY_FONT_COLOR.g, GRAY_FONT_COLOR.b
+                end
+                return
+            end
             local level = applicant:GetLevel()
             if applicant:GetResult() then
                 local activity = CreatePanel:GetCurrentActivity()
@@ -72,7 +92,12 @@ local APPLICANT_LIST_HEADER = {
             end
         end,
         sortHandler = function(applicant)
-            return _PartySortHandler(applicant) or tostring(999 - applicant:GetLevel())
+            local score = applicant:GetDungeonScore()
+            if score > 0 then
+                return _PartySortHandler(applicant) or tostring(9999 - score)
+            else
+                return _PartySortHandler(applicant) or tostring(999 - applicant:GetLevel())
+            end
         end
     },
     {
@@ -90,6 +115,23 @@ local APPLICANT_LIST_HEADER = {
             return _PartySortHandler(applicant) or tostring(9999 - applicant:GetItemLevel())
         end
     },
+    --[[
+    {
+        key = 'Score',
+        text = L['评分'],
+        width = 52,
+        showHandler = function(applicant)
+
+            local info = applicant:GetBestDungeonScore() or {}
+            local mapScore = info.mapScore or 0
+            local text = format("|cffffffff%d/%d|r", applicant:GetDungeonScore(), mapScore)
+            return text
+        end,
+        sortHandler = function(applicant)
+            return _PartySortHandler(applicant) or tostring(9999 - applicant:GetDungeonScore())
+        end
+    },
+    --]]
     -- {
     --     key = 'PvPRating',
     --     text = L['PvP'],
@@ -185,14 +227,16 @@ function ApplicantPanel:OnInitialize()
         end)
     end
 
-    -- local AutoInvite = GUI:GetClass('CheckBox'):New(self) do
-    --     AutoInvite:SetPoint('BOTTOMRIGHT', self, 'TOPLEFT', -80, 7)
-    --     AutoInvite:SetText(L['自动邀请'])
-    --     AutoInvite:SetScript('OnClick', function(AutoInvite)
-    --         local checked = AutoInvite:GetChecked()
-    --         self:SetAutoInvite(checked)
-    --     end)
-    -- end
+    local AutoInvite = GUI:GetClass('CheckBox'):New(self)
+    do
+        AutoInvite:SetPoint('BOTTOMRIGHT', self, 'TOPLEFT', -80, 7)
+        AutoInvite:SetText(L['自动邀请'])
+        AutoInvite:SetChecked(not not Profile:GetSetting('AUTO_INVITE_JOIN'))
+        AutoInvite:SetScript('OnClick', function()
+            Profile:SetSetting('AUTO_INVITE_JOIN', AutoInvite:GetChecked())
+            self:UpdateAutoInvite()
+        end)
+    end
 
     self.ApplicantList = ApplicantList
     self.AutoInvite = AutoInvite
@@ -210,6 +254,7 @@ function ApplicantPanel:LFG_LIST_APPLICANT_LIST_UPDATED(_, hasNewPending, hasNew
     self.hasNewPending = hasNewPending and hasNewPendingWithData and IsActivityManager()
     self:UpdateApplicantsList()
     self:SendMessage('MEETINGSTONE_NEW_APPLICANT_STATUS_UPDATE')
+    self:UpdateAutoInvite()
 end
 
 function ApplicantPanel:HasNewPending()
@@ -316,8 +361,36 @@ function ApplicantPanel:ToggleEventMenu(button, applicant)
     }, 'cursor')
 end
 
-function ApplicantPanel:SetAutoInvite(flag)
-    LFGListUtil_SetAutoAccept(flag)
+function ApplicantPanel:UpdateAutoInvite()
+    if self.AutoInvite:GetChecked() and UnitIsGroupLeader('player') then
+        local applicants = C_LFGList.GetApplicants() or {}
+        for k, v in pairs(applicants) do
+            if self:CheckCanInvite(v) then
+                C_LFGList.InviteApplicant(v)
+            end
+        end
+    end
+end
+
+function ApplicantPanel:CheckCanInvite(id)
+    local applicantInfo = C_LFGList.GetApplicantInfo(id)
+    local status = applicantInfo.applicationStatus
+    local numMembers = applicantInfo.numMembers
+
+    local numAllowed = select(ACTIVITY_RETURN_VALUES.maxPlayers, C_LFGList.GetActivityInfo(CreatePanel:GetCurrentActivity():GetActivityID()))
+    
+    if numAllowed == 0 then
+        numAllowed = MAX_RAID_MEMBERS
+    end
+
+    local currentCount = GetNumGroupMembers(LE_PARTY_CATEGORY_HOME)
+    local numInvited = C_LFGList.GetNumInvitedApplicantMembers()
+
+    if numMembers + currentCount + numInvited > numAllowed then
+        return
+    elseif status == 'applied' then
+        return true
+    end
 end
 
 function ApplicantPanel:CanInvite(applicant)
@@ -346,7 +419,7 @@ function ApplicantPanel:StartInvite()
     for i, v in ipairs(list) do
         if self:CanInvite(v) then
             if self:Invite(v:GetID(), v:GetNumMembers()) then
-                
+                debug('invite: ' .. v:GetName() .. ' ' .. v:GetLocalizedClass())
             end
             break
         end

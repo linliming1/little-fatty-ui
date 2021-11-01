@@ -115,7 +115,7 @@
 		</HitRectInsets>
 		<Layers>
 			<Layer level="ARTWORK">
-				<Texture parentKey="Icon" file="Interface\Icons\INV_Misc_QuestionMark">
+				<Texture parentKey="Icon">
 					<Size x="27" y="27"/>
 					<Anchors>
 						<Anchor point="LEFT"/>
@@ -275,6 +275,15 @@
 						<Layers>
 							<Layer level="BORDER">
 								<Texture parentKey="Texture" setAllPoints="true"/>
+								<MaskTexture parentKey="CircleMask" file="Interface\CharacterFrame\TempPortraitAlphaMask" hWrapMode="CLAMPTOBLACKADDITIVE" vWrapMode="CLAMPTOBLACKADDITIVE">
+									<Anchors>
+										<Anchor point="TOPLEFT" relativeKey="$parent.Texture" x="2" y="-2"/>
+										<Anchor point="BOTTOMRIGHT" relativeKey="$parent.Texture" x="-2" y="2"/>
+									</Anchors>
+									<MaskedTextures>
+										<MaskedTexture childKey="Texture"/>
+									</MaskedTextures>
+								</MaskTexture>							
 							</Layer>
 							<Layer level="ARTWORK">
 								<!-- thin gold border around Icon -->
@@ -325,6 +334,15 @@
 									<Size x="41" y="41"/>
 									<TexCoords left="0.4921875" right="0.796875" top="0.50390625" bottom="0.65625"/>
 								</Texture>
+								<MaskTexture parentKey="CircleMask" file="Interface\CharacterFrame\TempPortraitAlphaMask" hWrapMode="CLAMPTOBLACKADDITIVE" vWrapMode="CLAMPTOBLACKADDITIVE">
+									<Anchors>
+										<Anchor point="TOPLEFT" relativeKey="$parent.Texture" x="2" y="-2"/>
+										<Anchor point="BOTTOMRIGHT" relativeKey="$parent.Texture" x="-2" y="2"/>
+									</Anchors>
+									<MaskedTextures>
+										<MaskedTexture childKey="Texture"/>
+									</MaskedTextures>
+								</MaskTexture>															
 							</Layer>
 							<Layer level="ARTWORK">
 								<!-- thin gold border around Type (which already has one but not a matching color) -->
@@ -363,15 +381,15 @@
 			</Frame> <!-- Title -->
 			
 			<!-- front is border encompassing whole card inset -->
-			<Frame parentKey="Front" ignoreParentAlpha="true">
+			<Frame parentKey="Front" ignoreParentAlpha="true" inherits="RematchBorderBackdropTemplate">
 				<Anchors> <!-- 254 width -->
 					<Anchor point="TOPLEFT" x="2" y="-22"/>
 					<Anchor point="BOTTOMRIGHT" x="-4" y="2"/>
 				</Anchors>
-				<Backdrop edgeFile="Interface\Tooltips\UI-Tooltip-Border" tile="true">
+				<!-- <Backdrop edgeFile="Interface\Tooltips\UI-Tooltip-Border" tile="true">
 					<EdgeSize val="16"/>
 					<BorderColor r="0.5" g="0.5" b="0.5"/>
-				</Backdrop>
+				</Backdrop> -->
 
 				<Frames>
 
@@ -455,6 +473,15 @@
 								<Texture parentKey="MiddleBG" file="Interface\FrameGeneral\UI-Background-Rock" horizTile="true" vertTile="true" setAllPoints="true"/>
 							</Layer>
 							<Layer level="BACKGROUND" textureSubLevel="1">
+								<Texture parentKey="ExpansionBackground" file="Interface\GLUES\AccountUpgrade\AccountUpgradeBanners" alpha="0.2" hidden="true">
+									<Size x="248" y="124"/>
+									<Anchors>
+										<Anchor point="TOPLEFT"/>
+									</Anchors>
+									<TexCoords left="0" right="0.1953125" top="0" bottom="0.390625"/>
+								</Texture>
+							</Layer>							
+							<Layer level="BACKGROUND" textureSubLevel="2">
 								<Texture file="Interface\Common\ShadowOverlay-Corner" setAllPoints="true">
 									<TexCoords left="0" right="1" top="1" bottom="0"/>
 								</Texture>
@@ -560,15 +587,15 @@
 							</StatusBar>
 
 							<!-- breed table that appears when mouseover PossibleBreeds -->
-							<Frame parentKey="BreedTable" hidden="true">
+							<Frame parentKey="BreedTable" hidden="true" inherits="RematchBorderBackdropTemplate">
 								<Size x="184" y="180"/>
 								<Anchors>
 									<Anchor point="BOTTOMRIGHT" relativeKey="$parent.PossibleBreeds" relativePoint="TOPRIGHT" x="12" y="0"/>
 								</Anchors>
-								<Backdrop edgeFile="Interface\Tooltips\UI-Tooltip-Border" tile="true">
+								<!-- <Backdrop edgeFile="Interface\Tooltips\UI-Tooltip-Border" tile="true">
 									<EdgeSize val="16"/>
 									<BorderColor r="0.5" g="0.5" b="0.5"/>
-								</Backdrop>
+								</Backdrop> -->
 								<Layers>
 									<Layer level="BACKGROUND" textureSubLevel="-1">
 										<Texture>
@@ -712,15 +739,11 @@
 			</Frame> <!-- Front -->
 
 			<!-- back of card -->
-			<Frame parentKey="Back" ignoreParentAlpha="true">
+			<Frame parentKey="Back" ignoreParentAlpha="true" inherits="RematchBorderBackdropTemplate">
 				<Anchors> <!-- 254 width -->
 					<Anchor point="TOPLEFT" x="2" y="-22"/>
 					<Anchor point="BOTTOMRIGHT" x="-4" y="2"/>
 				</Anchors>
-				<Backdrop edgeFile="Interface\Tooltips\UI-Tooltip-Border" tile="true">
-					<EdgeSize val="16"/>
-					<BorderColor r="0.5" g="0.5" b="0.5"/>
-				</Backdrop>
 				<Frames>
 					<Frame parentKey="Source" useParentLevel="true">
 						<Size x="248" y="80"/>

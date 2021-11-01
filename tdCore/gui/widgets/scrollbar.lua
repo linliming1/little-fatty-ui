@@ -4,7 +4,7 @@ local GUI = tdCore('GUI')
 local ScrollBar = GUI:NewModule('ScrollBar', CreateFrame('Slider'))
 
 local function PageOnClick(self)
-    PlaySound163("UChatScrollButton")
+    PlaySound(SOUNDKIT.U_CHAT_SCROLL_BUTTON)
     local parent = self:GetParent()
     parent:SetValue(parent:GetValue() + self.y)
 end
@@ -58,7 +58,7 @@ function ScrollBar:New(parent)
     thumb:SetSize(16, 24)
     thumb:SetTexCoord(1/4, 3/4, 1/8, 7/8)
 
-    local border = CreateFrame('Frame', nil, obj)
+    local border = CreateFrameAby('Frame', nil, obj)
     border:SetPoint('TOPLEFT', up, -5, 5)
     border:SetPoint('BOTTOMRIGHT', down, 5, -3)
     border:SetBackdrop{

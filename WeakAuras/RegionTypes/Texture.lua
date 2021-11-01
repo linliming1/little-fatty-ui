@@ -1,15 +1,19 @@
+if not WeakAuras.IsCorrectVersion() then return end
+local AddonName, Private = ...
+
 local L = WeakAuras.L;
 
 local root2 = math.sqrt(2);
 local halfroot2 = root2/2;
 
 local default = {
-  texture = "Textures\\SpellActivationOverlays\\Eclipse_Sun",
+  texture = "Interface\\Addons\\WeakAuras\\PowerAurasMedia\\Auras\\Aura3",
   desaturate = false,
   width = 200,
   height = 200,
-  color = {1, 1, 1, 0.75},
+  color = {1, 1, 1, 1},
   blendMode = "BLEND",
+  textureWrapMode = "CLAMPTOBLACKADDITIVE",
   rotation = 0,
   discrete_rotation = 0,
   mirror = false,
@@ -64,30 +68,30 @@ local properties = {
 
 WeakAuras.regionPrototype.AddProperties(properties, default);
 
-local function GetProperties(data)
-  return properties;
-end
-
 local function create(parent)
-  local frame = CreateFrame("FRAME", nil, UIParent);
-  frame:SetMovable(true);
-  frame:SetResizable(true);
-  frame:SetMinResize(1, 1);
+  local region = CreateFrame("FRAME", nil, UIParent);
+  region.regionType = "texture"
+  region:SetMovable(true);
+  region:SetResizable(true);
+  region:SetMinResize(1, 1);
 
-  local texture = frame:CreateTexture();
+  local texture = region:CreateTexture();
   texture:SetSnapToPixelGrid(false)
   texture:SetTexelSnappingBias(0)
-  frame.texture = texture;
-  texture:SetAllPoints(frame);
+  region.texture = texture;
+  texture:SetAllPoints(region);
 
-  WeakAuras.regionPrototype.create(frame);
-  frame.values = {};
-  return frame;
+  WeakAuras.regionPrototype.create(region);
+  region.values = {};
+
+  region.AnchorSubRegion = WeakAuras.regionPrototype.AnchorSubRegion
+
+  return region;
 end
 
 local function modify(parent, region, data)
   WeakAuras.regionPrototype.modify(parent, region, data);
-  WeakAuras.SetTextureOrAtlas(region.texture, data.texture);
+  WeakAuras.SetTextureOrAtlas(region.texture, data.texture, data.textureWrapMode, data.textureWrapMode);
   region.texture:SetDesaturated(data.desaturate)
   region:SetWidth(data.width);
   region:SetHeight(data.height);
@@ -181,9 +185,10 @@ local function modify(parent, region, data)
     DoTexCoord()
   end
 
-  function region:SetTexture(path)
-    local texturePath = path;
-    WeakAuras.SetTextureOrAtlas(region.texture, texturePath);
+  function region:Update()
+    if region.state.texture then
+      WeakAuras.SetTextureOrAtlas(region.texture, region.state.texture, data.textureWrapMode, data.textureWrapMode);
+    end
   end
 
   function region:Color(r, g, b, a)
@@ -232,6 +237,8 @@ local function modify(parent, region, data)
     region.Rotate = nil;
     region.GetRotation = nil;
   end
+
+  WeakAuras.regionPrototype.modifyFinish(parent, region, data);
 end
 
-WeakAuras.RegisterRegionType("texture", create, modify, default, GetProperties);
+WeakAuras.RegisterRegionType("texture", create, modify, default, properties);

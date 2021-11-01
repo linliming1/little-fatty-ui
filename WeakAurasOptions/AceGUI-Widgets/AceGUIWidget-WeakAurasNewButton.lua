@@ -1,4 +1,6 @@
-local Type, Version = "WeakAurasNewButton", 22
+if not WeakAuras.IsCorrectVersion() then return end
+
+local Type, Version = "WeakAurasNewButton", 24
 local AceGUI = LibStub and LibStub("AceGUI-3.0", true)
 if not AceGUI or (AceGUI:GetWidgetVersion(Type) or 0) >= Version then return end
 
@@ -43,17 +45,40 @@ local methods = {
       if(self.iconRegion and self.iconRegion.Hide) then
         self.iconRegion:Hide();
       end
+      self.iconRegion = nil
     else
       self.iconRegion = icon;
       icon:SetAllPoints(self.icon);
       icon:SetParent(self.frame);
+      icon:Show()
       self.icon:Hide();
     end
   end,
+  ["SetThumbnail"] = function(self, regionType, data)
+    local regionData = WeakAuras.regionOptions[regionType]
+    if regionData and regionData.acquireThumbnail then
+      local thumbnail = regionData.acquireThumbnail(self.frame, data)
+      self:SetIcon(thumbnail)
+      self.thumbnail = thumbnail
+      self.thumbnailType = regionType
+    end
+  end,
+  ["ReleaseThumbnail"] = function(self)
+    if self.thumbnail then
+      local regionData = WeakAuras.regionOptions[self.thumbnailType]
+      if regionData and regionData.releaseThumbnail then
+        regionData.releaseThumbnail(self.thumbnail)
+      end
+    end
+    self.thumbnail = nil
+    self.thumbnailType = nil
+  end,
   ["OnRelease"] = function(self)
+    self:ReleaseThumbnail()
     if(self.iconRegion and self.iconRegion.Hide) then
       self.iconRegion:Hide();
     end
+    self.iconRegion = nil
     self.icon:Hide();
     self.frame:UnlockHighlight();
   end

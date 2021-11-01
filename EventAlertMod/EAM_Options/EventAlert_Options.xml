@@ -90,24 +90,16 @@
 		<FontString inherits="ChatFontNormal" />
 	</EditBox>
 	<!-- Options Setting Frames -->
-	<Frame name="EA_Options_Frame" hidden="true" parent="UIParent" toplevel="true" movable="true" frameStrata="HIGH" enableMouse="true" enableKeyboard="true">
+	<Frame name="EA_Options_Frame" hidden="true" parent="UIParent" toplevel="true" movable="true" frameStrata="HIGH" enableMouse="true" enableKeyboard="true" inherits="BackdropTemplate">
 		<Size>
 			<AbsDimension x="300" y="600" />
 		</Size>
 		<Anchors>
 			<Anchor point="CENTER" />
 		</Anchors>
-		<Backdrop bgFile="Interface\DialogFrame\UI-DialogBox-Background" edgeFile="Interface\DialogFrame\UI-DialogBox-Border" tile="true">
-			<BackgroundInsets>
-				<AbsInset left="11" right="12" top="12" bottom="11" />
-			</BackgroundInsets>
-			<TileSize>
-				<AbsValue val="32" />
-			</TileSize>
-			<EdgeSize>
-				<AbsValue val="32" />
-			</EdgeSize>
-		</Backdrop>
+        <KeyValues>
+             <KeyValue key="backdropInfo" value="BACKDROP_DIALOG_32_32" type="global"/>
+        </KeyValues>
 		<Frames>
 			<Button name="$parent_ToggleIconOptions" inherits="OptionsButtonTemplate" text="">
 				<Size>
@@ -125,7 +117,7 @@
 						_G[self:GetName().."Text"]:SetText(EA_XOPT_ICONPOSOPT);
 					</OnLoad>
 					<OnClick>
-						PlaySound163("gsTitleOptionOK");
+						PlaySound(SOUNDKIT.GS_TITLE_OPTION_OK);
 						EventAlert_Options_ToggleIconOptionsFrame();
 					</OnClick>
 				</Scripts>
@@ -402,7 +394,7 @@
 						_G[self:GetName().."Text"]:SetText(EA_XOPT_SHOW_CLASSALERT);
 					</OnLoad>
 					<OnClick>
-						PlaySound163("gsTitleOptionOK");
+						PlaySound(SOUNDKIT.GS_TITLE_OPTION_OK);
 						EventAlert_Options_ToggleClassEventsFrame();
 					</OnClick>
 				</Scripts>
@@ -423,7 +415,7 @@
 						_G[self:GetName().."Text"]:SetText(EA_XOPT_SHOW_OTHERALERT);
 					</OnLoad>
 					<OnClick>
-						PlaySound163("gsTitleOptionOK");
+						PlaySound(SOUNDKIT.GS_TITLE_OPTION_OK);
 						EventAlert_Options_ToggleOtherEventsFrame();
 					</OnClick>
 				</Scripts>
@@ -444,7 +436,7 @@
 						_G[self:GetName().."Text"]:SetText(EA_XOPT_SHOW_TARGETALERT);
 					</OnLoad>
 					<OnClick>
-						PlaySound163("gsTitleOptionOK");
+						PlaySound(SOUNDKIT.GS_TITLE_OPTION_OK);
 						EventAlert_Options_ToggleTargetEventsFrame();
 					</OnClick>
 				</Scripts>
@@ -465,7 +457,7 @@
 						_G[self:GetName().."Text"]:SetText(EA_XOPT_SHOW_SCDALERT);
 					</OnLoad>
 					<OnClick>
-						PlaySound163("gsTitleOptionOK");
+						PlaySound(SOUNDKIT.GS_TITLE_OPTION_OK);
 						EventAlert_Options_ToggleSCDEventsFrame();
 					</OnClick>
 				</Scripts>
@@ -486,7 +478,7 @@
 						_G[self:GetName().."Text"]:SetText(EA_XOPT_SHOW_GROUPALERT);
 					</OnLoad>
 					<OnClick>
-						PlaySound163("gsTitleOptionOK");
+						PlaySound(SOUNDKIT.GS_TITLE_OPTION_OK);
 						EventAlert_Options_ToggleGroupEventsFrame();
 					</OnClick>
 				</Scripts>
@@ -507,8 +499,8 @@
 						_G[self:GetName().."Text"]:SetText(EA_XOPT_OKAY);
 					</OnLoad>
 					<OnClick>
-						PlaySound163("gsTitleOptionOK");
-						HideUIPanel(EA_Options_Frame);
+						PlaySound(SOUNDKIT.GS_TITLE_OPTION_OK);
+						EA_Options_Frame:Hide();
 						EventAlert_Options_CloseAnchorFrames();
 					</OnClick>
 				</Scripts>
@@ -578,7 +570,7 @@
 			</Layer>
 		</Layers>
 		<Scripts>
-			<OnLoad>
+			<OnLoad inherit="prepend">
 				self:RegisterForDrag("LeftButton");
 				EventAlert_Options_OnLoad();
 			</OnLoad>
@@ -596,7 +588,7 @@
 
 
 	<!-- Spell Condition Setting Frames -->
-	<Frame name="EA_SpellCondition_Frame" hidden="true" parent="EA_Options_Frame" frameStrata="DIALOG">
+	<Frame name="EA_SpellCondition_Frame" hidden="true" parent="EA_Options_Frame" frameStrata="DIALOG" inherits="BackdropTemplate">
 		<Size>
 			<AbsDimension x="300" y="300" />
 		</Size>
@@ -605,17 +597,9 @@
 				<Offset x="-100" y="100" />
 			</Anchor>
 		</Anchors> -->
-		<Backdrop bgFile="Interface\AddOns\EventAlertMod\Images\UI-Panel-Backdrop" edgeFile="Interface\DialogFrame\UI-DialogBox-Border" tile="true">
-			<BackgroundInsets>
-				<AbsInset left="11" right="12" top="12" bottom="11" />
-			</BackgroundInsets>
-			<TileSize>
-				<AbsValue val="32" />
-			</TileSize>
-			<EdgeSize>
-				<AbsValue val="32" />
-			</EdgeSize>
-		</Backdrop>
+        <KeyValues>
+             <KeyValue key="backdropInfo" value="BACKDROP_DIALOG_32_32" type="global"/>
+        </KeyValues>
 		<Frames>
 			<Frame name="$parent_SpellIcon">
 				<Size>
@@ -958,7 +942,7 @@
 						_G[self:GetName().."Text"]:SetText(EA_XOPT_CANCEL);
 					</OnLoad>
 					<OnClick>
-						HideUIPanel(EA_SpellCondition_Frame);
+						EA_SpellCondition_Frame:Hide();
 					</OnClick>
 				</Scripts>
 			</Button>
@@ -1020,7 +1004,7 @@
 	</Frame>
 
 	<!-- GroupEvent Setting Frames -->
-	<Frame name="EA_GroupEventSetting_Frame" hidden="true" parent="EA_Options_Frame" frameStrata="DIALOG">
+	<Frame name="EA_GroupEventSetting_Frame" hidden="true" parent="EA_Options_Frame" frameStrata="DIALOG" inherits="BackdropTemplate">
 		<Size>
 			<AbsDimension x="725" y="480" />
 		</Size>
@@ -1029,18 +1013,9 @@
 				<Offset x="-100" y="100" />
 			</Anchor>
 		</Anchors> -->
-		<Backdrop bgFile="Interface\AddOns\EventAlertMod\Images\UI-Panel-Backdrop" edgeFile="Interface\DialogFrame\UI-DialogBox-Border" tile="true">
-		<!-- <Backdrop edgeFile="Interface\DialogFrame\UI-DialogBox-Border" tile="true"> -->
-			<BackgroundInsets>
-				<AbsInset left="11" right="12" top="12" bottom="11" />
-			</BackgroundInsets>
-			<TileSize>
-				<AbsValue val="32" />
-			</TileSize>
-			<EdgeSize>
-				<AbsValue val="32" />
-			</EdgeSize>
-		</Backdrop>
+        <KeyValues>
+             <KeyValue key="backdropInfo" value="BACKDROP_DIALOG_32_32" type="global"/>
+        </KeyValues>
 		<Frames>
 			<Slider name="$parent_IconSize" inherits="OptionsSliderTemplate">
 				<Anchors>
@@ -1051,7 +1026,7 @@
 					</Anchor>
 				</Anchors>
 				<Scripts>
-					<OnLoad>
+					<OnLoad inherit="prepend">
 						_G[self:GetName().."Text"]:SetText(EA_XICON_ICONSIZE.."(60)");
 						_G[self:GetName().."High"]:SetText(EA_XICON_LARGE.."(130)");
 						_G[self:GetName().."Low"]:SetText(EA_XICON_SMALL.."(30)");
@@ -1079,7 +1054,7 @@
 					</Anchor>
 				</Anchors>
 				<Scripts>
-					<OnLoad>
+					<OnLoad inherit="prepend">
 						_G[self:GetName().."Text"]:SetText(EA_XGRPALERT_ICONALPHA.."(50%)");
 						_G[self:GetName().."High"]:SetText(EA_XICON_DEEP.."(100%)");
 						_G[self:GetName().."Low"]:SetText(EA_XICON_LIGHT.."(0%)");
@@ -1338,21 +1313,13 @@
 				</Scripts>
 			</CheckButton>
 
-			<ScrollFrame name="$parent_SpellScrollFrame" inherits="UIPanelScrollFrameTemplate">
+			<ScrollFrame name="$parent_SpellScrollFrame" inherits="UIPanelScrollFrameTemplate, BackdropTemplate">
 				<Size>
 				    <AbsDimension x="680" y="340"/>
 				</Size>
-				<Backdrop bgFile="Interface\DialogFrame\UI-DialogBox-Gold-Background" edgeFile="" tile="false">
-					<BackgroundInsets>
-						<AbsInset left="0" right="0" top="0" bottom="0" />
-					</BackgroundInsets>
-					<TileSize>
-						<AbsValue val="0" />
-					</TileSize>
-					<EdgeSize>
-						<AbsValue val="0" />
-					</EdgeSize>
-				</Backdrop>
+                <KeyValues>
+                    <KeyValue key="backdropInfo" value="ABY_BACKDROP_GOLD_BGONLY" type="global"/>
+                </KeyValues>
 				<Anchors>
 					<Anchor point="TOPLEFT" relativeTo="$parent">
 						<Offset>
@@ -1407,7 +1374,7 @@
 						_G[self:GetName().."Text"]:SetText(EA_XOPT_CANCEL);
 					</OnLoad>
 					<OnClick>
-						HideUIPanel(EA_GroupEventSetting_Frame);
+						EA_GroupEventSetting_Frame:Hide();
 					</OnClick>
 				</Scripts>
 			</Button>
@@ -1428,7 +1395,7 @@
 					</OnLoad>
 					<OnClick>
 						EAFun_GroupEvent_SaveFrameToGroupEvent();
-						HideUIPanel(EA_GroupEventSetting_Frame);
+						EA_GroupEventSetting_Frame:Hide();
 					</OnClick>
 				</Scripts>
 			</Button>

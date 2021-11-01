@@ -465,9 +465,9 @@ function addon:OnEnable() -- Construct addon option tables here
 	else
 		fonts = {
 			{ STANDARD_TEXT_FONT, "Friz Quadrata TT" },
-			{ "Fonts\MORPHEUS.ttf", "Morpheus" },
-			{ "Fonts\ARIALN.ttf", "Arial Narrow" },
-			{ "Fonts\SKURRI.ttf", "Skurri" },
+			{ [[Fonts\MORPHEUS.ttf]], "Morpheus" },
+			{ [[Fonts\ARIALN.ttf]], "Arial Narrow" },
+			{ [[Fonts\SKURRI.ttf]], "Skurri" },
 		}
 	end
 
@@ -532,7 +532,19 @@ function addon:OnEnable() -- Construct addon option tables here
 					{ "OFFICER", CHAT_MSG_OFFICER },
 					{ "RAID", CHAT_MSG_RAID },
 					{ "RAID_WARNING", RAID_WARNING },
-				}}
+					{ 'INSTANCE_CHAT', INSTANCE_CHAT},
+				}},
+				{ "linkall_channel_secondary", {
+					{ "SAY", CHAT_MSG_SAY },
+					{ "PARTY", CHAT_MSG_PARTY },
+					{ "GUILD", CHAT_MSG_GUILD },
+					{ "OFFICER", CHAT_MSG_OFFICER },
+					{ "RAID", CHAT_MSG_RAID },
+					{ "RAID_WARNING", RAID_WARNING },
+					{ 'INSTANCE_CHAT', INSTANCE_CHAT},
+					{ 'NONE', NONE },
+				}},
+				{ "linkall_first_only" }
 			}},
 			{ "autolooting", "group", {
 				{ "autolooting_text", "description" },
@@ -639,6 +651,7 @@ function addon:OnEnable() -- Construct addon option tables here
 			{ "details", "group", {
 				{ "show_totals", width = "double" },
 				{ "use_altoholic", requires = "show_totals" },
+				{ "totals_delay", "range", 0.1, 1.0, 0.1 },
 				{ "name_width", "range", 25, 200, 5 },
 				{ "show_ilvl" },
 			}},
@@ -648,7 +661,11 @@ function addon:OnEnable() -- Construct addon option tables here
 				{ "font_sizes", "header" },
 				{ "font_size_loot", "range", 4, 26, 1 },
 				{ "font_size_quantity", "range", 4, 26, 1 },
+				{ "font_size_ilvl", "range", 4, 26, 1 },
 			}},
+			{ "colors", "group", {
+				{ "gradients", must_reload_ui = true },
+			}, name = L.Frame.colors },
 		})
 	end
 
@@ -692,6 +709,7 @@ function addon:OnEnable() -- Construct addon option tables here
 			{ "awardannounce", "group", {
 				{ "award_qualitythreshold", item_qualities },
 				{ "award_channel", channels },
+				{ "award_channel_secondary", channels },
 				{ "award_guildannounce" },
 				{ "award_special" },
 			}},

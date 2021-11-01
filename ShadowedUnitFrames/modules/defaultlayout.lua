@@ -34,18 +34,18 @@ local function finalizeData(config, useMerge)
 			end
 		end
 	end
-	
+
 	-- Set everything
 	for unit, child in pairs(config.units) do
 		if( self.defaults.profile.units[unit] ) then
-			if( not useMerge or ( useMerge and not self.db.profile.units[unit].enabled and self.db.profile.units[unit].height == 0 and self.db.profile.units[unit].width == 0 and self.db.profile.positions[unit].anchorPoint == "" and self.db.profile.positions[unit].point == "" ) ) then
+			if( not useMerge or ( useMerge and self.db.profile.units[unit].height == 0 and self.db.profile.units[unit].width == 0 and self.db.profile.positions[unit].anchorPoint == "" and self.db.profile.positions[unit].point == "" ) ) then
 				-- Merge the primary parent table
 				mergeToChild(config.parentUnit, child)
 				-- Strip any invalid tables
 				verifyTable(child, self.defaults.profile.units[unit])
 				-- Merge the new child table into the actual units
 				mergeToChild(child, self.db.profile.units[unit], true)
-				
+
 				-- Merge position in too
 				if( useMerge and self.db.profile.positions[unit].point == "" and self.db.profile.positions[unit].relativePoint == "" and self.db.profile.positions[unit].anchorPoint == "" and self.db.profile.positions[unit].x == 0 and self.db.profile.positions[unit].y == 0 ) then
 					self.db.profile.positions[unit] = config.positions[unit]
@@ -55,11 +55,11 @@ local function finalizeData(config, useMerge)
 	end
 
 	self.db.profile.loadedLayout = true
-	
+
 	if( not useMerge ) then
 		config.parentUnit = nil
 		config.units = nil
-		
+
 		for key, data in pairs(config) do
 			self.db.profile[key] = data
 		end
@@ -110,20 +110,20 @@ function ShadowUF:LoadDefaultLayout(useMerge)
 		extra = "",
 		shadowColor = {r = 0, g = 0, b = 0, a = 1},
 		color = {r = 1, g = 1, b = 1, a = 1},
-		shadowX = 0.80,
-		shadowY = -0.80,
+		shadowX = 1.00,
+		shadowY = -1.00,
 	}
-	
+
 	-- Some localizations do not work with Myriad Condensed Web, need to automatically swap it to a localization that will work for it
 	local SML = LibStub:GetLibrary("LibSharedMedia-3.0")
 	if( GetLocale() == "koKR" or GetLocale() == "zhCN" or GetLocale() == "zhTW" ) then
 		config.font.name = SML.DefaultMedia.font
 	end
-	
+
 	config.auraColors = {
 		removable = {r = 1, g = 1, b = 1}
 	}
-	
+
 	config.classColors = {
 		HUNTER = {r = 0.67, g = 0.83, b = 0.45},
 		WARLOCK = {r = 0.58, g = 0.51, b = 0.79},
@@ -141,11 +141,11 @@ function ShadowUF:LoadDefaultLayout(useMerge)
 		VEHICLE = {r = 0.23, g = 0.41, b = 0.23},
 	}
 	config.powerColors = {
-		MANA = {r = 0.30, g = 0.50, b = 0.85}, 
+		MANA = {r = 0.30, g = 0.50, b = 0.85},
 		RAGE = {r = 0.90, g = 0.20, b = 0.30},
 		FOCUS = {r = 1.0, g = 0.50, b = 0.25},
-		ENERGY = {r = 1.0, g = 0.85, b = 0.10}, 
-		RUNES = {r = 0.50, g = 0.50, b = 0.50}, 
+		ENERGY = {r = 1.0, g = 0.85, b = 0.10},
+		RUNES = {r = 0.50, g = 0.50, b = 0.50},
 		RUNIC_POWER = {b = 0.60, g = 0.45, r = 0.35},
 		AMMOSLOT = {r = 0.85, g = 0.60, b = 0.55},
 		FUEL = {r = 0.85, g = 0.47, b = 0.36},
@@ -195,17 +195,17 @@ function ShadowUF:LoadDefaultLayout(useMerge)
 		normal = {r = 0.58, g = 0.0, b = 0.55},
 		rested = {r = 0.0, g = 0.39, b = 0.88},
 	}
-	
+
 	config.positions = {
-		targettargettarget = {anchorPoint = "RC", anchorTo = "#SUFUnittargettarget", x = 0, y = 0}, 
-		targettarget = {anchorPoint = "TL", anchorTo = "#SUFUnittarget", x = 0, y = 0}, 
+		targettargettarget = {anchorPoint = "RC", anchorTo = "#SUFUnittargettarget", x = 0, y = 0},
+		targettarget = {anchorPoint = "TL", anchorTo = "#SUFUnittarget", x = 0, y = 0},
 		focustarget = {anchorPoint = "TL", anchorTo = "#SUFUnitfocus", x = 0, y = 0},
-		party = {point = "TOPLEFT", anchorTo = "#SUFUnitplayer", relativePoint = "TOPLEFT", movedAnchor = "TL", x = 0, y = -60}, 
-		focus = {anchorPoint = "RB", anchorTo = "#SUFUnittarget", x = 35, y = -4}, 
-		target = {anchorPoint = "RC", anchorTo = "#SUFUnitplayer", x = 50, y = 0}, 
-		player = {point = "TOPLEFT", anchorTo = "UIParent", relativePoint = "TOPLEFT", y = -25, x = 20}, 
-		pet = {anchorPoint = "TL", anchorTo = "#SUFUnitplayer", x = 0, y = 0}, 
-		pettarget = {anchorPoint = "C", anchorTo = "UIParent", x = 0, y = 0}, 
+		party = {point = "TOPLEFT", anchorTo = "#SUFUnitplayer", relativePoint = "TOPLEFT", movedAnchor = "TL", x = 0, y = -60},
+		focus = {anchorPoint = "RB", anchorTo = "#SUFUnittarget", x = 35, y = -4},
+		target = {anchorPoint = "RC", anchorTo = "#SUFUnitplayer", x = 50, y = 0},
+		player = {point = "TOPLEFT", anchorTo = "UIParent", relativePoint = "TOPLEFT", y = -25, x = 20},
+		pet = {anchorPoint = "TL", anchorTo = "#SUFUnitplayer", x = 0, y = 0},
+		pettarget = {anchorPoint = "C", anchorTo = "UIParent", x = 0, y = 0},
 		partypet = {anchorPoint = "RB", anchorTo = "$parent", x = 0, y = 0},
 		partytarget = {anchorPoint = "RT", anchorTo = "$parent", x = 0, y = 0},
 		partytargettarget = {anchorPoint = "RT", anchorTo = "$parent", x = 0, y = 0},
@@ -229,7 +229,7 @@ function ShadowUF:LoadDefaultLayout(useMerge)
 		bosstarget = {anchorPoint = "RB", anchorTo = "$parent", x = 0, y = 0},
 		bosstargettarget = {anchorPoint = "RB", anchorTo = "$parent", x = 0, y = 0},
 	}
-	
+
 	-- Parent unit options that all the children will inherit unless they override it
 	config.parentUnit = {
 		portrait = {enabled = false, type = "3D", alignment = "LEFT", width = 0.22, height = 0.50, order = 15, fullBefore = 0, fullAfter = 100},
@@ -267,7 +267,7 @@ function ShadowUF:LoadDefaultLayout(useMerge)
 		castBar = {background = true, height = 0.60, order = 40, icon = "HIDE", name = {enabled = true, size = 0, anchorTo = "$parent", rank = true, anchorPoint = "CLI", x = 1, y = 0}, time = {enabled = true, size = 0, anchorTo = "$parent", anchorPoint = "CRI", x = -1, y = 0}},
 		altPowerBar = {background = true, height = 0.40, order = 100},
 	}
-	
+
 	-- Units configuration
 	config.units = {
 		raid = {
@@ -292,6 +292,7 @@ function ShadowUF:LoadDefaultLayout(useMerge)
 				role = {enabled = false, anchorTo = "$parent", anchorPoint = "BR", size = 14, x = 0, y = 14},
 				ready = {anchorTo = "$parent", anchorPoint = "LC", size = 24, x = 25, y = 0},
 				resurrect = {enabled = true, anchorPoint = "LC", size = 28, x = 37, y = -1, anchorTo = "$parent"},
+				sumPending = {enabled = true, anchorPoint = "C", size = 40, x = 0, y = 0, anchorTo = "$parent"},
 			},
 			text = {
 				{text = "[(()afk() )][name]"},
@@ -357,7 +358,8 @@ function ShadowUF:LoadDefaultLayout(useMerge)
 			incAbsorb = {cap = 1},
 			healAbsorb = {cap = 1},
 			indicators = {
-                resurrect = {enabled = true, anchorPoint = "LC", size = 28, x = 37, y = -1, anchorTo = "$parent"},
+				resurrect = {enabled = true, anchorPoint = "LC", size = 28, x = 37, y = -1, anchorTo = "$parent"},
+				sumPending = {enabled = true, anchorPoint = "C", size = 40, x = 0, y = 0, anchorTo = "$parent"},
 			},
 			auras = {
 				buffs = {enabled = false, maxRows = 1},
@@ -390,8 +392,9 @@ function ShadowUF:LoadDefaultLayout(useMerge)
 			incAbsorb = {cap = 1},
 			healAbsorb = {cap = 1},
 			indicators = {
-                resurrect = {enabled = true, anchorPoint = "LC", size = 28, x = 37, y = -1, anchorTo = "$parent"},
-                phase = {enabled = true, anchorPoint = "RC", size = 14, x = -11, y = 0, anchorTo = "$parent"}
+				resurrect = {enabled = true, anchorPoint = "LC", size = 28, x = 37, y = -1, anchorTo = "$parent"},
+				sumPending = {enabled = true, anchorPoint = "C", size = 40, x = 0, y = 0, anchorTo = "$parent"},
+				phase = {enabled = true, anchorPoint = "RC", size = 14, x = -11, y = 0, anchorTo = "$parent"}
 			},
 			auras = {
 				buffs = {enabled = true, maxRows = 1},
@@ -640,7 +643,8 @@ function ShadowUF:LoadDefaultLayout(useMerge)
 			portrait = {enabled = false, fullAfter = 50},
 			castBar = {order = 60},
 			indicators = {
-                resurrect = {enabled = true, anchorPoint = "LC", size = 28, x = 37, y = -1, anchorTo = "$parent"},
+				resurrect = {enabled = true, anchorPoint = "LC", size = 28, x = 37, y = -1, anchorTo = "$parent"},
+				sumPending = {enabled = true, anchorPoint = "C", size = 40, x = 0, y = 0, anchorTo = "$parent"},
 			},
 			auras = {
 				buffs = {enabled = false},
@@ -705,7 +709,8 @@ function ShadowUF:LoadDefaultLayout(useMerge)
 			portrait = {enabled = false, fullAfter = 50},
 			castBar = {order = 60},
 			indicators = {
-                resurrect = {enabled = true, anchorPoint = "LC", size = 28, x = 37, y = -1, anchorTo = "$parent"},
+				resurrect = {enabled = true, anchorPoint = "LC", size = 28, x = 37, y = -1, anchorTo = "$parent"},
+				sumPending = {enabled = true, anchorPoint = "C", size = 40, x = 0, y = 0, anchorTo = "$parent"},
 			},
 			auras = {
 				buffs = {enabled = false},
@@ -805,7 +810,7 @@ function ShadowUF:LoadDefaultLayout(useMerge)
 				{text = "[name]"},
 				{text = ""},
 			},
-		},		
+		},
 		target = {
 			width = 190,
 			height = 45,
@@ -818,8 +823,9 @@ function ShadowUF:LoadDefaultLayout(useMerge)
 			comboPoints = {enabled = false, anchorTo = "$parent", order = 60, anchorPoint = "BR", x = -3, y = 8, size = 14, spacing = -4, growth = "LEFT", isBar = true, height = 0.40},
 			indicators = {
 				lfdRole = {enabled = false},
-                resurrect = {enabled = true, anchorPoint = "RC", size = 28, x = -39, y = -1, anchorTo = "$parent"},
-                questBoss = {enabled = true, anchorPoint = "BR", size = 22, x = 9, y = 24, anchorTo = "$parent"},
+				resurrect = {enabled = true, anchorPoint = "RC", size = 28, x = -39, y = -1, anchorTo = "$parent"},
+				sumPending = {enabled = true, anchorPoint = "C", size = 40, x = 0, y = 0, anchorTo = "$parent"},
+				questBoss = {enabled = true, anchorPoint = "BR", size = 22, x = 9, y = 24, anchorTo = "$parent"},
 				petBattle = {enabled = true, anchorPoint = "BL", size = 18, x = -6, y = 14, anchorTo = "$parent"}
 			},
 			auras = {
@@ -880,9 +886,10 @@ function ShadowUF:LoadDefaultLayout(useMerge)
 			castBar = {order = 60},
 			indicators = {
 				lfdRole = {enabled = false},
-                resurrect = {enabled = true, anchorPoint = "LC", size = 28, x = 37, y = -1, anchorTo = "$parent"},
-                questBoss = {enabled = false, anchorPoint = "BR", size = 22, x = 7, y = 14, anchorTo = "$parent"},
-                petBattle = {enabled = false, anchorPoint = "BL", size = 18, x = -6, y = 12, anchorTo = "$parent"}
+				resurrect = {enabled = true, anchorPoint = "LC", size = 28, x = 37, y = -1, anchorTo = "$parent"},
+				sumPending = {enabled = true, anchorPoint = "C", size = 40, x = 0, y = 0, anchorTo = "$parent"},
+				questBoss = {enabled = false, anchorPoint = "BR", size = 22, x = 7, y = 14, anchorTo = "$parent"},
+				petBattle = {enabled = false, anchorPoint = "BL", size = 18, x = -6, y = 12, anchorTo = "$parent"}
 			},
 			text = {
 				{text = "[(()afk() )][name]"},
@@ -951,7 +958,7 @@ function ShadowUF:LoadDefaultLayout(useMerge)
 			},
 		},
 	}
-	
+
 	finalizeData(config, useMerge)
 end
-	
+

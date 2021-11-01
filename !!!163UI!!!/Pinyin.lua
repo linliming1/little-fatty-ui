@@ -1,7 +1,7 @@
 local _, U1 = ...;
 U1.ABBR={
     ["tellmewhen"] = "tmw",
-    ["weakauras2"] = "wa",
+    ["weakauras"] = "wa2",
     ["eventalertmod"] = "eam",
     ["worldquestslist"] = "wql",
     ["worldquesttracker"] = "wqt",
@@ -14,7 +14,8 @@ U1.ABBR={
     ["targetnameplateindicator"] = "tni",
     ["theburningtrade"] = "tbt",
     ["tidyplates"] = "tp",
-    ["methoddungeontools"] = "mdt",
+    ["mythicdungeontools"] = "mdt",
+    ["mrt"] = "exrt",
 }
 U1.PINYIN={
 	['DBM:军团5人本']={'dbmjuntuanrenben','dbm:jt5rb'},
@@ -259,4 +260,10 @@ U1.PINYIN={
     ['入侵时刻表']={'ruqinshikebiao','rqskb'},
     ['目标姓名板标记']={'mubiaoxingmingbanbiaoji','mbxmbbj'},
     ['大秘路线']={'damiluxian','dmlx'},
+    ['拍卖价格统计']={'paimaijiagetongji','pmjgtj'},
+    ['拍卖收藏保存']={'paimaishoucangbaocun','pmscbc'},
+    ['天赋方案切换']={'tianfufanganqiehuan','tffaqh'},
+    ['盟约随从任务']={'mengyuesuicongrenwu','myscrw'},
+    ['队友技能监控']={'duiyoujinengjiankong','dyjnjk'},
+    ['统御碎片助手']={'tongyusuipianzhushou','tyspzs'},
 }

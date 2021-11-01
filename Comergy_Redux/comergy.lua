@@ -1224,7 +1224,7 @@ function ChiStatus()
     if (class == MONK and GetSpecialization() == 3) then
         chiType = SPELL_POWER_CHI
     elseif (class == PALADIN) then
-        chiType = GetSpecialization() == 3 and SPELL_POWER_HOLY_POWER
+        chiType = SPELL_POWER_HOLY_POWER
     elseif (class == WARLOCK) then
         chiType = SPELL_POWER_SOUL_SHARDS
     elseif (class == MAGE) then
@@ -1461,6 +1461,7 @@ function ComergyOnLoad(self)
     self:RegisterEvent("ADDON_LOADED")
     self:RegisterEvent("PLAYER_LOGIN")
     self:RegisterEvent("PLAYER_ENTERING_WORLD")
+    self:RegisterEvent("UNIT_DISPLAYPOWER") --元素萨的漩涡值在这个事件后UnitPowerType才对
 
     self:RegisterEvent("PLAYER_REGEN_DISABLED")
     self:RegisterEvent("PLAYER_REGEN_ENABLED")
@@ -1472,6 +1473,7 @@ function ComergyOnLoad(self)
 
     self:RegisterEvent("UNIT_MAXPOWER")
     self:RegisterEvent("UNIT_POWER_UPDATE")
+    self:RegisterEvent("UNIT_POWER_FREQUENT")
     self:RegisterEvent("UNIT_MAXHEALTH")
     self:RegisterEvent("UNIT_HEALTH")
     self:RegisterEvent("UNIT_ENTERED_VEHICLE")
@@ -1481,7 +1483,7 @@ function ComergyOnLoad(self)
 
     --self:RegisterEvent("ACTIVE_TALENT_GROUP_CHANGED")
     self:RegisterEvent("PLAYER_SPECIALIZATION_CHANGED")
-    --self:RegisterEvent("RUNE_TYPE_UPDATE") --aby8
+    --self:RegisterEvent("RUNE_TYPE_UPDATE") --abyui8
     self:RegisterEvent("RUNE_POWER_UPDATE")
 end
 
@@ -1615,7 +1617,7 @@ function EventHandlers.UPDATE_SHAPESHIFT_FORM()
         MainFrameToggle()
 
         if ((form > 0) and (form < 4) and (Comergy_Settings.StealthSound) and (status.shapeshiftForm == 0)) then
-            PlaySoundFile("Sound\\interface\\iQuestUpdate.ogg")
+            PlaySound(17317) --("Sound\\interface\\iQuestUpdate.ogg")
         end
         status.shapeshiftForm = form
     end
@@ -1697,6 +1699,16 @@ function EventHandlers.Aby_COMBAT_LOG_EVENT_UNFILTERED(...)
             end
         end
     end
+end
+
+function EventHandlers.UNIT_DISPLAYPOWER()
+    ReadStatus()
+
+    ResizeEnergyBars()
+    EnergyChanged()
+    ManaChanged()
+    PlayerHealthChanged()
+    TargetHealthChanged()
 end
 
 function EventHandlers.PLAYER_REGEN_DISABLED()
@@ -1836,6 +1848,13 @@ function EventHandlers.UNIT_POWER_UPDATE()
         if (status.curChi ~= UnitPower(status.curUnit, status.curChiType)) then
             ChiChanged()
         end
+    end
+end
+
+function EventHandlers.UNIT_POWER_FREQUENT()
+    local class = status.playerClass
+    if class == SHAMAN then
+        OnPeriodicUpdate() -- 元素萨的能量是事件触发的，不是时间变化的，更及时
     end
 end
 
@@ -2091,29 +2110,35 @@ end
 
 
 --move sound, not registering max power
+local lastEnergy = -1
 function OnPeriodicUpdate()
     if (status.energyEnabled) then
         local curEnergy = UnitPower(status.curUnit)
-        if (status.curEnergy ~= curEnergy) then
-            if ((curEnergy > status.curEnergy) and ((not Comergy_Settings.ShowOnlyInCombat) or (status.playerInCombat))) then
+        if (lastEnergy ~= curEnergy) then
+            if ((curEnergy > lastEnergy) and ((not Comergy_Settings.ShowOnlyInCombat) or (status.playerInCombat))) then
                 local sound = false
                 for i = 1, ENERGY_SUBBAR_NUM - 1 do
-                    if ((Comergy_Settings["EnergyThreshold"..i] > status.curEnergy) and (Comergy_Settings["EnergyThreshold"..i] <= curEnergy) and (Comergy_Settings["SoundEnergy"..i])) then
-                        sound = true
+                    if ((Comergy_Settings["EnergyThreshold"..i] > lastEnergy) and (Comergy_Settings["EnergyThreshold"..i] <= curEnergy) and (Comergy_Settings["SoundEnergy"..i])) then
+                        sound = i
                         break
                     end
                 end
                 if ((status.maxEnergy == curEnergy) and (Comergy_Settings["SoundEnergy"..ENERGY_SUBBAR_NUM])) then
-                    sound = true
+                    sound = ENERGY_SUBBAR_NUM
                 end
                 if (sound) then
-                    PlaySoundFile("Interface\\AddOns\\Comergy_Redux\\sound\\energytick.ogg")
+                    if status.playerClass == SHAMAN then
+                        PlaySoundFile(format("Interface\\AddOns\\Comergy_Redux\\sound\\combo%d.ogg", sound))
+                    else
+                        PlaySoundFile("Interface\\AddOns\\Comergy_Redux\\sound\\energytick.ogg")
+                    end
                 end
             end
 
-            local diff = curEnergy - status.curEnergy
+            local diff = curEnergy - lastEnergy
             local isSmallInc = (diff >= 1) and (diff <= 3)
             status.curEnergy = curEnergy
+            lastEnergy = curEnergy
 
             if ((status.curEnergy == status.maxEnergy) and ((status.curPowerType == "ENERGY") or (status.curPowerType == "FOCUS"))) then
                 MainFrameToggle()

@@ -30,6 +30,7 @@ L["Adds a bar indicating how much time is left on your ghoul timer, only used if
 L["Adds a bar indicating how much time is left on your mushrooms."] = "Adds a bar indicating how much time is left on your mushrooms."
 L["Adds a bar indicating how much time is left on your Rune of Power."] = "Adds a bar indicating how much time is left on your Rune of Power."
 L["Adds a bar inside the health bar indicating how much damage will be absorbed."] = "Adds a bar inside the health bar indicating how much damage will be absorbed."
+L["Adds a bar inside the health bar indicating how much healing someone is estimated to be receiving."] = "Adds a bar inside the health bar indicating how much healing someone is estimated to be receiving."
 L["Adds a bar inside the health bar indicating how much healing someone will receive."] = "Adds a bar inside the health bar indicating how much healing someone will receive."
 L["Adds a bar inside the health bar indicating how much healing will be absorbed and not applied to the player."] = "Adds a bar inside the health bar indicating how much healing will be absorbed and not applied to the player."
 L["Adds a mana bar to the player frame for elemental and enhancement shamans."] = "Adds a mana bar to the player frame for elemental and enhancement shamans."
@@ -283,6 +284,7 @@ L["Disabling unit modules in various instances."] = "Disabling unit modules in v
 L["Dismissable Totem bars"] = "Dismissable Totem bars"
 L["Dispellable/Stealable"] = "Dispellable/Stealable"
 L["Display"] = "Display"
+L["Display enemy buffs using LibClassicDuration data."] = "Display enemy buffs using LibClassicDuration data."
 L["DND"] = "DND"
 L["DND:%s"] = "DND:%s"
 L["Documentation"] = "Documentation"
@@ -301,6 +303,7 @@ L["Empty bar"] = "Empty bar"
 L["Enable %s"] = "Enable %s"
 L["Enable buffs"] = "Enable buffs"
 L["Enable debuffs"] = "Enable debuffs"
+L["Enable enemy buff tracking"] = "Enable enemy buff tracking"
 L["Enable for friendlies"] = "Enable for friendlies"
 L["Enable for hostiles"] = "Enable for hostiles"
 L["Enable frequent updates"] = "Enable frequent updates"
@@ -355,6 +358,7 @@ L["General"] = "General"
 L["General configuration to all enabled units."] = "General configuration to all enabled units."
 L["General threat situation"] = "General threat situation"
 L["Ghost"] = "Ghost"
+L["Ghoul bar"] = "Ghoul bar"
 L["Global"] = "Global"
 L["Global configurating will let you mass enable or disable aura groups for multiple units at once."] = "Global configurating will let you mass enable or disable aura groups for multiple units at once."
 L["Gold checkmark - Enabled in this zone / Grey checkmark - Disabled in this zone / No checkmark - Use the default unit settings"] = "Gold checkmark - Enabled in this zone / Grey checkmark - Disabled in this zone / No checkmark - Use the default unit settings"
@@ -457,6 +461,7 @@ L["Incoming heal/Name"] = "Incoming heal/Name"
 L["Incoming heals"] = "Incoming heals"
 L["Index"] = "Index"
 L["Indicator color"] = "Indicator color"
+L["Indicator for the current pet happiness."] = "Indicator for the current pet happiness."
 L["Indicator name"] = "Indicator name"
 L["Indicator this aura should be displayed in."] = "Indicator this aura should be displayed in."
 L["Indicators"] = "Indicators"
@@ -589,6 +594,7 @@ L["Percentage value of how far outside the unit frame the incoming absorb bar ca
 L["Percentage value of how far outside the unit frame the incoming heal bar can go. 130% means it will go 30% outside the frame, 100% means it will not go outside."] = "Percentage value of how far outside the unit frame the incoming heal bar can go. 130% means it will go 30% outside the frame, 100% means it will not go outside."
 L["Pet"] = "Pet"
 L["Pet Battle"] = "Pet Battle"
+L["Pet Happiness"] = "Pet Happiness"
 L["Pet Target"] = "Pet Target"
 L["Player"] = "Player"
 L["player alt. power"] = "player alt. power"
@@ -782,6 +788,7 @@ L["Status"] = "Status"
 L["Status indicator, shows if the unit is currently in combat. For the player it will also show if you are rested."] = "Status indicator, shows if the unit is currently in combat. For the player it will also show if you are rested."
 L["Stealable/Curable/Dispellable"] = "Stealable/Curable/Dispellable"
 L["Style of borders to show for all auras."] = "Style of borders to show for all auras."
+L["Summon Pending"] = "Summon Pending"
 L["T"] = "T"
 L["Tag list"] = "Tag list"
 L["Tag name"] = "Tag name"
@@ -812,6 +819,9 @@ L["This bar will automatically hide when you are at the level cap, or you do not
 L[ [=[This color will be used if the indicator shown is your own, only applies if icons are not used.
 Handy if you want to know if a target has a Rejuvenation on them, but you also want to know if you were the one who casted the Rejuvenation.]=] ] = [=[This color will be used if the indicator shown is your own, only applies if icons are not used.
 Handy if you want to know if a target has a Rejuvenation on them, but you also want to know if you were the one who casted the Rejuvenation.]=]
+--[[Translation missing --]]
+L[ [=[This color will be used if the indicator shown is your own, only applies if icons are not used.
+Handy if you want to know if a target has a Rejuvenation on them, but you also want to know if you were the one who casted the Rejuvenation.]=] ] = ""
 L["This filter has no aura types set to filter out."] = "This filter has no aura types set to filter out."
 L["This filter has no auras in it, you will have to add some using the dialog above."] = "This filter has no auras in it, you will have to add some using the dialog above."
 L["This is a good guide on how to get started with programming in Lua, while you do not need to read the entire thing it is a helpful for understanding the basics of Lua syntax and API's."] = "This is a good guide on how to get started with programming in Lua, while you do not need to read the entire thing it is a helpful for understanding the basics of Lua syntax and API's."
@@ -820,6 +830,9 @@ L["This unit has child units that depend on it, you need to enable this unit bef
 L[ [=[This will be set for your current class only.
 If no custom spells are set, defaults appropriate for your class will be used.]=] ] = [=[This will be set for your current class only.
 If no custom spells are set, defaults appropriate for your class will be used.]=]
+--[[Translation missing --]]
+L[ [=[This will be set for your current class only.
+If no custom spells are set, defaults appropriate for your class will be used.]=] ] = ""
 L["This will disable the automatic detection of what events this tag will need, you should leave this unchecked unless you know what you are doing."] = "This will disable the automatic detection of what events this tag will need, you should leave this unchecked unless you know what you are doing."
 L["This will override all background colorings for bars including custom set ones."] = "This will override all background colorings for bars including custom set ones."
 L["Threat"] = "Threat"
@@ -935,11 +948,11 @@ L["Zone configuration units"] = "Zone configuration units"
 
 
 ShadowUF.L = L
---[===[@debug@
+--[==[@debug@
 ShadowUF.L = setmetatable(ShadowUF.L, {
 	__index = function(tbl, value)
 		rawset(tbl, value, value)
 		return value
 	end,
 })
---@end-debug@]===]
+--@end-debug@]==]

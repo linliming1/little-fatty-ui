@@ -1,10 +1,9 @@
 local mod	= DBM:NewMod(1856, "DBM-TombofSargeras", nil, 875)
 local L		= mod:GetLocalizedStrings()
 
-mod:SetRevision(("$Revision: 2 $"):sub(12, -3))
+mod:SetRevision("20211011150938")
 mod:SetCreatureID(116407)
 mod:SetEncounterID(2036)
-mod:SetZone()
 --mod:SetBossHPInfoToHighest()
 --mod:SetUsedIcons(1)
 mod:SetHotfixNoticeRev(16282)
@@ -65,23 +64,20 @@ local specWarnTantrum				= mod:NewSpecialWarningSpell(241590, nil, nil, nil, 2, 
 
 --Harjatan
 mod:AddTimerLine(BOSS)
-local timerUncheckedRageCD			= mod:NewNextCountTimer(20, 231854, nil, nil, nil, 2)--5 power per second heroic, 20 seconds for 100 energy
+local timerUncheckedRageCD			= mod:NewNextCountTimer(20, 231854, nil, nil, nil, 2, nil, nil, nil, 1, 4)--5 power per second heroic, 20 seconds for 100 energy
 local timerDrawInCD					= mod:NewNextTimer(59, 232061, nil, nil, nil, 6)
 local timerCommandingRoarCD			= mod:NewNextTimer(31.8, 232192, nil, nil, nil, 1)
-mod:AddTimerLine(DBM_ADDS)
+mod:AddTimerLine(DBM_CORE_L.ADDS)
 --Razorjaw Wavemender
 local timerAqueousBurstCD			= mod:NewCDTimer(6, 231729, nil, false, nil, 3)--6-8
 --Razorjaw Gladiator
 local timerDrivenAssault			= mod:NewTargetTimer(10, 234016, nil, false, nil, 3)--Too many spawn, this would be spammy so off by default
-local timerSplashCleaveCD			= mod:NewCDTimer(12, 234129, nil, false, nil, 5, nil, DBM_CORE_TANK_ICON)
+local timerSplashCleaveCD			= mod:NewCDTimer(12, 234129, nil, false, nil, 5, nil, DBM_CORE_L.TANK_ICON)
 --Mythic
 mod:AddTimerLine(ENCOUNTER_JOURNAL_SECTION_FLAG12)
 local timerHatchingCD				= mod:NewNextTimer(40.6, 240319, nil, nil, nil, 1)--40.6-42
 
 local berserkTimer					= mod:NewBerserkTimer(360)
-
---Harjatan
-local countdownUncheckedRage		= mod:NewCountdown(20, 231854)
 
 --mod:AddSetIconOption("SetIconOnShield", 228270, true)
 --mod:AddInfoFrameOption(227503, true)
@@ -97,7 +93,6 @@ function mod:OnCombatStart(delay)
 	self.vb.rageCount = 0
 	table.wipe(seenMobs)
 	timerUncheckedRageCD:Start(-delay, 1)
-	countdownUncheckedRage:Start()
 	specWarnUncheckedRage:Schedule(16-delay, 1)
 	specWarnUncheckedRage:ScheduleVoice(16-delay, "gathershare")
 	timerCommandingRoarCD:Start(17.3-delay)
@@ -135,7 +130,6 @@ function mod:SPELL_CAST_START(args)
 		self.vb.rageCount = 0
 		timerCommandingRoarCD:Start(17.1)
 		timerUncheckedRageCD:Start(21.1, 1)--21.1-23.5
-		countdownUncheckedRage:Start(21)
 		specWarnUncheckedRage:Schedule(17, 1)
 		specWarnUncheckedRage:Play(17, "gathershare")
 		timerDrawInCD:Start()
@@ -163,7 +157,6 @@ function mod:SPELL_CAST_SUCCESS(args)
 	elseif spellId == 231854 then--Unchecked Rage
 		self.vb.rageCount = self.vb.rageCount + 1
 		timerUncheckedRageCD:Start(nil, self.vb.rageCount+1)
-		countdownUncheckedRage:Start()
 		specWarnUncheckedRage:Schedule(17, self.vb.rageCount+1)
 		specWarnUncheckedRage:ScheduleVoice(17, "gathershare")
 	elseif spellId == 234129 then
@@ -230,7 +223,6 @@ function mod:SPELL_AURA_APPLIED(args)
 		end
 	elseif spellId == 232061 then
 		timerUncheckedRageCD:Stop()
-		countdownUncheckedRage:Cancel()
 		specWarnUncheckedRage:Cancel()
 		specWarnUncheckedRage:CancelVoice()
 		timerCommandingRoarCD:Stop()
@@ -279,7 +271,7 @@ function mod:UNIT_DIED(args)
 	--elseif cid == 117522 then--Darkscale Taskmaster
 		--timerFrostySpittleCD:Stop(args.destGUID)
 	elseif cid == 120545 then--Incubated Egg
-		
+
 	end
 end
 
@@ -297,15 +289,14 @@ function mod:INSTANCE_ENCOUNTER_ENGAGE_UNIT()
 			if cid == 116569 then--Razorjaw Wavemender
 				--timerAqueousBurstCD:Start(1, GUID)
 				if self.Options.SetIconOnWavemender then
-					self:ScanForMobs(GUID, 0, 8, 2, 0.2, 12, "SetIconOnWavemender")
+					self:ScanForMobs(GUID, 0, 8, 2, nil, 12, "SetIconOnWavemender")
 				end
 			end
 		end
 	end
 end
 
-function mod:UNIT_SPELLCAST_SUCCEEDED(uId, _, bfaSpellId, _, legacySpellId)
-	local spellId = legacySpellId or bfaSpellId
+function mod:UNIT_SPELLCAST_SUCCEEDED(uId, _, spellId)
 	if spellId == 232192 then--Commanding Roar
 		specWarnCommandingroar:Show()
 		specWarnCommandingroar:Play("killmob")

@@ -6,8 +6,21 @@ local INVSLOT_AVALIABLE = 16
 local S_ITEM_LEVEL = ITEM_LEVEL:gsub("%%d", "(%%d+)")
 --local GSS_Mode = 0;	--0=simply, 1=profession
 
-local MAX_LEVEL = 120
-local RATINGS_BONUS = { 72, 68, 85, 72, } --CRIT HASTE VERSATILITY MASTERY
+local MAX_LEVEL = 60
+local RATINGS_BONUS = { 35, 33, 40, 35, nil, nil, nil, nil, nil, nil, 14, 21, 10} --CRIT HASTE VERSATILITY MASTERY 闪避吸血加速
+function GearStatsSummary_UpdateRatingBonus()
+    for i, v in ipairs({CR_CRIT_SPELL, CR_HASTE_SPELL, CR_VERSATILITY_DAMAGE_DONE, CR_MASTERY }) do
+        if GetCombatRating(v) > 0 then
+            RATINGS_BONUS[i] = math.floor(GetCombatRating(v) / GetCombatRatingBonus(v) + 0.5)
+        end
+    end
+    for i, v in ipairs({CR_AVOIDANCE, CR_LIFESTEAL, CR_SPEED}) do
+        if GetCombatRating(v) > 0 then
+            RATINGS_BONUS[10+i] = math.floor(GetCombatRating(v) / GetCombatRatingBonus(v) + 0.5)
+        end
+    end
+    return RATINGS_BONUS
+end
 
 local tip
 if not tip then
@@ -52,10 +65,8 @@ local function ScanItemTooltip(unit, slot)
 	end
 	tip:SetInventoryItem(unit, slot);
 	tip:Show();
-	
-	local itemLevel, GemsSlotCount, GemsEmptyCount = 0, 0, 0;
-	local itemSet;
-	local ret;
+
+	local itemLevel, itemSet, ret
 	
 	for i = 2, tip:NumLines() do
 		local text = _G[ tip:GetName() .."TextLeft"..i]:GetText();
@@ -72,24 +83,9 @@ local function ScanItemTooltip(unit, slot)
 		end
 	end
 
-	for i = 1,4 do
-		local texture = _G[ tip:GetName() .."Texture"..i]
-		if ( texture ) then
-			local texture = _G[ tip:GetName() .."Texture"..i]:GetTexture();
-			if ( texture ) then
-				--if string.find(texture, "gem") then
-					GemsSlotCount = GemsSlotCount + 1
-					if string.find(texture, "EmptySocket") then
-						GemsEmptyCount = GemsEmptyCount + 1
-					end
-				--end
-			end
-		end
-	end
-	
 	tip:Hide();
     --if (slot == 16 or slot == 17) and itemLevel ~= 750 and not UnitIsUnit(unit, "player") then itemLevel=itemLevel+15 end
-	return itemLevel, itemSet, GemsSlotCount, GemsEmptyCount
+	return itemLevel or 0, itemSet
 end
 
 local function SetOrHookScript(frame, scriptName, func)
@@ -123,26 +119,6 @@ function GearStatsSummary_SetupHook()
 	SetOrHookScript(InspectFrame, "OnShow", GearStatsSummary_InspectFrame);
 	SetOrHookScript(InspectFrame, "OnHide", GearStatsSummary_InspectFrame_OnHide);
 	hooksecurefunc("InspectFrame_UnitChanged", GearStatsSummary_InspectFrame_UnitChanged);
-end
-
-local GemSlots = {
-	EMPTY_SOCKET = true,
-	EMPTY_SOCKET_BLUE = true,
-	EMPTY_SOCKET_COGWHEEL = true,
-	EMPTY_SOCKET_HYDRAULIC = true,
-	EMPTY_SOCKET_META = true,
-	EMPTY_SOCKET_NO_COLOR = true,
-	EMPTY_SOCKET_PRISMATIC = true,
-	EMPTY_SOCKET_RED = true,
-	EMPTY_SOCKET_YELLOW = true,
-}
-
-local function AddGem(TblGems, gem, addNum)
-	if TblGems[gem] == nil then
-		TblGems[gem] = addNum or 1
-	else
-		TblGems[gem] = TblGems[gem] + (addNum or 1)
-	end
 end
 
 function GearStatsSummary_UpdateAnchor(doll, insp)
@@ -210,6 +186,7 @@ function GearStatsSummary_OnEvent(self, event, ...)
 	end
 
 	if event == "ADDON_LOADED" and arg1=="Blizzard_InspectUI" then
+        GearStatsSummary_UpdateRatingBonus()
 		GearStatsSummary_SetupHook();
 	end
 
@@ -299,7 +276,7 @@ end
 function GearStatsSummary_GetSpecName(unit)
 	local spec, name, specID
     unit = unit or "player"
-    local classID = select(3, UnitClass("player"))
+    local classID = select(3, UnitClass(unit))
 	if not unit or unit == "player" then
 		spec = GetSpecialization()
         specID, name = GetSpecializationInfo(spec)
@@ -362,6 +339,9 @@ function GearStatsSummary_ShowFrame(frame,target,tiptitle,anchorx,anchory,ready)
 		end
     end
 	local inspecting = unit~="player"
+    if not inspecting then
+        GearStatsSummary_UpdateRatingBonus()
+    end
 
     local spec, classID, specID = GearStatsSummary_GetSpecName(unit)
 
@@ -419,7 +399,7 @@ function GearStatsSummary_ShowFrame(frame,target,tiptitle,anchorx,anchory,ready)
 		if v then
             --163ui Add Tooltip
             if not masks[k] then
-                masks[k] = WW:Frame("$parentM"..k, frame):Size(120, select(2, text:GetFont())):un() --:CreateTexture():SetColorTexture(0,1,0,0.5):ALL():up():un();
+                masks[k] = WW:Frame("$parentM"..k, frame):Size(160, select(2, text:GetFont())):un() --:CreateTexture():SetColorTexture(0,1,0,0.5):ALL():up():un();
                 masks[k].id = k
                 masks[k]:SetScript("OnEnter", GearStatsSummary_MaskOnEnter)
                 masks[k]:SetScript("OnLeave", GearStatsSummary_MaskOnLeave)
@@ -444,7 +424,8 @@ function GearStatsSummary_ShowFrame(frame,target,tiptitle,anchorx,anchory,ready)
             local iconformat = "\124TInterface\\AddOns\\GearStatsSummary\\icons\\%s:11\124t"
             local emptyformat = "\124T" .. emptyTex .. ":11\124t"
             local attrIcons = ""
-            local attrs = (k==16 or k==17) and U1GetItemStats(unit, k, tmptable, true, classID, specID) or U1GetItemStats(v, nil, tmptable, true, classID, specID)
+            local attrs = U1GetItemStats(v, nil, tmptable, true, classID, specID)
+            --(k==16 or k==17) and U1GetItemStats(unit, k, tmptable, true, classID, specID) 7.0神器用
             for i=1, 4 do
                 local icon = i == 1 and "crit" or i == 2 and "haste" or i == 3 and "vers" or i == 4 and "mastery"
                 attrIcons = attrIcons .. (attrs[i] and attrs[i] > 0 and iconformat:format(icon) or emptyformat)
@@ -455,6 +436,7 @@ function GearStatsSummary_ShowFrame(frame,target,tiptitle,anchorx,anchory,ready)
             end
 
             local _, _, ccode, linkp1, itemname = v:find("(\124c.-)(\124Hitem.-)\124h%[(.-)%]\124h\124r")
+            --if attrs[9] and attrs[9] > 0 then ccode = "|cffC21010" end --腐蚀
             if (GetLocale() == "zhCN" or GetLocale() == "zhTW") and string.utf8len(itemname) > 6 then itemname = string.utf8sub(itemname,1,5).."…" end
             --v = v:gsub("(\124c.-)(\124Hitem.-)\124h%[(.-)%]\124h\124r", "%2\124h" .. sum["ItemLevels"][k] .. " %1%3\124r\124h")
             v = sum["ItemLevels"][k] .. " " .. ccode..linkp1.."\124h"..itemname.."\124h\124r"
@@ -484,10 +466,12 @@ function GearStatsSummary_ShowFrame(frame,target,tiptitle,anchorx,anchory,ready)
 	end--]]
 	
     local gem_enchant = ""
-	if sum["Gems"] ~= nil then
-		local total_gem, has_gem, missing_gem = sum["Gems"]["GemSlotCount"], sum["Gems"]["GemSlotCount"] - (sum["Gems"]["EmptyGemSlotCount"] or 0), sum["Gems"]["EmptyGemSlotCount"]
-		local gem_info = string.format(((missing_gem == nil or missing_gem == 0) and "%d" or "|cffff0000%d|r")..'/%d',has_gem, total_gem)
-		gem_enchant = RATING_SUMMARY_GEM..': '.. gem_info
+	if U1GetUnitGemInfo then
+        local _, _, gemCount, slotCount = U1GetUnitGemInfo(unit)
+        if slotCount > 0 then
+		    local gem_info = string.format((slotCount == gemCount and "%d" or "|cffff0000%d|r")..'/%d', gemCount, slotCount)
+		    gem_enchant = RATING_SUMMARY_GEM..': '.. gem_info
+        end
 	end
 	local total_enchant, has_enchant, missing_enchant = (sum["CanEnchant"] or 0), (sum["HasEnchant"] or 0), sum["EnchantMissing"]
 	if total_enchant ~= 0 then
@@ -496,15 +480,54 @@ function GearStatsSummary_ShowFrame(frame,target,tiptitle,anchorx,anchory,ready)
 	end
     tiptext = tiptext .. '\n\n' .. gem_enchant
 
+    if U1GetUnitDominationInfo then
+        local domi_info
+        local set_index, set_level, details = U1GetUnitDominationInfo(unit)
+        if set_index then
+            local DomiSetColor, _, DomiSetNameShort, _ = U1GetDominationSetData()
+            domi_info = format("|cff%s%s%d级|r", DomiSetColor[set_index], DomiSetNameShort[set_index], set_level) .. " - " .. details
+        else
+            domi_info = details or ""
+        end
+        if domi_info and domi_info ~= "" then
+            tiptext = tiptext .. '\n\n' .. RATING_SUMMARY_DOMINATION .. ': ' .. domi_info
+        end
+    end
+
     local showPercent = UnitLevel(unit) == MAX_PLAYER_LEVEL  --爆击有额外加成，急速和全能是对的，精通受GetMasteryEffect()比例影响
     tiptext = tiptext.."\n\n"..(UnitIsUnit("player", unit) and RS_STATS_ONLY_FROM_GEARS or RS_STATS_ONLY_FROM_GEARS) --"(未计算熔炉+15神器装等)"
     for i=5, 8 do if stats_total[i] then tiptext = tiptext .. "\n|cffffd200"..U1ATTRSNAME[i]..":|r"..YELLOW_FONT_COLOR_CODE.." +"..format("%-6d",stats_total[i]).."|r" end end
     local greenTotal = 0
     for i=1, 4 do greenTotal = greenTotal + (stats_total[i] or 0) end
     tiptext = tiptext .. "\n|cffffd200绿字总和:|r " .. GREEN_FONT_COLOR_CODE .. greenTotal .. "|r"
-    for i=1, 4 do if stats_total[i] then tiptext = tiptext .. "\n|cffffd200"..U1ATTRSNAME[i]..":|r"..GREEN_FONT_COLOR_CODE .." +"..format("%-6d",stats_total[i]).."|r"..(showPercent and format(" +%.2f%%", stats_total[i]/RATINGS_BONUS[i]) or "") end end
-    if not inspecting then tiptext = tiptext .. "\n|cffffd200精通系数:|r " .. YELLOW_FONT_COLOR_CODE .. format("%.2f", select(2, GetMasteryEffect())) .. "|r" end
-
+    for i=1, 4 do
+        if stats_total[i] then
+            tiptext = tiptext .. "\n |cffffd200"..U1ATTRSNAME[i]..":|r"..GREEN_FONT_COLOR_CODE .." +"..format("%-4d",stats_total[i]).."|r"..(showPercent and format(" +%.2f%%", stats_total[i]/RATINGS_BONUS[i]) or "")
+            if not inspecting and i == 4 then
+                --"\n |cffffd200精通系数:|r "
+                tiptext = tiptext .. YELLOW_FONT_COLOR_CODE .. format(" *%.1f", select(2, GetMasteryEffect())) .. "|r"
+            end
+        end
+    end
+    --吸血闪避加速
+    for i=11, 13 do
+        if stats_total[i] then
+            tiptext = tiptext .. "\n |cffffd200"..U1ATTRSNAME[i]..":|r"..BATTLENET_FONT_COLOR_CODE .." +"..format("%-3d",stats_total[i])..(showPercent and format(" +%.2f%%", stats_total[i]/RATINGS_BONUS[i]) or "").."|r"
+        end
+    end
+    --[[
+    --8.3 CORRUPTION
+    local corruption_resistence = (stats_total[10] or 0) + 10
+    if not inspecting then stats_total[9], corruption_resistence = GetCorruption(), GetCorruptionResistance() end
+    local total_corrupt = max(0, (stats_total[9] or 0) - corruption_resistence)
+    local cccode = "|cff946cd0"
+    local tccode = total_corrupt > 59 and "|cffff0000" or total_corrupt > 39 and "|cffFF6CD0" or cccode
+    local i=9 if stats_total[i] then tiptext = tiptext .. "\n"..cccode.."合计腐蚀"..":".." +"..format("|r"..tccode.."%d|r"..cccode, total_corrupt)..format(" (+%d)", stats_total[i], corruption_resistence).."|r" end
+    if U1GetAllCorruptionText then
+        local corrupt_text, c_all, c_corrupt = U1GetAllCorruptionText(sum["ItemLink"])
+        tiptext = tiptext .. format(" %d/%d", c_corrupt, c_all) .. "\n " .. U1GetAllCorruptionText(sum["ItemLink"]):gsub("\n", "\n ")
+    end
+    --]]
 	GearStatsSummary_SetFrameText(frame, tiptitle, tiptext, unit);
 	frame:Show();
 end
@@ -540,7 +563,7 @@ function GearStatsSummary_Sum(inspecting, classID, specID)
 		if (link) and i ~= INVSLOT_BODY and i ~= INVSLOT_TABARD then
 			local itemName, _, quality, lv, _, itemType, itemSubType, _, ItemEquipLoc = GetItemInfo(link); --TO DO: ADD UPGRADES
 			--local iLevel = ItemUpgradeInfo:GetUpgradedItemLevel(link);
-			local iLevel, iSet, GemsSlotCount, GemsEmptyCount = ScanItemTooltip(unit, i);
+			local iLevel, iSet = ScanItemTooltip(unit, i);
 			local r, g, b = 1, 1, 1
 			if quality then
 				r, g, b = GetItemQualityColor(quality);
@@ -577,30 +600,12 @@ function GearStatsSummary_Sum(inspecting, classID, specID)
 				if not GSSJTNum[iSet] then GSSJTNum[iSet] = 1 else GSSJTNum[iSet] = GSSJTNum[iSet] + 1 end
 			end
 			
-			stats["Gems"] = {}
-			stats["Gems"]["GemSlotCount"] = 0
-			
-			if GemsSlotCount then
-				AddGem(stats["Gems"], "GemSlotCount", GemsSlotCount)
-			end
-			if GemsEmptyCount then
-				AddGem(stats["Gems"], "EmptyGemSlotCount", GemsEmptyCount)
-			end
-
-			local check, _, color, Ltype, Id, Enchant, Gem1, Gem2, Gem3, Gem4, Suffix, Unique, LinkLvl, Reforge, Upgrade, Name = string.find(link, "|?c?f?f?(%x*)|?H?([^:]*):?(%d+):?(%d*):?(%d*):?(%d*):?(%d*):?(%d*):?(%-?%d*):?(%-?%d*):?(%d*):?(%d*):?(%d*)|?h?%[?([^%[%]c]*)%]?|?h?|?r?");
+			local check, _, color, Ltype, Id, Enchant, _, _, _, _, Suffix, Unique, LinkLvl, Reforge, Upgrade, Name = string.find(link, "|?c?f?f?(%x*)|?H?([^:]*):?(%d+):?(%d*):?(%d*):?(%d*):?(%d*):?(%d*):?(%-?%d*):?(%-?%d*):?(%d*):?(%d*):?(%d*)|?h?%[?([^%[%]c]*)%]?|?h?|?r?");
 
 			if Enchant ~= nil and tonumber(Enchant) and tonumber(Enchant) > 0 then --func for RS
 				stats["Enchanted"] = 1
 			end
 
-			if (stats["Gems"] ~= nil) then
-				if sum["Gems"] == nil then sum["Gems"] = {} end
-				for k,v in pairs(stats["Gems"]) do
-					if sum["Gems"][k] == nil then sum["Gems"][k] = 0 end
-					sum["Gems"][k] = sum["Gems"][k] + v
-				end
-			end
-			
 			for slot, shortname in next, RATING_SUMMARY_ENCHANTABLES do
 				if i == slot then
 					if sum["CanEnchant"] == nil then sum["CanEnchant"] = 0 end

@@ -1,8 +1,17 @@
-﻿-- Prevent tainting global _.
+﻿local CreateFrame = CreateFrameAby
+-- -- Prevent tainting global _.
 local _
 local _G = _G
 
-
+ABY_BACKDROP_GOLD_BGONLY = {
+	bgFile = "Interface\\DialogFrame\\UI-DialogBox-Gold-Background",
+	edgeFile = "",
+	tile = true,
+	tileEdge = true,
+	tileSize = 0,
+	edgeSize = 0,
+	insets = { left = 0, right = 0, top = 0, bottom = 0 },
+};
 --------------------------------------------------------------------------------
 -- Create Basic Spell Frames, Anchor Frames, Speciall Frames
 --------------------------------------------------------------------------------
@@ -94,7 +103,7 @@ end
 
 
 function CreateFrames_CreateAnchorFrame(AnchorFrameName, typeIndex)
-		local eaaf = CreateFrame("FRAME", AnchorFrameName, UIParent);
+		local eaaf = CreateFrameAby("FRAME", AnchorFrameName, UIParent);
 		eaaf:ClearAllPoints();
 		eaaf:SetFrameStrata("DIALOG");
 		-- eaaf:SetFrameStrata("LOW");
@@ -229,7 +238,7 @@ function CreateFrames_SpecialFrames_Show(index)
 	
 	
 	-- 尚未建立特殊能力框架，以下是第一次執行
-	eaf = CreateFrame("FRAME", sFramePrefix..index, EA_Main_Frame);
+	eaf = CreateFrameAby("FRAME", sFramePrefix..index, EA_Main_Frame);
 	eaf.spellName = eaf:CreateFontString(sFramePrefix..index.."_Name","OVERLAY");
 	eaf.spellTimer = eaf:CreateFontString(sFramePrefix..index.."_Timer","OVERLAY");
 	eaf.spellStack = eaf:CreateFontString(sFramePrefix..index.."_Stack","OVERLAY");

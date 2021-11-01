@@ -1,11 +1,10 @@
 local mod	= DBM:NewMod(2128, "DBM-Party-BfA", 10, 1001)
 local L		= mod:GetLocalizedStrings()
 
-mod:SetRevision(("$Revision: 18026 $"):sub(12, -3))
+mod:SetRevision("20201116014239")
 mod:SetCreatureID(131527, 131545)
 mod:SetMainBossID(131545)
 mod:SetEncounterID(2116)
-mod:SetZone()
 
 mod:RegisterCombat("combat")
 
@@ -25,20 +24,15 @@ local specWarnVirulentPathogen		= mod:NewSpecialWarningMoveAway(261440, nil, nil
 local yellVirulentPathogen			= mod:NewShortYell(261440)
 --local specWarnGTFO				= mod:NewSpecialWarningGTFO(238028, nil, nil, nil, 1, 8)
 
-local timerWastingStrikeCD			= mod:NewCDTimer(16.5, 261438, nil, "Tank", nil, 5, nil, DBM_CORE_TANK_ICON)--16.5-17.1
-local timerVirulentPathogenCD		= mod:NewCDTimer(15.4, 261440, nil, nil, nil, 3, nil, DBM_CORE_DISEASE_ICON)--15.4-17
+local timerWastingStrikeCD			= mod:NewCDTimer(16.5, 261438, nil, "Tank", nil, 5, nil, DBM_CORE_L.TANK_ICON, nil, 2, 3)--16.5-17.1
+local timerVirulentPathogenCD		= mod:NewCDTimer(15.4, 261440, nil, nil, nil, 3, nil, DBM_CORE_L.DISEASE_ICON, nil, 1, 3)--15.4-17
 local timerDiscordantCadenzaCD		= mod:NewCDTimer(22.6, 268306, nil, nil, nil, 3)--pull:16.1, 3.6, 19.4, 17.0
-
-local countdownWastingStrike		= mod:NewCountdown("Alt15", 261438, "Tank", nil, 3)
-local countdownVirulentPathogen		= mod:NewCountdown(15.4, 261440, nil, nil, 3)
 
 mod:AddRangeFrameOption(6, 261440)
 
 function mod:OnCombatStart(delay)
 	timerWastingStrikeCD:Start(6-delay)
-	countdownWastingStrike:Start(6-delay)
 	timerVirulentPathogenCD:Start(10.5-delay)
-	countdownVirulentPathogen:Start(10.5-delay)
 	timerDiscordantCadenzaCD:Start(15.5-delay)
 	if self.Options.RangeFrame then
 		DBM.RangeCheck:Show(6)
@@ -62,7 +56,6 @@ function mod:SPELL_AURA_APPLIED(args)
 		end
 	end
 end
---mod.SPELL_AURA_APPLIED_DOSE = mod.SPELL_AURA_APPLIED
 
 function mod:SPELL_CAST_START(args)
 	local spellId = args.spellId
@@ -72,7 +65,6 @@ function mod:SPELL_CAST_START(args)
 		timerDiscordantCadenzaCD:Start()
 	elseif spellId == 261440 then
 		timerVirulentPathogenCD:Start()
-		countdownVirulentPathogen:Start()
 	end
 end
 
@@ -80,33 +72,13 @@ function mod:SPELL_CAST_SUCCESS(args)
 	local spellId = args.spellId
 	if spellId == 261438 then
 		timerWastingStrikeCD:Start()
-		countdownWastingStrike:Start(15.7)
 	end
 end
-
---[[
-function mod:SPELL_PERIODIC_DAMAGE(_, _, _, _, destGUID, _, _, _, spellId)
-	if spellId == 228007 and destGUID == UnitGUID("player") and self:AntiSpam(2, 4) then
-		specWarnGTFO:Show()
-		specWarnGTFO:Play("watchfeet")
-	end
-end
-mod.SPELL_PERIODIC_MISSED = mod.SPELL_PERIODIC_DAMAGE
---]]
 
 function mod:UNIT_DIED(args)
 	local cid = self:GetCIDFromGUID(args.destGUID)
 	if cid == 131527 then--Lord Waycrest
 		timerWastingStrikeCD:Stop()
 		timerVirulentPathogenCD:Stop()
-		countdownWastingStrike:Cancel()
-		countdownVirulentPathogen:Cancel()
 	end
 end
-
---[[
-function mod:UNIT_SPELLCAST_SUCCEEDED(uId, _, spellId)
-	if spellId == 257939 then
-	end
-end
---]]

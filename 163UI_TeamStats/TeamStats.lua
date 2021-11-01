@@ -85,10 +85,38 @@ local function SaveGearScore(name, unit, isPlayer)
         --player.has_enchant = has_enchant
         --player.missing_enchant = missing_enchant
 
+        local set_index, set_level, shards_level = U1GetUnitDominationInfo(unit)
+        if set_index then
+            local DomiSetColor, _, DomiSetNameShort, _ = U1GetDominationSetData()
+            player.domi_info = format("|cff%s%s%d级|r", DomiSetColor[set_index], DomiSetNameShort[set_index], set_level)
+        else
+            player.domi_info = shards_level or ""
+        end
+
         if(not player.gsGot) then
+            --计算腐蚀 U1GetItemStats 要用
+            local classID = select(3, UnitClass(unit))
+            local specID = isPlayer and GetSpecializationInfo(GetSpecialization()) or GetInspectSpecialization(unit)
+
             local avgLevel, color, pvp, totalLevel, count, slotCount, itemLinks = U1GetInventoryLevel(unit, true)
             --debug("SaveGearScore", U1GetInventoryLevel(unit))
             if avgLevel and avgLevel > 0 then
+                --[[-- 计算腐蚀值
+                local slots = { Waist=6, Legs=7, Feet=8, Wrist=9, Hands=10, Finger0=11, Finger1=12, Back=15, MainHand=16, SecondaryHand=17, }
+                local c_text = U1GetAllCorruptionText(itemLinks)
+                local tmptable, c_resist, c_total = {}, 0, 0
+                for _, slot in pairs(slots) do
+                    local link = itemLinks[slot]
+                    if link then
+                        local attrs = U1GetItemStats(link, nil, tmptable, false, classID, specID)
+                        c_resist = c_resist + math.abs(attrs[10] or 0)
+                        c_total = c_total + math.abs(attrs[9] or 0)
+                    end
+                end
+                player.c_text, player.c_resist, player.c_total = c_text, c_resist, c_total
+                --]]
+
+                --[[ --军团再临神器
                 player.legends = nil
                 for id, link in pairs(itemLinks) do
                     local _, _, quality = GetItemInfo(link)
@@ -101,6 +129,7 @@ local function SaveGearScore(name, unit, isPlayer)
                         end
                     end
                 end
+                --]]
                 player.gs = avgLevel
                 player.re = pvp
                 player.bad = count~=slotCount --有格子没装备
@@ -278,6 +307,8 @@ function TeamStats:OnUpdateNameTimer()
             player.name = UnitName(unit)
             player.heath = UnitHealthMax(unit)
             player.class = select(2, UnitClass(unit))
+            local summary = C_PlayerInfo.GetPlayerMythicPlusRatingSummary(unit)
+            player.mscore = summary and summary.currentSeasonScore or player.mscore
             current_names[fullname] = true
         end
     end
@@ -447,6 +478,9 @@ function TeamStats:OnCheck()
 
         local name = UnitFullName(unit)
         local curr = TeamStats.db.players[name]
+        local summary = C_PlayerInfo.GetPlayerMythicPlusRatingSummary(unit)
+        curr.mscore = summary and summary.currentSeasonScore or curr.mscore
+
         if UnitIsUnit("player", unit) then
             --玩家自身不需要观察直接获取
             if not curr.inspected then

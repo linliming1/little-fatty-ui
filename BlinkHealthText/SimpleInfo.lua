@@ -183,7 +183,7 @@ end
 function S:CreateAnchorFrame()
 	if (self.anchor) then return end
 
-	self.anchor = CreateFrame("Button", "SimpleInfoAnchorFrame", UIParent);
+	self.anchor = CreateFrameAby("Button", "SimpleInfoAnchorFrame", UIParent);
 	self.anchor:SetWidth(280);
 	self.anchor:SetHeight(80);
 	self.anchor:EnableMouse(true);
@@ -289,8 +289,9 @@ function S:UpdateUnitValues()
 		petheal, petmax = UnitHealth("pet"), UnitHealthMax("pet");
 		name = UnitName("pet");
 		_, powertype = UnitPowerType("player");
-	end
-	
+    end
+    if maxheal == 0 or maxpower == 0 then return end
+
 	perh = heal/maxheal * 100 + 0.5;
 	self:SetPercentText("player", perh);
 	local hexColor = self:ToHexColor(1, 0.65, 0.16);
@@ -684,7 +685,7 @@ function S:EnableRune()
 	end
 
 	self:RegisterEvent("RUNE_POWER_UPDATE", "UpdateRune");
-	--self:RegisterEvent("RUNE_TYPE_UPDATE", "UpdateRuneType"); --aby8
+	--self:RegisterEvent("RUNE_TYPE_UPDATE", "UpdateRuneType"); --abyui8
 
 	runes:Show();
 end
@@ -693,7 +694,7 @@ function S:DisableRune()
 	self.Runes:Hide();
 
 	self:UnregisterEvent("RUNE_POWER_UPDATE");
-	--self:UnregisterEvent("RUNE_TYPE_UPDATE"); --aby8
+	--self:UnregisterEvent("RUNE_TYPE_UPDATE"); --abyui8
 end
 end
 ----------------------
@@ -748,7 +749,7 @@ function S:ConstructCastingBar()
 	name.Border:SetAlpha(0);
 	name.BorderShield:SetAlpha(0);
 	name.Flash:SetTexture("");
-	self.castBar.bg = CreateFrame("Frame", nil, self.castBar);
+	self.castBar.bg = CreateFrameAby("Frame", nil, self.castBar);
 	self.castBar.bg:SetFrameStrata("BACKGROUND");
 	self.castBar.bg:SetPoint("TOPLEFT", self.castBar, "TOPLEFT", -5, 5);
 	self.castBar.bg:SetPoint("BOTTOMRIGHT", self.castBar, "BOTTOMRIGHT", 5, -5);
@@ -800,7 +801,7 @@ end
 function S:CreateHitAnchor()
 	if (self.HitAnchor) then return end
 
-	self.HitAnchor = CreateFrame("Button", "SimpleInfoHitPointAnchorFrameNew", UIParent);
+	self.HitAnchor = CreateFrameAby("Button", "SimpleInfoHitPointAnchorFrameNew", UIParent);
 	self.HitAnchor:SetSize(100, 80);
 	self.HitAnchor:EnableMouse(true);
 	self.HitAnchor:SetMovable(true);

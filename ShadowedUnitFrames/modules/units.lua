@@ -66,6 +66,11 @@ local function RegisterNormalEvent(self, event, handler, func, unitOverride)
 		return
 	end
 
+	-- XXX: replace once 9.0 goes live, and we can cleanly remove events from tags and all modules
+	if event == "UNIT_HEALTH_FREQUENT" then
+		event = "UNIT_HEALTH"
+	end
+
 	if( unitEvents[event] and not ShadowUF.fakeUnits[self.unitRealType] ) then
 		self:BlizzRegisterUnitEvent(event, unitOverride or self.unitOwner, self.vehicleUnit)
 		if unitOverride then
@@ -77,7 +82,7 @@ local function RegisterNormalEvent(self, event, handler, func, unitOverride)
 	end
 
 	self.registeredEvents[event] = self.registeredEvents[event] or {}
-	
+
 	-- Each handler can only register an event once per a frame.
 	if( self.registeredEvents[event][handler] ) then
 		return
@@ -90,13 +95,13 @@ end
 local function UnregisterEvent(self, event, handler)
 	if( self.registeredEvents[event] and self.registeredEvents[event][handler] ) then
 		self.registeredEvents[event][handler] = nil
-		
+
 		local hasHandler
-		for handler in pairs(self.registeredEvents[event]) do
+		for _handler in pairs(self.registeredEvents[event]) do
 			hasHandler = true
 			break
 		end
-		
+
 		if( not hasHandler ) then
 			self:UnregisterEvent(event)
 		end
@@ -122,7 +127,7 @@ local function RegisterUpdateFunc(self, handler, func)
 			return
 		end
 	end
-	
+
 	table.insert(self.fullUpdates, handler)
 	table.insert(self.fullUpdates, func)
 end
@@ -148,13 +153,13 @@ local function UnregisterAll(self, handler)
 	for event, list in pairs(self.registeredEvents) do
 		if( list[handler] ) then
 			list[handler] = nil
-			
+
 			local hasRegister
-			for handler in pairs(list) do
+			for _handler in pairs(list) do
 				hasRegister = true
 				break
 			end
-			
+
 			if( not hasRegister ) then
 				self:UnregisterEvent(event)
 			end
@@ -165,7 +170,7 @@ end
 -- Handles setting alphas in a way so combat fader and range checker don't override each other
 local function DisableRangeAlpha(self, toggle)
 	self.disableRangeAlpha = toggle
-	
+
 	if( not toggle and self.rangeAlpha ) then
 		self:SetAlpha(self.rangeAlpha)
 	end
@@ -249,7 +254,7 @@ local function SetVisibility(self)
 		if( module.OnEnable and module.OnDisable and ShadowUF.db.profile.units[self.unitType][module.moduleKey] ) then
 			local key = module.moduleKey
 			local enabled = ShadowUF.db.profile.units[self.unitType][key].enabled
-			
+
 			-- These modules have mini-modules, the entire module should be enabled if at least one is enabled, and disabled if all are disabled
 			if( key == "auras" or key == "indicators" or key == "highlight" ) then
 				enabled = nil
@@ -260,7 +265,7 @@ local function SetVisibility(self)
 					end
 				end
 			end
-			
+
 			-- In an actual zone, check to see if we have an override for the zone
 			if( instanceType ~= "none" ) then
 				if( ShadowUF.db.profile.visibility[instanceType][self.unitType .. key] == false ) then
@@ -269,7 +274,7 @@ local function SetVisibility(self)
 					enabled = true
 				end
 			end
-			
+
 			-- Force disable modules for people who aren't the appropriate class
 			if( module.moduleClass and module.moduleClass ~= playerClass ) then
 				enabled = nil
@@ -284,7 +289,7 @@ local function SetVisibility(self)
 					enabled = nil
 				end
 			end
-    
+
 			-- Module isn't enabled all the time, only in this zone so we need to force it to be enabled
 			if( not self.visibility[key] and enabled ) then
 				module:OnEnable(self)
@@ -293,11 +298,11 @@ local function SetVisibility(self)
 				module:OnDisable(self)
 				layoutUpdate = true
 			end
-			
+
 			self.visibility[key] = enabled or nil
 		end
 	end
-	
+
 	-- We had a module update, force a full layout update of this frame
 	if( layoutUpdate ) then
 		ShadowUF.Layout:Load(self)
@@ -310,7 +315,7 @@ local function checkVehicleData(self, elapsed)
 	if( self.timeElapsed >= 0.50 ) then
 		self.timeElapsed = 0
 		self.dataAttempts = self.dataAttempts + 1
-		
+
 		-- Took too long to get vehicle data, or they are no longer in a vehicle
 		if( self.dataAttempts >= 6 or not UnitHasVehicleUI(self.unitOwner) or not UnitHasVehiclePlayerFrameUI(self.unitOwner) ) then
 			self.timeElapsed = nil
@@ -320,18 +325,18 @@ local function checkVehicleData(self, elapsed)
 			self.inVehicle = false
 			self.unit = self.unitOwner
 			self:FullUpdate()
-			
+
 		-- Got data, stop checking and do a full frame update
 		elseif( UnitIsConnected(self.unit) or UnitHealthMax(self.unit) > 0 ) then
 			self.timeElapsed = nil
 			self.dataAttempts = nil
 			self:SetScript("OnUpdate", nil)
-			
+
 			self.unitGUID = UnitGUID(self.unit)
 			self:FullUpdate()
 		end
 	end
-end 
+end
 
 -- Check if a unit entered a vehicle
 function Units:CheckVehicleStatus(frame, event, unit)
@@ -350,7 +355,7 @@ function Units:CheckVehicleStatus(frame, event, unit)
 			frame.unitGUID = UnitGUID(frame.unit)
 			frame:FullUpdate()
 		end
-				
+
 	-- Was in a vehicle, no longer has a UI
 	elseif( frame.inVehicle and ( not UnitHasVehicleUI(frame.unitOwner) or not UnitHasVehiclePlayerFrameUI(frame.unitOwner) or ShadowUF.db.profile.units[frame.unitType].disableVehicle ) ) then
 		frame.inVehicle = false
@@ -365,7 +370,7 @@ function Units:CheckUnitStatus(frame)
 	local guid = frame.unit and UnitGUID(frame.unit)
 	if( guid ~= frame.unitGUID ) then
 		frame.unitGUID = guid
-		
+
 		if( guid ) then
 			frame:FullUpdate()
 		end
@@ -399,7 +404,7 @@ end
 -- More fun with sorting, due to sorting magic we have to check if we want to create stuff when the frame changes of partys too
 local function createChildUnits(self)
 	if( not self.unitID ) then return end
-	
+
 	for child, parentUnit in pairs(childUnits) do
 		if( parentUnit == self.unitType and ShadowUF.db.profile.units[child].enabled ) then
 			Units:LoadChildUnit(self, child, self.unitID)
@@ -410,7 +415,7 @@ end
 local OnAttributeChanged
 local function updateChildUnits(...)
 	if( not ShadowUF.db.profile.locked ) then return end
-	
+
 	for i=1, select("#", ...) do
 		local child = select(i, ...)
 		if( child.parent and child.unitType ) then
@@ -438,7 +443,7 @@ OnAttributeChanged = function(self, name, unit)
 	-- Nullify the previous entry if it had one
 	local configUnit = self.unitUnmapped or unit
 	if( self.configUnit and unitFrames[self.configUnit] == self ) then unitFrames[self.configUnit] = nil end
-	
+
 	-- Setup identification data
 	self.unit = unit
 	self.unitID = tonumber(string.match(unit, "([0-9]+)"))
@@ -454,7 +459,7 @@ OnAttributeChanged = function(self, name, unit)
 	if( self.unitRealType == self.unitType ) then
 		unitFrames[configUnit] = self
 	end
-	
+
 	frameList[self] = true
 
 	if( self.hasChildren ) then
@@ -472,7 +477,7 @@ OnAttributeChanged = function(self, name, unit)
 		self:FullUpdate()
 		return
 	end
-	
+
 	self.unitInitialized = true
 
 	-- Add to Clique
@@ -480,14 +485,14 @@ OnAttributeChanged = function(self, name, unit)
 		ClickCastFrames = ClickCastFrames or {}
 		ClickCastFrames[self] = true
 	end
-	
+
 	-- Handles switching the internal unit variable to that of their vehicle
 	if( self.unit == "player" or self.unitRealType == "party" or self.unitRealType == "raid" ) then
 		self:RegisterNormalEvent("UNIT_ENTERED_VEHICLE", Units, "CheckVehicleStatus")
 		self:RegisterNormalEvent("UNIT_EXITED_VEHICLE", Units, "CheckVehicleStatus")
 		self:RegisterUpdateFunc(Units, "CheckVehicleStatus")
-	end	
-	
+	end
+
 	-- Phase change, do a full update on it
 	self:RegisterUnitEvent("UNIT_PHASE", self, "FullUpdate")
 
@@ -496,18 +501,18 @@ OnAttributeChanged = function(self, name, unit)
 		self.unitRealOwner = self.unit == "pet" and "player" or ShadowUF.partyUnits[self.unitID]
 		self:SetAttribute("unitRealOwner", self.unitRealOwner)
 		self:RegisterNormalEvent("UNIT_PET", Units, "CheckPetUnitUpdated")
-		
+
 		if( self.unit == "pet" ) then
 			self:SetAttribute("disableVehicleSwap", ShadowUF.db.profile.units.player.disableVehicle)
 		else
 			self:SetAttribute("disableVehicleSwap", ShadowUF.db.profile.units.party.disableVehicle)
 		end
-	
+
 		-- Logged out in a vehicle
 		if( UnitHasVehicleUI(self.unitRealOwner) and UnitHasVehiclePlayerFrameUI(self.unitRealOwner) ) then
 			self:SetAttribute("unitIsVehicle", true)
 		end
-		
+
 		-- Hide any pet that became a vehicle, we detect this by the owner being untargetable but they have a pet out
 		stateMonitor:WrapScript(self, "OnAttributeChanged", [[
 			if( name == "state-vehicleupdated" ) then
@@ -535,13 +540,19 @@ OnAttributeChanged = function(self, name, unit)
 		self.isUnitVolatile = true
 		self:RegisterNormalEvent("PLAYER_FOCUS_CHANGED", Units, "CheckUnitStatus")
 		self:RegisterUnitEvent("UNIT_TARGETABLE_CHANGED", self, "FullUpdate")
-				
+
 	elseif( self.unit == "player" ) then
-		self:SetAttribute("toggleForVehicle", true)
-		
+		-- this should not get called in combat, but just in case make sure we are not actually in combat
+		if not InCombatLockdown() then
+			self:SetAttribute("toggleForVehicle", true)
+		end
+
 		-- Force a full update when the player is alive to prevent freezes when releasing in a zone that forces a ressurect (naxx/tk/etc)
 		self:RegisterNormalEvent("PLAYER_ALIVE", self, "FullUpdate")
-	
+
+		-- full update when the player targetable changes, ie. during cutscenes or transports
+		self:RegisterUnitEvent("UNIT_TARGETABLE_CHANGED", self, "FullUpdate")
+
 	-- Update boss
 	elseif( self.unitType == "boss" ) then
 		self:RegisterNormalEvent("INSTANCE_ENCOUNTER_ENGAGE_UNIT", self, "FullUpdate")
@@ -562,7 +573,7 @@ OnAttributeChanged = function(self, name, unit)
 		self:RegisterNormalEvent("GROUP_ROSTER_UPDATE", Units, "CheckGroupedUnitStatus")
 		self:RegisterUnitEvent("UNIT_NAME_UPDATE", Units, "CheckUnitStatus")
 		self:RegisterUnitEvent("UNIT_CONNECTION", self, "FullUpdate")
-		
+
 	-- Party members need to watch for changes
 	elseif( self.unitRealType == "party" ) then
 		self:RegisterNormalEvent("GROUP_ROSTER_UPDATE", Units, "CheckGroupedUnitStatus")
@@ -571,11 +582,11 @@ OnAttributeChanged = function(self, name, unit)
 		self:RegisterUnitEvent("UNIT_NAME_UPDATE", Units, "CheckUnitStatus")
 		self:RegisterUnitEvent("UNIT_OTHER_PARTY_CHANGED", self, "FullUpdate")
 		self:RegisterUnitEvent("UNIT_CONNECTION", self, "FullUpdate")
-	
+
 	-- *target units are not real units, thus they do not receive events and must be polled for data
 	elseif( ShadowUF.fakeUnits[self.unitRealType] ) then
 		createFakeUnitUpdateTimer(self)
-		
+
 		-- Speeds up updating units when their owner changes target, if party1 changes target then party1target is force updated, if target changes target
 		-- then targettarget and targettargettarget are also force updated
 		if( self.unitRealType == "partytarget" ) then
@@ -631,7 +642,7 @@ local secureInitializeUnit = [[
 	end
 ]]
 
-local unitButtonTemplate = ClickCastHeader and "ClickCastUnitTemplate,SUF_SecureUnitTemplate" or "SUF_SecureUnitTemplate"
+local unitButtonTemplate = ClickCastHeader and (BackdropTemplateMixin and "ClickCastUnitTemplate,SUF_SecureUnitTemplate,BackdropTemplate" or "ClickCastUnitTemplate,SUF_SecureUnitTemplate") or (BackdropTemplateMixin and "SUF_SecureUnitTemplate,BackdropTemplate" or "SUF_SecureUnitTemplate")
 
 -- Header unit initialized
 local function initializeUnit(header, frameName)
@@ -706,7 +717,7 @@ function Units:CreateUnit(...)
 	frame.highFrame = CreateFrame("Frame", nil, frame)
 	frame.highFrame:SetFrameLevel(frame.topFrameLevel + 2)
 	frame.highFrame:SetAllPoints(frame)
-	
+
 	frame:HookScript("OnAttributeChanged", OnAttributeChanged)
 	frame:SetScript("OnEvent", OnEvent)
 	frame:HookScript("OnEnter", OnEnter)
@@ -723,7 +734,7 @@ function Units:CreateUnit(...)
 		frame:SetAttribute("*type1", "target")
 		frame:SetAttribute("*type2", "togglemenu")
 	end
-	
+
 	return frame
 end
 
@@ -739,7 +750,7 @@ function Units:ReloadHeader(type)
 		end
 	elseif( type == "raid" and not ShadowUF.db.profile.units[type].frameSplit and headerFrames.raidParent ) then
 		self:InitializeFrame("raid")
-	
+
 	elseif( headerFrames[type] ) then
 		self:SetHeaderAttributes(headerFrames[type], type)
 		ShadowUF.Layout:AnchorFrame(UIParent, headerFrames[type], ShadowUF.db.profile.positions[type])
@@ -750,13 +761,13 @@ end
 function Units:PositionHeaderChildren(frame)
     local point = frame:GetAttribute("point") or "TOP"
     local relativePoint = ShadowUF.Layout:GetRelativeAnchor(point)
-	
+
 	if( #(frame.children) == 0 ) then return end
 
     local xMod, yMod = math.abs(frame:GetAttribute("xMod")), math.abs(frame:GetAttribute("yMod"))
     local x = frame:GetAttribute("xOffset") or 0
     local y = frame:GetAttribute("yOffset") or 0
-	
+
 	for id, child in pairs(frame.children) do
 		if( id > 1 ) then
 			frame.children[id]:ClearAllPoints()
@@ -789,45 +800,45 @@ function Units:SetHeaderAttributes(frame, type)
 	local yMod = config.attribPoint == "TOP" and -1 or config.attribPoint == "BOTTOM" and 1 or 0
 	local widthMod = (config.attribPoint == "LEFT" or config.attribPoint == "RIGHT") and MEMBERS_PER_RAID_GROUP or 1
 	local heightMod = (config.attribPoint == "TOP" or config.attribPoint == "BOTTOM") and MEMBERS_PER_RAID_GROUP or 1
-	
+
 	frame:SetAttribute("point", config.attribPoint)
 	frame:SetAttribute("sortMethod", config.sortMethod)
 	frame:SetAttribute("sortDir", config.sortOrder)
-	
+
 	frame:SetAttribute("xOffset", config.offset * xMod)
 	frame:SetAttribute("yOffset", config.offset * yMod)
 	frame:SetAttribute("xMod", xMod)
 	frame:SetAttribute("yMod", yMod)
-	
+
 	-- Split up raid frame groups
 	if( config.frameSplit and type == "raid" ) then
-		local anchorPoint, relativePoint, xMod, yMod = ShadowUF.Layout:GetSplitRelativeAnchor(config.attribPoint, config.attribAnchorPoint)
+		local anchorPoint, relativePoint, xModRow, yModRow = ShadowUF.Layout:GetSplitRelativeAnchor(config.attribPoint, config.attribAnchorPoint)
 		local columnPoint, xColMod, yColMod = ShadowUF.Layout:GetRelativeAnchor(config.attribPoint)
-		
+
 		local lastHeader = frame
 		for id=1, 8 do
 			local childHeader = headerFrames["raid" .. id]
 			if( childHeader ) then
 				childHeader:SetAttribute("showRaid", ShadowUF.db.profile.locked and true)
-				
+
 				childHeader:SetAttribute("minWidth", config.width * widthMod)
 				childHeader:SetAttribute("minHeight", config.height * heightMod)
-				
+
 				if( childHeader ~= frame ) then
 					childHeader:SetAttribute("point", config.attribPoint)
 					childHeader:SetAttribute("sortMethod", config.sortMethod)
 					childHeader:SetAttribute("sortDir", config.sortOrder)
 					childHeader:SetAttribute("showPlayer", nil)
 					childHeader:SetAttribute("showParty", nil)
-					
+
 					childHeader:SetAttribute("xOffset", frame:GetAttribute("xOffset"))
 					childHeader:SetAttribute("yOffset", frame:GetAttribute("yOffset"))
-					
+
 					childHeader:ClearAllPoints()
 					if( (id - 1) % config.groupsPerRow == 0 ) then
 						local x = config.groupSpacing * xColMod
 						local y = config.groupSpacing * yColMod
-						
+
 						-- When we're anchoring a new column to the bottom of naother one, the height will mess it up
 						-- if what we anchored to isn't full, by anchoring it to the top instead will get a consistent result
 						local point = columnPoint
@@ -836,10 +847,10 @@ function Units:SetHeaderAttributes(frame, type)
 							x = x + (config.height * 5) * xColMod
 							y = y + (config.height * 5) * yColMod
 						end
-						
+
 						childHeader:SetPoint(config.attribPoint, headerFrames["raid" .. id - config.groupsPerRow], point, x, y)
 					else
-						childHeader:SetPoint(anchorPoint, lastHeader, relativePoint, config.columnSpacing * xMod, config.columnSpacing * yMod)
+						childHeader:SetPoint(anchorPoint, lastHeader, relativePoint, config.columnSpacing * xModRow, config.columnSpacing * yModRow)
 					end
 
 					lastHeader = childHeader
@@ -849,9 +860,9 @@ function Units:SetHeaderAttributes(frame, type)
 				-- if we force a repositioning through startingIndex it's fixed thought.
 				childHeader:SetAttribute("startingIndex", 10000)
 				childHeader:SetAttribute("startingIndex", 1)
-			end	
+			end
 		end
-		
+
 	-- Normal raid, ma or mt
 	elseif( type == "raidpet" or type == "raid" or type == "mainassist" or type == "maintank" ) then
 		local filter
@@ -868,7 +879,7 @@ function Units:SetHeaderAttributes(frame, type)
 		else
 			filter = config.groupFilter
 		end
-		
+
 		frame:SetAttribute("showRaid", ShadowUF.db.profile.locked and true)
 		frame:SetAttribute("maxColumns", config.maxColumns)
 		frame:SetAttribute("unitsPerColumn", config.unitsPerColumn)
@@ -895,7 +906,7 @@ function Units:SetHeaderAttributes(frame, type)
 		frame:SetAttribute("childChanged", 1)
 
 		self:PositionHeaderChildren(frame)
-	
+
 	-- Update party frames to not show anyone if they should be in raids
 	elseif( type == "party" ) then
 		frame:SetAttribute("maxColumns", math.ceil((config.showPlayer and 5 or 4) / config.unitsPerColumn))
@@ -909,7 +920,7 @@ function Units:SetHeaderAttributes(frame, type)
 			stateMonitor.party:SetAttribute("hideAnyRaid", ShadowUF.db.profile.units.party.hideAnyRaid)
 		end
 	end
-	
+
 	if( type == "raid" ) then
 		self:CheckGroupVisibility()
 
@@ -930,7 +941,7 @@ function Units:SetHeaderAttributes(frame, type)
 			index = index + 1
 			child = _G[name .. index]
 		end
-	
+
 		-- Hiding and reshowing the header forces an update
 		if( frame:IsShown() ) then
 			frame:Hide()
@@ -948,11 +959,11 @@ function Units:LoadUnit(unit)
 		RegisterUnitWatch(unitFrames[unit], unitFrames[unit].hasStateWatch)
 		return
 	end
-	
-	local frame = self:CreateUnit("Button", "SUFUnit" .. unit, petBattleFrame, "SecureUnitButtonTemplate")
+
+	local frame = self:CreateUnit("Button", "SUFUnit" .. unit, petBattleFrame, BackdropTemplateMixin and "SecureUnitButtonTemplate,BackdropTemplate" or "SecureUnitButtonTemplate")
 	frame:SetAttribute("unit", unit)
 	frame.hasStateWatch = unit == "pet"
-		
+
 	-- Annd lets get this going
 	RegisterUnitWatch(frame, frame.hasStateWatch)
 end
@@ -974,14 +985,14 @@ local function setupRaidStateMonitor(id, headerFrame)
 			if( header:IsVisible() ) then header:Hide() end
 			return
 		end
-		
+
 		if( self:GetAttribute("hideSemiRaid") and self:GetAttribute("state-raidmonitor") ~= "raid6" ) then
 			header:Hide()
 		else
 			header:Show()
 		end
 	]])
-	
+
 	RegisterStateDriver(stateMonitor.raids[id], "raidmonitor", "[target=raid6, exists] raid6; none")
 end
 
@@ -1015,33 +1026,33 @@ function Units:LoadSplitGroupHeader(type)
 				--frame:SetBackdrop({bgFile = "Interface\\ChatFrame\\ChatFrameBackground", edgeFile = "Interface\\ChatFrame\\ChatFrameBackground", edgeSize = 1})
 				--frame:SetBackdropBorderColor(1, 0, 0, 1)
 				--frame:SetBackdropColor(0, 0, 0, 0)
-				
+
 				frame:SetAttribute("style-height", config.height)
 				frame:SetAttribute("style-width", config.width)
 				frame:SetAttribute("style-scale", config.scale)
-				
+
 				if( ClickCastHeader ) then
 					-- the OnLoad adds the functions like SetFrameRef to the header
 					SecureHandler_OnLoad(frame)
 					frame:SetFrameRef("clickcast_header", ClickCastHeader)
 				end
-				
+
 				headerFrames["raid" .. id] = frame
 			end
-			
+
 			frame:Show()
-			
+
 			if( not headerFrames.raidParent or headerFrames.raidParent.groupID > id ) then
 				headerFrames.raidParent = frame
 			end
 
 			setupRaidStateMonitor(id, frame)
-			
+
 		elseif( frame ) then
-			frame:Hide()	
+			frame:Hide()
 		end
 	end
-	
+
 	if( headerFrames.raidParent ) then
 		self:SetHeaderAttributes(headerFrames.raidParent, type)
 		ShadowUF.Layout:AnchorFrame(UIParent, headerFrames.raidParent, ShadowUF.db.profile.positions.raid)
@@ -1057,7 +1068,7 @@ function Units:LoadGroupHeader(type)
 		if( type == "party" and stateMonitor.party ) then
 			stateMonitor.party:SetAttribute("partyDisabled", nil)
 		end
-		
+
 		if( type == "raid" ) then
 			for id, monitor in pairs(stateMonitor.raids) do
 				monitor:SetAttribute("hideSemiRaid", ShadowUF.db.profile.units.raid.hideSemiRaid)
@@ -1102,7 +1113,7 @@ function Units:LoadGroupHeader(type)
 	end
 
 	ShadowUF.Layout:AnchorFrame(UIParent, headerFrame, ShadowUF.db.profile.positions[type])
-	
+
 	-- We have to do party hiding based off raid as a state driver so that we can smoothly hide the party frames based off of combat and such
 	-- technically this isn't the cleanest solution because party frames will still have unit watches active
 	-- but this isn't as big of a deal, because SUF automatically will unregister the OnEvent for party frames while hidden
@@ -1115,7 +1126,7 @@ function Units:LoadGroupHeader(type)
 		stateMonitor.party:WrapScript(stateMonitor.party, "OnAttributeChanged", [[
 			if( name ~= "state-raidmonitor" and name ~= "partydisabled" and name ~= "hideanyraid" and name ~= "hidesemiraid" ) then return end
 			if( self:GetAttribute("partyDisabled") ) then return end
-			
+
 			if( self:GetAttribute("hideAnyRaid") and ( self:GetAttribute("state-raidmonitor") == "raid1" or self:GetAttribute("state-raidmonitor") == "raid6" ) ) then
 				self:GetFrameRef("partyHeader"):Hide()
 			elseif( self:GetAttribute("hideSemiRaid") and self:GetAttribute("state-raidmonitor") == "raid6" ) then
@@ -1125,7 +1136,7 @@ function Units:LoadGroupHeader(type)
 			end
 		]])
 		RegisterStateDriver(stateMonitor.party, "raidmonitor", "[target=raid6, exists] raid6; [target=raid1, exists] raid1; none")
-		
+
 	elseif( type == "raid" ) then
 		setupRaidStateMonitor(-1, headerFrame)
 	else
@@ -1134,12 +1145,12 @@ function Units:LoadGroupHeader(type)
 
 	-- Any frames that were split out in this group need to be hidden
 	if( headerFrames.raidParent ) then
-		for _, headerFrame in pairs(headerFrames) do
-			if( headerFrame.splitParent == type ) then
-				headerFrame:Hide()
+		for _, f in pairs(headerFrames) do
+			if( f.splitParent == type ) then
+				f:Hide()
 			end
 		end
-	end	
+	end
 end
 
 -- Fake headers that are supposed to act like headers to the users, but are really not
@@ -1155,7 +1166,7 @@ function Units:LoadZoneHeader(type)
 		end
 		return
 	end
-	
+
 	local headerFrame = CreateFrame("Frame", "SUFHeader" .. type, petBattleFrame, "SecureHandlerBaseTemplate")
 	headerFrame.isHeaderFrame = true
 	headerFrame.unitType = type
@@ -1163,21 +1174,21 @@ function Units:LoadZoneHeader(type)
 	headerFrame:SetClampedToScreen(true)
 	headerFrame:SetMovable(true)
 	headerFrame:SetHeight(0.1)
- 	headerFrame:SetAttribute("totalChildren", #(ShadowUF[type .. "Units"]))
+	headerFrame:SetAttribute("totalChildren", #(ShadowUF[type .. "Units"]))
 	headerFrame.children = {}
 
 	headerFrames[type] = headerFrame
-	
+
 	if( type == "arena" ) then
-		headerFrame:SetScript("OnAttributeChanged", function(self, key, value)
-			if( key == "childChanged" and value and self.children[value] and self:IsVisible() ) then
-				self.children[value]:FullUpdate()
+		headerFrame:SetScript("OnAttributeChanged", function(frame, key, value)
+			if( key == "childChanged" and value and frame.children[value] and frame:IsVisible() ) then
+				frame.children[value]:FullUpdate()
 			end
 		end)
 	end
-	
+
 	for id, unit in pairs(ShadowUF[type .. "Units"]) do
-		local frame = self:CreateUnit("Button", "SUFHeader" .. type .. "UnitButton" .. id, headerFrame, "SecureUnitButtonTemplate")
+		local frame = self:CreateUnit("Button", "SUFHeader" .. type .. "UnitButton" .. id, headerFrame, BackdropTemplateMixin and "SecureUnitButtonTemplate,BackdropTemplate" or "SecureUnitButtonTemplate")
 		frame.ignoreAnchor = true
 		frame.hasStateWatch = true
 		frame.unitUnmapped = type .. id
@@ -1188,7 +1199,7 @@ function Units:LoadZoneHeader(type)
 		-- Override with our arena specific concerns
 		frame.UnitClassToken = ArenaClassToken
 		frame:SetScript("OnShow", OnShowForced)
-		
+
 		headerFrame.children[id] = frame
 		headerFrame:SetFrameRef("child" .. id, frame)
 
@@ -1204,7 +1215,7 @@ function Units:LoadZoneHeader(type)
 					elseif( not value and not self:GetAttribute("unitDisappeared") ) then
 						self:SetAttribute("unitDisappeared", true)
 					end
-					
+
 					if( value ) then
 						self:Show()
 					end
@@ -1223,12 +1234,12 @@ function Units:LoadZoneHeader(type)
 					parent:SetAttribute("childChanged", self:GetAttribute("unitID"))
 				end
 			]])
- 		end
+		end
 
 		RegisterUnitWatch(frame, frame.hasStateWatch)
- 	end
+	end
 
- 	-- Dynamic height/width adjustment
+	-- Dynamic height/width adjustment
 	stateMonitor:WrapScript(headerFrame, "OnAttributeChanged", [[
 		if( name ~= "childchanged" ) then return end
 
@@ -1256,7 +1267,7 @@ function Units:LoadZoneHeader(type)
 
 
 	self:SetHeaderAttributes(headerFrame, type)
-	ShadowUF.Layout:AnchorFrame(UIParent, headerFrame, ShadowUF.db.profile.positions[type])	
+	ShadowUF.Layout:AnchorFrame(UIParent, headerFrame, ShadowUF.db.profile.positions[type])
 
 	if( type == "arena" ) then
 		self:InitializeArena()
@@ -1280,7 +1291,7 @@ function Units:LoadChildUnit(parent, type, id)
 			end
 		end
 	end
-	
+
 	parent.hasChildren = true
 
 	local suffix
@@ -1293,7 +1304,7 @@ function Units:LoadChildUnit(parent, type, id)
 	end
 
 	-- Now we can create the actual frame
-	local frame = self:CreateUnit("Button", "SUFChild" .. type .. string.match(parent:GetName(), "(%d+)"), parent, "SecureUnitButtonTemplate")
+	local frame = self:CreateUnit("Button", "SUFChild" .. type .. string.match(parent:GetName(), "(%d+)"), parent, BackdropTemplateMixin and "SecureUnitButtonTemplate,BackdropTemplate" or "SecureUnitButtonTemplate")
 	frame.unitType = type
 	frame.parent = parent
 	frame.isChildUnit = true
@@ -1303,7 +1314,7 @@ function Units:LoadChildUnit(parent, type, id)
 	frame:SetAttribute("unitsuffix", suffix)
 	OnAttributeChanged(frame, "unit", SecureButton_GetModifiedUnit(frame))
 	frameList[frame] = true
-	
+
 	RegisterUnitWatch(frame, frame.hasStateWatch)
 	ShadowUF.Layout:AnchorFrame(parent, frame, ShadowUF.db.profile.positions[type])
 end
@@ -1352,7 +1363,7 @@ function Units:UninitializeFrame(type)
 		end
 	elseif( headerFrames[type] ) then
 		headerFrames[type]:Hide()
-		
+
 		if( headerFrames[type].children ) then
 			for _, frame in pairs(headerFrames[type].children) do
 				if( self.zoneUnits[type] ) then
@@ -1383,7 +1394,7 @@ function Units:ProfileChanged()
 			frame:ClearAllPoints()
 		end
 	end
-	
+
 	for frame in pairs(frameList) do
 		if( frame.unit and ShadowUF.db.profile.units[frame.unitType].enabled ) then
 			-- Force all enabled modules to disable
@@ -1393,14 +1404,14 @@ function Units:ProfileChanged()
 					module:OnDisable(frame)
 				end
 			end
-			
+
 			-- Now enable whatever we need to
 			frame:SetVisibility()
 			ShadowUF.Layout:Load(frame)
 			frame:FullUpdate()
 		end
 	end
-	
+
 	for _, frame in pairs(headerFrames) do
 		if( ShadowUF.db.profile.units[frame.unitType].enabled ) then
 			self:ReloadHeader(frame.unitType)
@@ -1413,7 +1424,7 @@ function Units:CreateBar(parent)
 	local bar = CreateFrame("StatusBar", nil, parent)
 	bar:SetFrameLevel(parent.topFrameLevel or 5)
 	bar.parent = parent
-	
+
 	bar.background = bar:CreateTexture(nil, "BORDER")
 	bar.background:SetHeight(1)
 	bar.background:SetWidth(1)
@@ -1445,24 +1456,24 @@ function Units:CheckPlayerZone(force)
 		queueZoneCheck = force and 2 or 1
 		return
 	end
-	
+
 	-- CanHearthAndResurrectFromArea() returns true for world pvp areas, according to BattlefieldFrame.lua
 	local instance = CanHearthAndResurrectFromArea() and "pvp" or select(2, IsInInstance()) or "none"
 	if( instance == "scenario" ) then instance = "party" end
 
 	if( instance == instanceType and not force ) then return end
 	instanceType = instance
-	
+
 	ShadowUF:LoadUnits()
 	for frame in pairs(frameList) do
 		if( frame.unit and ShadowUF.db.profile.units[frame.unitType].enabled ) then
 			frame:SetVisibility()
-			
+
 			-- Auras are enabled so will need to check if the filter has to change
 			if( frame.visibility.auras ) then
 				ShadowUF.modules.auras:UpdateFilter(frame)
 			end
-			
+
 			if( UnitExists(frame.unit) ) then
 				frame:FullUpdate()
 			end
@@ -1473,13 +1484,15 @@ end
 -- Handle figuring out what auras players can cure
 local curableSpells = {
 	["DRUID"] = {[88423] = {"Magic", "Curse", "Poison"}, [2782] = {"Curse", "Poison"}},
-	["PRIEST"] = {[527] = {"Magic", "Disease"}, [32375] = {"Magic"}},
+	["PRIEST"] = {[527] = {"Magic", "Disease"}, [32375] = {"Magic"}, [213634] = {"Disease"}},
 	["PALADIN"] = {[4987] = {"Poison", "Disease", "Magic"}, [213644] = {"Poison", "Disease"}},
 	["SHAMAN"] = {[77130] = {"Curse", "Magic"}, [51886] = {"Curse"}},
 	["MONK"] = {[115450] = {"Poison", "Disease", "Magic"}, [218164] = {"Poison", "Disease"}},
+	["MAGE"] = {[475] = {"Curse"}},
+	["WARLOCK"] = {[89808] = {"Magic"}},
 }
 
-curableSpells = curableSpells[select(2, UnitClass("player"))]
+curableSpells = curableSpells[playerClass]
 
 local function checkCurableSpells()
 	if( not curableSpells ) then return end
@@ -1487,7 +1500,7 @@ local function checkCurableSpells()
 	table.wipe(Units.canCure)
 
 	for spellID, cures in pairs(curableSpells) do
-		if( IsPlayerSpell(spellID) ) then
+		if( IsPlayerSpell(spellID) or IsSpellKnown(spellID, true) ) then
 			for _, auraType in pairs(cures) do
 				Units.canCure[auraType] = true
 			end
@@ -1513,7 +1526,7 @@ centralFrame:SetScript("OnEvent", function(self, event, unit)
 		else
 			self:UnregisterEvent("PLAYER_UNGHOST")
 			Units:CheckPlayerZone()
-		end	
+		end
 
 	-- Force update frames
 	elseif( event == "ARENA_PREP_OPPONENT_SPECIALIZATIONS" or event == "ARENA_OPPONENT_UPDATE" ) then
@@ -1531,7 +1544,7 @@ centralFrame:SetScript("OnEvent", function(self, event, unit)
 		end
 
 	-- Monitor talent changes for curable changes
-	elseif( event == "PLAYER_SPECIALIZATION_CHANGED" ) then
+	elseif( event == "PLAYER_SPECIALIZATION_CHANGED" or event == "UNIT_PET" ) then
 		checkCurableSpells()
 
 		for frame in pairs(ShadowUF.Units.frameList) do
@@ -1547,6 +1560,9 @@ centralFrame:SetScript("OnEvent", function(self, event, unit)
 	elseif( event == "PLAYER_LOGIN" ) then
 		checkCurableSpells()
 		self:RegisterEvent("PLAYER_SPECIALIZATION_CHANGED")
+		if( playerClass == "WARLOCK" ) then
+			self:RegisterUnitEvent("UNIT_PET", "player", nil)
+		end
 
 	-- This is slightly hackish, but it suits the purpose just fine for somthing thats rarely called.
 	elseif( event == "PLAYER_REGEN_ENABLED" ) then
@@ -1554,9 +1570,9 @@ centralFrame:SetScript("OnEvent", function(self, event, unit)
 		for _, queue in pairs(queuedCombat) do
 			Units:LoadChildUnit(queue.parent, queue.type, queue.id)
 		end
-		
+
 		table.wipe(queuedCombat)
-		
+
 		if( queueZoneCheck ) then
 			Units:CheckPlayerZone(queueZoneCheck == 2 and true)
 			queueZoneCheck = nil

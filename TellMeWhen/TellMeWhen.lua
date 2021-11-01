@@ -1,4 +1,4 @@
--- ---------------------------------
+﻿-- ---------------------------------
 -- TellMeWhen
 -- Originally by Nephthys of Hyjal <lieandswell@yahoo.com>
 
@@ -15,10 +15,27 @@
 -- ADDON GLOBALS AND LOCALS
 -- ---------------------------------
 
-TELLMEWHEN_VERSION = "8.6.0"
+if WOW_PROJECT_ID ~= WOW_PROJECT_MAINLINE then
+	StaticPopupDialogs["TMW_PROJECT_MISMATCH"] = {
+		-- This is not localizable, because AceLocale might not have loaded
+		-- (this is why we don't bother to load AceLocale until after these checks).
+		text = ("You've installed TellMeWhen for retail WoW, but this is %s. Please double-check which version of TMW you downloaded."):format(_G["EXPANSION_NAME" + GetExpansionLevel()]), 
+		button1 = EXIT_GAME,
+		button2 = CANCEL,
+		OnAccept = ForceQuit,
+		timeout = 0,
+		showAlert = true,
+		whileDead = true,
+		preferredIndex = 3, -- http://forums.wowace.com/showthread.php?p=320956
+	}
+	StaticPopup_Show("TMW_PROJECT_MISMATCH")
+	return
+end
+
+TELLMEWHEN_VERSION = "9.1.1"
 
 TELLMEWHEN_VERSION_MINOR = ""
-local projectVersion = "8.6.0" -- comes out like "6.2.2-21-g4e91cee"
+local projectVersion = "9.1.1" -- comes out like "6.2.2-21-g4e91cee"
 if projectVersion:find("project%-version") then
 	TELLMEWHEN_VERSION_MINOR = "dev"
 elseif strmatch(projectVersion, "%-%d+%-") then
@@ -26,11 +43,11 @@ elseif strmatch(projectVersion, "%-%d+%-") then
 end
 
 TELLMEWHEN_VERSION_FULL = TELLMEWHEN_VERSION .. " " .. TELLMEWHEN_VERSION_MINOR
-TELLMEWHEN_VERSIONNUMBER = 86006 -- NEVER DECREASE THIS NUMBER (duh?).  IT IS ALSO ONLY INTERNAL (for versioning of)
+TELLMEWHEN_VERSIONNUMBER = 91100 -- NEVER DECREASE THIS NUMBER (duh?).  IT IS ALSO ONLY INTERNAL (for versioning of)
 
 TELLMEWHEN_FORCECHANGELOG = 86005 -- if the user hasn't seen the changelog until at least this version, show it to them.
 
-if TELLMEWHEN_VERSIONNUMBER > 87000 or TELLMEWHEN_VERSIONNUMBER < 86000 then
+if TELLMEWHEN_VERSIONNUMBER > 92000 or TELLMEWHEN_VERSIONNUMBER < 91000 then
 	-- safety check because i accidentally made the version number 414069 once
 	return error("TELLMEWHEN: THE VERSION NUMBER IS SCREWED UP OR MAYBE THE SAFETY LIMITS ARE WRONG")
 end
@@ -419,8 +436,8 @@ end})
 
 TMW.SpellTexturesMetaIndex = {
 	--hack for pvp tinkets
-	[42292] = "Interface\\Icons\\inv_jewelry_trinketpvp_0" .. (UnitFactionGroup("player") == "Horde" and "2" or "1"),
-	[strlowerCache[GetSpellInfo(42292)]] = "Interface\\Icons\\inv_jewelry_trinketpvp_0" .. (UnitFactionGroup("player") == "Horde" and "2" or "1"),
+	[336126] = GetSpellTexture(336126),
+	[strlowerCache[GetSpellInfo(336126)]] = GetSpellTexture(336126),
 }
 local SpellTexturesMetaIndex = TMW.SpellTexturesMetaIndex
 
@@ -1102,9 +1119,7 @@ function TMW:PLAYER_LOGIN()
 		-- GLOBALS: StaticPopupDialogs, StaticPopup_Show, EXIT_GAME, CANCEL, ForceQuit
 		StaticPopupDialogs["TMW_RESTARTNEEDED"] = {
 			text = L["ERROR_MISSINGFILE"], 
-			button1 = EXIT_GAME,
-			button2 = CANCEL,
-			OnAccept = ForceQuit,
+			button1 = OKAY,
 			timeout = 0,
 			showAlert = true,
 			whileDead = true,
@@ -1114,18 +1129,16 @@ function TMW:PLAYER_LOGIN()
 		return
 
 	-- if the file is NOT required for gross functionality
-	elseif not TMW.DOGTAG then
+	elseif not LibStub("DRList-1.0", true) then
 		StaticPopupDialogs["TMW_RESTARTNEEDED"] = {
-			text = L["ERROR_MISSINGFILE_NOREQ"], 
-			button1 = EXIT_GAME,
-			button2 = CANCEL,
-			OnAccept = ForceQuit,
+			text = L["ERROR_MISSINGFILE_NOREQ"],
+			button1 = OKAY,
 			timeout = 0,
 			showAlert = true,
 			whileDead = true,
 			preferredIndex = 3, -- http://forums.wowace.com/showthread.php?p=320956
 		}
-		StaticPopup_Show("TMW_RESTARTNEEDED", TELLMEWHEN_VERSION_FULL, "TellMeWhen/Lib/LibBabble-CreatureType-3.0/LibBabble-CreatureType-3.0.lua") -- arg3 could also be L["ERROR_MISSINGFILE_REQFILE"]
+		StaticPopup_Show("TMW_RESTARTNEEDED", TELLMEWHEN_VERSION_FULL, "TellMeWhen/Lib/DRList-1.0/DRList-1.0.lua") -- arg3 could also be L["ERROR_MISSINGFILE_REQFILE"]
 	end
 	
 
@@ -1177,7 +1190,7 @@ function TMW:PLAYER_LOGIN()
 	
 	TMW:Fire("TMW_INITIALIZE")
 	TMW:UnregisterAllCallbacks("TMW_INITIALIZE")
-	
+
 	TMW.Initialized = true
 	
 	TMW:SetScript("OnUpdate", TMW.OnUpdate)
@@ -2607,7 +2620,13 @@ do	-- TMW:OnUpdate()
 
 	TMW:RegisterEvent("UNIT_FLAGS", function(event, unit)
 		if unit == "player" then
+			local old = inCombatLockdown
 			inCombatLockdown = InCombatLockdown()
+			if not old and inCombatLockdown then
+				TMW:Fire("TMW_COMBAT_LOCKDOWN_STARTED")
+			elseif old and not inCombatLockdown then
+				TMW:Fire("TMW_COMBAT_LOCKDOWN_ENDED")
+			end
 		end
 	end)
 
@@ -2856,9 +2875,19 @@ do -- TMW:UpdateViaCoroutine()
 		NumCoroutinesQueued = NumCoroutinesQueued + 1
 	end
 
+	local function TryPreloadOptions()
+		if TMW.db.global.AllowCombatConfig and not TMW.ALLOW_LOCKDOWN_CONFIG then
+			TMW.ALLOW_LOCKDOWN_CONFIG = true
+			TMW:LoadOptions()
+			return true
+		end
+		return false
+	end
+
 	TMW:RegisterEvent("PLAYER_REGEN_DISABLED", function()
+		TryPreloadOptions()
 		if TMW.Initialized then
-			if not TMW.ALLOW_LOCKDOWN_CONFIG and not TMW.Locked then
+			if not TMW.ALLOW_LOCKDOWN_CONFIG and not TMW.db.profile.Locked then
 				TMW:LockToggle()
 			end
 		end
@@ -2867,9 +2896,7 @@ do -- TMW:UpdateViaCoroutine()
 	-- Auto-loads options if AllowCombatConfig is enabled.
 	TMW:RegisterSelfDestructingCallback("TMW_GLOBAL_UPDATE", function()
 		if TMW.db.global.AllowCombatConfig and not TMW.ALLOW_LOCKDOWN_CONFIG then
-			TMW.ALLOW_LOCKDOWN_CONFIG = true
-			TMW:LoadOptions()
-			return true -- Signal callback destruction
+			return TryPreloadOptions()
 		end
 	end)
 end
@@ -2952,6 +2979,8 @@ function TMW:OnProfile(event, arg2, arg3)
 			icon:SetInfo("state", 0)
 		end
 	end
+
+	TMW:Fire("TMW_ON_PROFILE_PRE", event, arg2, arg3)
 
 	TMW:Update()
 	
@@ -3097,6 +3126,14 @@ function TMW:SlashCommand(str)
 		else
 			TMW:Print("Bad syntax. Usage: /tmw [enable||disable||toggle] [profile||global] groupID iconID")
 		end
+	elseif cmd == "counter" then
+		local name, operation, value = arg2, arg3, tonumber(arg4)
+		if value == nil or arg2 == nil or arg3 == nil then
+			TMW:Print("Usage: /tmw counter counter-name [+||-||/||*||=] number. E.g. '/tmw counter casts + 1'")
+			return
+		end
+		TMW:ChangeCounter(name, operation, value)
+
 	elseif cmd == "cpu" then
 		if arg2 == "reset" then
 			TMW:CpuProfileReset()
@@ -3220,7 +3257,7 @@ function TMW:LoadOptions(recursed)
 		return;
 	end
 
-	TMW:Print(L["LOADINGOPT"])
+	TMW:Debug(L["LOADINGOPT"])
 
 	local loaded, reason = LoadAddOn("TellMeWhen_Options")
 	if not loaded then

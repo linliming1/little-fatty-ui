@@ -1,10 +1,9 @@
 local mod	= DBM:NewMod(2140, "DBM-Party-BfA", 5, 1001)
 local L		= mod:GetLocalizedStrings()
 
-mod:SetRevision(("$Revision: 18026 $"):sub(12, -3))
+mod:SetRevision("20210614230033")
 mod:SetCreatureID(120553)
 mod:SetEncounterID(2100)
-mod:SetZone()
 
 mod:RegisterCombat("combat")
 
@@ -14,7 +13,7 @@ mod:RegisterEventsInCombat(
 	"SPELL_CAST_SUCCESS 274991",
 	"UNIT_DIED",
 	"INSTANCE_ENCOUNTER_ENGAGE_UNIT",
-	"UNIT_SPELLCAST_SUCCEEDED boss1"
+	"UNIT_SPELLCAST_SUCCEEDED boss1 boss2 boss3 boss4 boss5"
 )
 
 local warnPutridWaters				= mod:NewTargetAnnounce(275014, 2)
@@ -24,21 +23,19 @@ local yellCrushingEmbrace			= mod:NewYell(270624)
 local specWarnPutridWaters			= mod:NewSpecialWarningMoveAway(275014, nil, nil, nil, 1, 2)
 local yellPutridWaters				= mod:NewYell(275014)
 local specWarnSlam					= mod:NewSpecialWarningDodge(269266, "Tank", nil, 2, 2, 2)
---local specWarnGTFO				= mod:NewSpecialWarningGTFO(238028, nil, nil, nil, 1, 8)
 
---local timerCalloftheDeepCD			= mod:NewAITimer(13, 270185, nil, nil, nil, 3)--6.4, 15.1, 19.0, 11.9, 12.1, 12.3, 15.6, 12.1, 12.9, 7.0, 8.6, 7.5, 7.2, 7.4, 7.0, 7.0, 7.3, 7.2
-local timerPutridWatersCD			= mod:NewCDTimer(19.9, 275014, nil, nil, nil, 5, nil, DBM_CORE_MAGIC_ICON)
-local timerSlamCD					= mod:NewCDTimer(7.3, 269266, nil, "Tank", nil, 5, nil, DBM_CORE_TANK_ICON)
-local timerDemolisherTerrorCD		= mod:NewCDTimer(20, 270605, nil, nil, nil, 1, nil, DBM_CORE_TANK_ICON..DBM_CORE_DAMAGE_ICON)
+--local timerCalloftheDeepCD			= mod:NewCDTimer(13, 270185, nil, nil, nil, 3)--6.4, 15.1, 19.0, 11.9, 12.1, 12.3, 15.6, 12.1, 12.9, 7.0, 8.6, 7.5, 7.2, 7.4, 7.0, 7.0, 7.3, 7.2
+local timerPutridWatersCD			= mod:NewCDTimer(19.9, 275014, nil, nil, nil, 5, nil, DBM_CORE_L.MAGIC_ICON)
+local timerSlamCD					= mod:NewCDTimer(7.3, 269266, nil, "Tank", nil, 5, nil, DBM_CORE_L.TANK_ICON)
+local timerDemolisherTerrorCD		= mod:NewCDTimer(20, 270605, nil, nil, nil, 1, nil, DBM_CORE_L.TANK_ICON..DBM_CORE_L.DAMAGE_ICON)
 
 mod:AddRangeFrameOption(5, 275014)
 
-mod.vb.phase = 1
 local seenAdds = {}
 
 function mod:OnCombatStart(delay)
 	table.wipe(seenAdds)
-	self.vb.phase = 1
+	self:SetStage(1)
 	timerPutridWatersCD:Start(3.4-delay)
 	--timerCalloftheDeepCD:Start(6.4-delay)
 	--timerDemolisherTerrorCD:Start(19.9-delay)--Should be started by IEEU event
@@ -90,24 +87,12 @@ function mod:SPELL_CAST_SUCCESS(args)
 	end
 end
 
---[[
-function mod:SPELL_PERIODIC_DAMAGE(_, _, _, _, destGUID, _, _, _, spellId)
-	if spellId == 228007 and destGUID == UnitGUID("player") and self:AntiSpam(2, 4) then
-		specWarnGTFO:Show()
-		specWarnGTFO:Play("watchfeet")
-	end
-end
-mod.SPELL_PERIODIC_MISSED = mod.SPELL_PERIODIC_DAMAGE
---]]
-
 function mod:UNIT_DIED(args)
 	local cid = self:GetCIDFromGUID(args.destGUID)
 	if cid == 137614 or cid == 137625 or cid == 137626 or cid == 140447 then--Demolishing Terror
 		timerSlamCD:Stop(args.destGUID)
-	--elseif cid == 137627 then--Constricting Terror
-	
-	elseif cid == 137437 then--Gripping Terror
-		timerDemolisherTerrorCD:Stop(args.destGUID)
+	elseif cid == 137405 then--Gripping Terror
+		timerDemolisherTerrorCD:Stop()
 	end
 end
 
@@ -118,21 +103,20 @@ function mod:INSTANCE_ENCOUNTER_ENGAGE_UNIT()
 		if GUID and not seenAdds[GUID] then
 			seenAdds[GUID] = true
 			local cid = self:GetCIDFromGUID(GUID)
-			if cid == 137437 then--Big Adds
-				timerDemolisherTerrorCD:Start(19.9, GUID)
+			if cid == 137405 then--Gripping Terror
+				timerDemolisherTerrorCD:Start(19.9)
 			end
 		end
 	end
 end
 
-function mod:UNIT_SPELLCAST_SUCCEEDED(uId, _, spellId)
+function mod:UNIT_SPELLCAST_SUCCEEDED(_, _, spellId)
 	if spellId == 270605 then--Summon Demolisher
-		local GUID = UnitGUID(uId)
-		timerDemolisherTerrorCD:Start(20, GUID)
+		timerDemolisherTerrorCD:Start(20)
 	elseif spellId == 269984 then--Damage Boss 35% (can use SPELL_CAST_START of 269456 alternatively)
 		--Might actually be at Repair event instead (269366)
 		if self.vb.phase < 3 then
-			self.vb.phase = self.vb.phase + 1
+			self:SetStage(0)
 		end
 	end
 end

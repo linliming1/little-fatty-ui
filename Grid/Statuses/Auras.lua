@@ -13,7 +13,7 @@ local n2s,f2s,floor=n2s or tostring,f2s or function(time) return format("%.1f", 
 	Grid status module for tracking buffs/debuffs.
 ----------------------------------------------------------------------]]
 
-local IS_WOW_8 = GetBuildInfo():match("^8")
+local IS_WOW_8 = select(4, GetBuildInfo()) >= 80000
 
 local _, Grid = ...
 local L = Grid.L
@@ -665,7 +665,7 @@ function GridStatusAuras:RegisterStatuses()
 						end
 					end
 				end
-				--[[if status == "boss_aura" then
+                --[[if status == "boss_aura" then
 					self:RegisterStatus(status, settings.desc, { text = false }, false, settings.order)
 
 				else]] if settings.buff or settings.debuff or self.defaultDB[status] then
@@ -674,21 +674,22 @@ function GridStatusAuras:RegisterStatuses()
 					local isBuff = not not settings.buff
 					local order = settings.order or (isBuff and 15 or 35)
 
-                if not isBuff or GridStatusAuras:ShouldRegisterByClass(settings.buff) then --163ui
-					self:Debug("Registering", status, desc)
-					if not self.defaultDB[status] then
-						self.defaultDB[status] = {}
-						self:CopyDefaults(self.defaultDB[status], statusDefaultDB)
-					end
-					self:CopyDefaults(settings, self.defaultDB[status])
-					self:RegisterStatus(status, desc, self:OptionsForStatus(status, isBuff), false, order)
-                end
+                    if not isBuff or GridStatusAuras:ShouldRegisterByClass(settings.buff) then --163ui
+                        self:Debug("Registering", status, desc)
+                        if not self.defaultDB[status] then
+                            self.defaultDB[status] = {}
+                            self:CopyDefaults(self.defaultDB[status], statusDefaultDB)
+                        end
+                        self:CopyDefaults(settings, self.defaultDB[status])
+                        settings.desc = (self.defaultDB[status] or {}).desc or settings.desc --abyui, without this, custom aura desc will not be replaced by default desc.
+                        self:RegisterStatus(status, desc, self:OptionsForStatus(status, isBuff), false, order)
+                    end
 				end
 			else
 				-- Can't do this because it screws people who play in multiple languages.
 				--self:Debug("Removing invalid status:", status)
 				--profile[status] = nil
-			end
+            end
 		end
 	end
 	self.db:RegisterDefaults({ profile = self.defaultDB or {} })
@@ -867,7 +868,7 @@ function GridStatusAuras:OptionsForStatus(status, isBuff)
 							desc = format(L["%s is low below this value."], L["Stack count"]),
 							order = 352,
 							type = "range",
-							min = 0, softMin = 0, max = 99, softMax = 10, step = 1,
+							min = 0, softMin = 0, max = 99, softMax = 50, step = 1,
 						},
 						countColorMiddle = {
 							name = L["Middle color"],
@@ -887,7 +888,7 @@ function GridStatusAuras:OptionsForStatus(status, isBuff)
 							desc = format(L["%s is high above this value."], L["Stack count"]),
 							order = 355,
 							type = "range",
-							min = 0, softMin = 0, max = 99, softMax = 10, step = 1,
+							min = 0, softMin = 0, max = 99, softMax = 50, step = 1,
 						},
 					},
 				},
@@ -934,7 +935,7 @@ function GridStatusAuras:OptionsForStatus(status, isBuff)
 							desc = format(L["%s is low below this value."], L["Duration"]),
 							order = 362,
 							type = "range",
-							min = 0, softMin = 0, max = 99, softMax = 10, step = 1,
+							min = 0, softMin = 0, max = 99, softMax = 50, step = 1,
 						},
 						durationColorMiddle = {
 							name = L["Middle color"],
@@ -954,7 +955,7 @@ function GridStatusAuras:OptionsForStatus(status, isBuff)
 							desc = format(L["%s is high above this value."], L["Duration"]),
 							order = 365,
 							type = "range",
-							min = 0, softMin = 0, max = 99, softMax = 10, step = 1,
+							min = 0, softMin = 0, max = 99, softMax = 50, step = 1,
 						},
 					},
 				},
@@ -1061,9 +1062,10 @@ function GridStatusAuras:CreateRemoveOptions()
 		local status = status
 		if type(settings) == "table" and settings.text and not default_auras[status] then
 			local debuffName = settings.desc or settings.text
+            local spellId = settings.debuffID or settings.buffID
 			self.options.args.delete_aura.args[status] = {
 				name = debuffName,
-				desc = format(L["Remove %s from the menu"], debuffName),
+				desc = format(L["Remove %s from the menu"], debuffName) .. (spellId and "\n" .. spellId or ""),
 				width = "double",
 				type = "execute",
 				func = function() return
@@ -1103,7 +1105,7 @@ function GridStatusAuras:AddAura(name, isBuff)
         local spellID = tonumber(name)
         name = GetSpellInfo(spellID)
         if not name then
-            return DEFAULT_CHAT_FRAME:AddMessage("AddAura failed, no spell for id " .. name, 1, 0, 0)
+            return DEFAULT_CHAT_FRAME:AddMessage("AddAura failed, no spell for id " .. spellID, 1, 0, 0)
         end
         desc = isBuff and format(L["Buff: %s"], "ID-"..name) or format(L["Debuff: %s"], "ID-"..name)
         settings.text = self:TextForSpell(name)
@@ -1122,9 +1124,10 @@ function GridStatusAuras:AddAura(name, isBuff)
 	self:CopyDefaults(settings, self.defaultDB[status])
 	self.db.profile[status] = settings
 
+    local spellId = settings.debuffID or settings.buffID
 	self.options.args.delete_aura.args[status] = {
 		name = desc,
-		desc = format(L["Remove %s from the menu"], desc),
+		desc = format(L["Remove %s from the menu"], desc) .. (spellId and "\n" .. spellId or ""),
 		width = "double",
 		type = "execute",
 		func = function()

@@ -1,11 +1,10 @@
 local mod	= DBM:NewMod(2114, "DBM-Party-BfA", 7, 1001)
 local L		= mod:GetLocalizedStrings()
 
-mod:SetRevision(("$Revision: 18026 $"):sub(12, -3))
+mod:SetRevision("20201116014239")
 mod:SetCreatureID(129227)
 mod:SetEncounterID(2106)
 mod:DisableESCombatDetection()--ES fires for nearby trash even if boss isn't pulled
-mod:SetZone()
 mod:SetMinSyncRevision(17732)
 
 mod:RegisterCombat("combat")
@@ -26,11 +25,10 @@ local specWarnInfusion				= mod:NewSpecialWarningSwitch(271698, "-Tank", nil, ni
 --local specWarnResonantPulse			= mod:NewSpecialWarningDodge(258622, nil, nil, nil, 2, 2)
 local specWarnTectonicSmash			= mod:NewSpecialWarningDodge(275907, "Tank", nil, 2, 1, 2)
 local specWarnQuake					= mod:NewSpecialWarningDodge(258627, nil, nil, nil, 2, 2)
---local specWarnGTFO				= mod:NewSpecialWarningGTFO(238028, nil, nil, nil, 1, 8)
 
 local timerCallEarthragerCD			= mod:NewNextCountTimer(60.4, 257593, nil, nil, nil, 1)
---local timerInfusionCD				= mod:NewAITimer(13, 271698, nil, nil, nil, 3, nil, DBM_CORE_DAMAGE_ICON)--Health based?
-local timerResonantPulseCD			= mod:NewCDTimer(33.2, 258622, nil, nil, nil, 2)
+--local timerInfusionCD				= mod:NewCDTimer(13, 271698, nil, nil, nil, 3, nil, DBM_CORE_L.DAMAGE_ICON)--Health based?
+local timerResonantPulseCD			= mod:NewCDTimer(32.2, 258622, nil, nil, nil, 2)
 local timerTectonicSmashCD			= mod:NewCDTimer(23.0, 275907, nil, nil, nil, 3)--23-28
 
 mod:AddInfoFrameOption(257481, true)
@@ -85,9 +83,6 @@ function mod:OnCombatStart(delay)
 end
 
 function mod:OnCombatEnd()
---	if self.Options.RangeFrame then
---		DBM.RangeCheck:Hide()
---	end
 	if self.Options.InfoFrame then
 		DBM.InfoFrame:Hide()
 	end
@@ -95,9 +90,9 @@ end
 
 function mod:SPELL_AURA_APPLIED(args)
 	local spellId = args.spellId
-	if spellId == 257582 then
+	if spellId == 257582 and self:AntiSpam(3.5, args.destName) then
 		warnRagingGaze:CombinedShow(0.5, args.destName)--In case two adds are up
-		if args:IsPlayer() then
+		if args:IsPlayer() and self:AntiSpam(3.5, 2) then
 			specWarnRagingGaze:Show()
 			specWarnRagingGaze:Play("justrun")
 			specWarnRagingGaze:ScheduleVoice(1.5, "keepmove")
@@ -121,7 +116,7 @@ function mod:SPELL_CAST_START(args)
 		specWarnTectonicSmash:Show()
 		specWarnTectonicSmash:Play("shockwave")
 		timerTectonicSmashCD:Start()
-	elseif spellId == 258627 and self:AntiSpam(3, 1) then
+	elseif spellId == 258627 and self:AntiSpam(3.5, 1) then
 		specWarnQuake:Show()
 		specWarnQuake:Play("watchstep")
 	end
@@ -135,25 +130,3 @@ function mod:SPELL_CAST_SUCCESS(args)
 		--timerInfusionCD:Start()--15.8, 36.4, 64.0
 	end
 end
-
---[[
-function mod:SPELL_PERIODIC_DAMAGE(_, _, _, _, destGUID, _, _, _, spellId)
-	if spellId == 228007 and destGUID == UnitGUID("player") and self:AntiSpam(2, 4) then
-		specWarnGTFO:Show()
-		specWarnGTFO:Play("watchfeet")
-	end
-end
-mod.SPELL_PERIODIC_MISSED = mod.SPELL_PERIODIC_DAMAGE
-
-function mod:UNIT_DIED(args)
-	local cid = self:GetCIDFromGUID(args.destGUID)
-	if cid == 124396 then
-		
-	end
-end
-
-function mod:UNIT_SPELLCAST_SUCCEEDED(uId, _, spellId)
-	if spellId == 257939 then
-	end
-end
---]]

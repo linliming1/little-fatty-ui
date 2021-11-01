@@ -1,4 +1,4 @@
-## Interface: 80100
+## Interface: 90100
 ## Version: 8.0.1.1
 
 ## Title: Grid
@@ -62,6 +62,8 @@ Statuses\Target.lua
 Statuses\Vehicle.lua
 
 Statuses\AurasByClass.lua
+Libs\LibCustomGlow-1.0\LibCustomGlow-1.0.lua
+_warbaby_aura.lua
 _warbaby_.lua
 
 ## Title: |cff880303[爱不易]|r Grid 团队框架

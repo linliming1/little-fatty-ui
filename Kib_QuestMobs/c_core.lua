@@ -43,7 +43,7 @@ local LocalDatabase, GlobalDatabase, SavedVars = unpack(select(2, ...))
     local function CreateQuestTextLine(plateFrame, LineNum)    
         local Quest_TextLine = plateFrame.Quest_TextFrame:CreateFontString(nil, "OVERLAY", "GameTooltipTextSmall")
         Quest_TextLine:SetFont(GlobalDatabase.Font, SavedVars.TextSize)
-        Quest_TextLine:SetJustifyH("CENTER")
+        Quest_TextLine:SetJustifyH("Left")
         Quest_TextLine:SetPoint("TOPLEFT", plateFrame.Quest_TextFrame, "TOPLEFT", 0, SavedVars.TextSize * -(LineNum - 1))
         Quest_TextLine:SetPoint("BOTTOMRIGHT", plateFrame.Quest_TextFrame, "TOPRIGHT", 0, SavedVars.TextSize * -LineNum)
         Quest_TextLine:Hide()
@@ -89,18 +89,71 @@ local LocalDatabase, GlobalDatabase, SavedVars = unpack(select(2, ...))
     end
 
 --<<SCAN QUEST DATA>>-------------------------------------------------------------------------------<<>>
-    
+    local IgnoredQuests = { 56064, 56308, 55350, 57728, 57008 }
+    for _, v in ipairs(IgnoredQuests) do IgnoredQuests[C_TaskQuest.GetQuestInfoByQuestID(v)] = true end
+    local ObjectiveLines = {}
     local function ScanPlate(plateData)                                                         --GlobalDatabase.EventBucket_AddLine("Kib_QuestMobs", "Plate Scanned and Cached: " .. plateData.unitName)
-        local PlayerQuest, GroupQuest, AreaQuest, QuestTasks = nil, nil, nil, {}
+        local PlayerQuest, GroupQuest, AreaQuest, QuestTasks = nil, nil, nil, _empty_table --{}
 
         Tooltip:SetOwner(WorldFrame, "ANCHOR_NONE")
         Tooltip:SetHyperlink("unit:" .. plateData.unitGUID)
-    
+
+        wipe(ObjectiveLines)
+        for i = 1, Tooltip:NumLines() do
+            local texture = _G["KibQuestTooltipTexture" .. i]
+            if not texture or not texture:IsShown() then break end
+            if texture:GetTexture() == 3083385 then
+                local anchor = select(2, texture:GetPoint())
+                local line = tonumber(anchor:GetName():sub(#"KibQuestTooltipTextLeft" + 1))
+                --一个人的时候是 <任务>\n - 进度，组队的时候是 <任务>\n人名\n-进度
+
+                if GetNumGroupMembers() == 0 then
+                    local quest = _G["KibQuestTooltipTextLeft" .. (line-1)]
+                    quest = quest and quest:GetText()
+                    if not IgnoredQuests[quest] then
+                        ObjectiveLines[line] = true
+                    end
+                    -- 不需要记录false
+                else
+                    if ObjectiveLines[line - 2] == true then
+                        ObjectiveLines[line] = true
+                    elseif ObjectiveLines[line - 2] == false then
+                        ObjectiveLines[line] = false
+                    else
+                        local quest = _G["KibQuestTooltipTextLeft" .. (line-2)]
+                        quest = quest and quest:GetText()
+                        if IgnoredQuests[quest] then
+                            ObjectiveLines[line] = false
+                        else
+                            ObjectiveLines[line] = true
+                        end
+                    end
+                end
+            end
+        end
+
         for i = 3, Tooltip:NumLines() do
             local line = _G["KibQuestTooltipTextLeft" .. i]
             local text = line:GetText()
             local text_r, text_g, text_b = line:GetTextColor()
-
+            if not ObjectiveLines[i] and ObjectiveLines[i+1] then
+                if text == UnitName("player") or GetNumGroupMembers() == 0 then
+                    PlayerQuest = true
+                    break -- not support QuestTasks
+                else
+                    GroupQuest = true
+                end
+                --[[
+                QuestTasks[#QuestTasks + 1] = text
+                while ObjectiveLines[i+1] do
+                    local line = _G["KibQuestTooltipTextLeft" .. (i+1)]
+                    local text = line:GetText()
+                    QuestTasks[#QuestTasks + 1] = " - " .. text
+                    i = i + 1
+                end
+                --]]
+            end
+            --[[
             if text_b == 0 and text_r > 0.99 and text_g > 0.82 then 
                 AreaQuest = true
             else
@@ -122,6 +175,7 @@ local LocalDatabase, GlobalDatabase, SavedVars = unpack(select(2, ...))
                     end
                 end
             end
+            --]]
         end
 
         local QuestType = (PlayerQuest and 1) or (GroupQuest and 2) or (AreaQuest and 3) or 0

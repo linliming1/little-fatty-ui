@@ -74,7 +74,7 @@ local function UpdatePlayerRole()
 
 	-- Check Auras
 	for i = 1, 40 do
-		name, _, _, _, _, _, _, _, _, spellID = UnitBuff("player", i)	-- 10th --aby8
+		name, _, _, _, _, _, _, _, _, spellID = UnitBuff("player", i)	-- 10th --abyui8
 		if TankAuras[tostring(spellID)] then
 			playerTankAura = true
 		end
@@ -152,7 +152,7 @@ local function TankWatcherEvents(frame, event, ...)
 	end
 end
 
-if not TankWatcher then TankWatcher = CreateFrame("Frame") end
+if not TankWatcher then TankWatcher = CreateFrame("Frame", nil, nil) end
 
 --[[
 TankWatcher:RegisterEvent("GROUP_ROSTER_UPDATE")

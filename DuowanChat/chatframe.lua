@@ -90,7 +90,7 @@ local DWC_TABS={
 	{text=function() return L["GuildShort"] end, chatType="GUILD", show=function() return IsInGuild() end,  index=0},
 	{text=function() return L["YellShort"] end, chatType="YELL", show=function() return not IsInGroup() --[[GetNumPartyMembers() == 0 and GetNumRaidMembers() == 0]] end,  index=0},
 	{text=function() return L["WhisperToShort"] end, chatType="WHISPER", show=function() return true end,  index=0},
-	{text=function() return L["OfficerShort"] end, chatType="OFFICER", show=function() return CanEditOfficerNote() end,  index=0}, 
+	{text=function() return L["OfficerShort"] end, chatType="OFFICER", show=function() return C_GuildInfo.CanEditOfficerNote() end,  index=0},
 } 
 
 
@@ -166,9 +166,18 @@ function DWC_SetChatType(chatType, index)
     --	else
 
     if(chatType == 'WHISPER') then
+        --do return ChatFrame_ReplyTell2() end
         local lastTell = ChatEdit_GetLastTellTarget()
-        if(lastTell == '') then lastTell = false end
+        if lastTell and lastTell ~= '' then
+            return ChatFrame_ReplyTell()
+        end
 
+        lastTell = ChatEdit_GetLastToldTarget()
+        if lastTell and lastTell ~= '' then
+            return ChatFrame_ReplyTell2()
+        end
+
+        if(lastTell == '') then lastTell = false end
         if(not lastTell) then
             if(UnitExists'target' and UnitIsFriend('target', 'player') and UnitIsPlayer'target') then
                 local name, realm = UnitName'target'
@@ -243,7 +252,7 @@ function DWChatFrame:OnInitialize()
 	db = self.db.profile;
 	self:SetEnabledState(DWChat:GetModuleEnabled(MODNAME));
 	DWChat:RegisterModuleOptions(MODNAME, getOptions, L["ChatFrame"]);
-	CoreUIEnableTooltip(DWCReportStatButton, "发送属性报告", "左键简略，右键详细");
+	CoreUIEnableTooltip(DWCReportStatButton, "发送属性报告", "点击生成实装和属性信息");
 	CoreUIEnableTooltip(DWCRandomButton, "掷骰子");
 end
 

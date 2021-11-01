@@ -9,9 +9,6 @@ local function Spell(id)
     if not name or name == "" or not tex then
         return "?????"
     end
-    if id == 42292 then
-        tex = "Interface\\Icons\\inv_jewelry_trinketpvp_0" .. (UnitFactionGroup("player") == "Horde" and "2" or "1")
-    end
 
     return spellFmt:format(tex, name)
 end
@@ -25,7 +22,7 @@ L["HELP_FIRSTUCD"]                      = L["HELP_FIRSTUCD"]                    
 L["HELP_MISSINGDURS"]                   = L["HELP_MISSINGDURS"]                     :format("%s", GetSpellInfo(1766)) -- keep the first "%s" as "%s"
 L["ICONMENU_IGNORENOMANA_DESC"]         = L["ICONMENU_IGNORENOMANA_DESC"]           :format(Spell(85288), Spell(5308))
 L["ICONMENU_REACTIVE_DESC"]             = L["ICONMENU_REACTIVE_DESC"]               :format(Spell(5308), Spell(119996), Spell(32379))
-L["ICONMENU_UNITCOOLDOWN_DESC"]         = L["ICONMENU_UNITCOOLDOWN_DESC"]           :format(Spell(42292), GetSpellInfo(42292))
+L["ICONMENU_UNITCOOLDOWN_DESC"]         = L["ICONMENU_UNITCOOLDOWN_DESC"]           :format(Spell(336126), GetSpellInfo(336126))
 L["CLEU_DAMAGE_SHIELD_DESC"]            = L["CLEU_DAMAGE_SHIELD_DESC"]              :format(Spell(31271), Spell(30482), Spell(324))
 L["CLEU_DAMAGE_SHIELD_MISSED_DESC"]     = L["CLEU_DAMAGE_SHIELD_MISSED_DESC"]       :format(Spell(31271), Spell(30482), Spell(324))
 L["CLEU_SPELL_STOLEN_DESC"]             = L["CLEU_SPELL_STOLEN_DESC"]               :format(Spell(30449))
@@ -74,6 +71,8 @@ L["CODESNIPPET_ORDER_DESC"]             = L["CODESNIPPET_ORDER_DESC"]           
 L["CLEU_NOFILTERS"]                     = L["CLEU_NOFILTERS"]                       :format(L["ICONMENU_CLEU"], "%s")
 L["CLEU_SPELL_DAMAGE_CRIT_DESC"]        = L["CLEU_SPELL_DAMAGE_CRIT_DESC"]          :format(L["CLEU_SPELL_DAMAGE"])
 L["CLEU_SPELL_DAMAGE_NONCRIT_DESC"]     = L["CLEU_SPELL_DAMAGE_NONCRIT_DESC"]       :format(L["CLEU_SPELL_DAMAGE"])
+L["CLEU_SPELL_HEAL_CRIT_DESC"]          = L["CLEU_SPELL_HEAL_CRIT_DESC"]            :format(L["CLEU_SPELL_HEAL"])
+L["CLEU_SPELL_HEAL_NONCRIT_DESC"]       = L["CLEU_SPELL_HEAL_NONCRIT_DESC"]         :format(L["CLEU_SPELL_HEAL"])
 
 
 L["UIPANEL_GROUPSORT_value_DESC"]       = L["UIPANEL_GROUPSORT_value_DESC"]         :format(L["ICONMENU_VALUE"])
@@ -134,3 +133,23 @@ L["STACKALPHA_DESC"] = L["STACKALPHA_DESC"]:format(L["ICONMENU_SHOWWHEN"])
 --L["CNDT_SLIDER_DESC_CLICKSWAP_TOMANUAL"] = L["CNDT_SLIDER_DESC_BASE"] .. "\r\n\r\n" .. L["CNDT_SLIDER_DESC_CLICKSWAP_TOMANUAL"]
 --L["CNDT_SLIDER_DESC_CLICKSWAP_TOSLIDER"] = L["CNDT_SLIDER_DESC_BASE"] .. "\r\n\r\n" .. L["CNDT_SLIDER_DESC_CLICKSWAP_TOSLIDER"]
 
+
+-- Wizard magic to make ICONMENU_CHOOSENAME_WPNENCH_DESC be locale-dynamic
+do
+	local FlametongueWeapon = GetSpellInfo(318038)
+	local FlametongueWeaponEnchant
+	for i = 1, select("#", strsplit("|", L["SUG_MATCH_WPNENCH_ENCH"])) do
+		local enchant = select(i, strsplit("|", L["SUG_MATCH_WPNENCH_ENCH"]))
+		enchant = FlametongueWeapon:match(enchant)
+		if enchant then
+			FlametongueWeaponEnchant = enchant
+			break
+		end
+	end
+	
+	if FlametongueWeaponEnchant then
+		L["ICONMENU_CHOOSENAME_WPNENCH_DESC"] 	= L["ICONMENU_CHOOSENAME_WPNENCH_DESC"]	 	:format(FlametongueWeaponEnchant, FlametongueWeapon) 
+	else
+		--- Uhh... I just noticed there is no code right here. Hopefully nothing breaks.
+	end
+end

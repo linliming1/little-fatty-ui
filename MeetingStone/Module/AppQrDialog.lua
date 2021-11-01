@@ -6,7 +6,11 @@ AppQrDialog.lua
 
 BuildEnv(...)
 
-AppQrDialog = CreateFrame('Frame', nil, UIParent)
+if not ADDON_REGIONSUPPORT then
+    return
+end
+
+AppQrDialog = CreateFrame('Frame', nil, UIParent, 'BackdropTemplate')
 AppQrDialog:Hide()
 AppQrDialog:SetScript('OnShow', function(self)
     self:SetScript('OnShow', nil)

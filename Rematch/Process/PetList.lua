@@ -16,7 +16,7 @@ roster.petList = {} -- filtered list of petIDs/speciesIDs to list in the pet pan
 local activeFilters = {} -- list of filter groups that are active
 -- this is the order that filter groups are processed (simplest to most complex)
 local priority = { "Favorite", "Collected", "Types", "Rarity", "Sources", "Tough",
-						 "Level", "Other", "Breed", "Strong", "Similar", "Moveset", "Script" }
+						 "Level", "Other", "Expansion", "Breed", "Strong", "Similar", "Moveset", "Script" }
 
 local petInfo -- this will be rematch.petInfo as each new pet is looked at
 local filterFuncs = {} -- each filter group has a filterFuncs entry to process the petInfo
@@ -45,6 +45,8 @@ function roster:UpdatePetList()
 		return -- don't do anything if list doesn't need updated
 	end
 	roster.petListNeedsUpdated = nil
+
+	local oldPetListSize = #roster.petList
 
 	-- start with a clean slate
 	wipe(roster.petList)
@@ -119,11 +121,17 @@ function roster:UpdatePetList()
 		end
 	end
 
+	-- if the number of pets listed has changed, then do an extra PetPanel update
+	if #roster.petList ~= oldPetListSize then
+		rematch.PetPanel:Update() -- this fixes the potential scroll offset bug when pet list changes length
+	end
+
 	-- whew! all done. now the cleanup
 	rematch:WipeTempTables()
 	if roster:GetFilter("Script","code") then
 		rematch:CleanupScriptEnvironment()
 	end
+
 end
 
 -- run the petID through each active filter and return false at first failure
@@ -388,6 +396,11 @@ function filterFuncs.Script()
 	end
 end
 
+function filterFuncs.Expansion()
+	local expansionID = petInfo.expansionID
+	return GetFilter(self,"Expansion",expansionID) or false
+end
+
 --[[ Searches ]]
 
 -- returns relevance if the pet defined in petInfo matches the passed search mask.
@@ -461,7 +474,7 @@ function roster:RunSearchMatch(mask)
 			end
 			-- if cached is false, we know this ability doesn't match the mask;
 			-- but another ability may return a hit. just ignore this ability.
-		elseif not cached then -- we haven't examined this ability yet
+		elseif not cached and abilityID then -- we haven't examined this ability yet
 			local _,name,_,_,description = C_PetBattles.GetAbilityInfoByID(abilityID)
 			relevance = matchRelevance(speciesID,mask,name,7) or matchRelevance(speciesID,mask,description,7)
 			if relevance then

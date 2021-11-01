@@ -1,9 +1,8 @@
 local mod	= DBM:NewMod("BrawlRank7", "DBM-Brawlers")
 local L		= mod:GetLocalizedStrings()
 
-mod:SetRevision(("$Revision: 18459 $"):sub(12, -3))
+mod:SetRevision("20201102223314")
 --mod:SetModelID(46798)
-mod:SetZone()
 
 mod:RegisterEvents(
 	"SPELL_CAST_START 133308 229154",
@@ -24,16 +23,22 @@ local timerThrowNetCD				= mod:NewCDTimer(20, 133308, nil, nil, nil, 3)--Fran an
 local timerGoblinDeviceCD			= mod:NewCDTimer(21.8, 133227, nil, nil, nil, 3)--Fran and Riddoh
 local timerHighNoon					= mod:NewCastTimer(80, 229154, nil, nil, nil, 3)
 
-local brawlersMod = DBM:GetModByName("Brawlers")
+local brawlersMod = DBM:GetModByName("BrawlersGeneral")
 
 function mod:SPELL_CAST_START(args)
 	if not brawlersMod.Options.SpectatorMode and not brawlersMod:PlayerFighting() then return end--Spectator mode is disabled, do nothing.
 	if args.spellId == 133308 then
 		warnThrowNet:Show()
 		timerThrowNetCD:Start()
+		if not brawlersMod:PlayerFighting() then
+			timerThrowNetCD:SetSTFade(true)
+		end
 	elseif args.spellId == 229154 then
 		warnHighNoon:Show()
 		timerHighNoon:Start()
+		if not brawlersMod:PlayerFighting() then
+			timerHighNoon:SetSTFade(true)
+		end
 	end
 end
 
@@ -45,6 +50,7 @@ function mod:SPELL_CAST_SUCCESS(args)
 			specWarnGoblinDevice:Show()
 		else
 			warnGoblinDevice:Show()
+			timerGoblinDeviceCD:SetSTFade(true)
 		end
 	end
 end

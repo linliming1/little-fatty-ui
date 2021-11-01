@@ -299,7 +299,6 @@ function Display:PlayerZoneChanged()
 end
 
 function Display:SKILL_LINES_CHANGED()
-	local skillname, isHeader
 	for k,v in pairs(have_prof_skill) do
 		have_prof_skill[k] = nil
 	end
@@ -384,7 +383,9 @@ function Display:UpdateVisibility()
 end
 
 function Display:SetTrackingSpell(skill,spell)
-	tracking_spells[(GetSpellInfo(spell))] = skill
+	local spellName, _, texture = GetSpellInfo(spell)
+	if not spellName then return end
+	tracking_spells[spellName] = skill
 	if fullInit then self:MINIMAP_UPDATE_TRACKING() end
 end
 
@@ -546,16 +547,7 @@ end
 --[[
 	Minimap zoom changed
 ]]
-function Display:UpdateMiniMapZoom()
-	local zoom = Minimap:GetZoom()
-	if GetCVar("minimapZoom") == GetCVar("minimapInsideZoom") then
-		Minimap:SetZoom(zoom < 2 and zoom + 1 or zoom - 1)
-	end
-	indoors = GetCVar("minimapZoom")+0 == Minimap:GetZoom() and "outdoor" or "indoor"
-	Minimap:SetZoom(zoom)
-end
 function Display:MinimapZoom()
-	self:UpdateMiniMapZoom()
 	self:UpdateMiniMap()
 end
 --[[
@@ -570,8 +562,6 @@ end
 
 function Display:UpdateMaps()
 	clearpins(minimapPins)
-	-- recheck zoom on map update, as it seems on load you dont get the map zoom changed event
-	self:UpdateMiniMapZoom()
 	-- Ask to update the visiblity for archaeology updates to blobs
 	self:UpdateVisibility()
 	self:UpdateMiniMap(true)
@@ -620,7 +610,7 @@ function Display:UpdateIconPositions()
 	-- if the player moved, or changed the facing (rotating map) - update nodes
 	if x ~= lastXY or y ~= lastYY or facing ~= lastFacing or refresh then
 		-- update radius of the map
-		mapRadius = self.minimapSize[indoors][zoom] / 2
+		mapRadius = C_Minimap.GetViewRadius()
 		-- update upvalues for icon placement
 		lastXY, lastYY = x, y
 		lastFacing = facing
@@ -685,11 +675,11 @@ function Display:UpdateMiniMap(force)
 	if x ~= lastXY or y ~= lastYY or diffZoom or facing ~= lastFacing or force then
 		-- set upvalues to new settings
 		minimapShape = GetMinimapShape and self.minimapShapes[GetMinimapShape() or "ROUND"]
-		mapRadius = self.minimapSize[indoors][zoom] / 2
 		minimapWidth = Minimap:GetWidth() / 2
 		minimapHeight = Minimap:GetHeight() / 2
 		minimapStrata = Minimap:GetFrameStrata()
 		minimapFrameLevel = Minimap:GetFrameLevel() + 5
+		mapRadius = C_Minimap.GetViewRadius()
 
 		local x1, y1 = GatherMate.HBD:GetZoneCoordinatesFromWorld(x,y,zone)
 		if not x1 then
@@ -789,6 +779,7 @@ function GatherMate2WorldMapPinMixin:OnAcquired(coord, nodeID, nodeType, zone)
 	self.texture:SetTexture(nodeTextures[nodeType][nodeID])
 	self.texture:SetTexCoord(0, 1, 0, 1)
 	self.texture:SetVertexColor(1, 1, 1, 1)
+	self:EnableMouse(db.worldMapIconsInteractive)
 end
 
 function GatherMate2WorldMapPinMixin:OnMouseEnter()

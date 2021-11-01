@@ -1,14 +1,20 @@
-## Interface: 80100
+## Interface: 90100
 ## Title: Dominos Config
-## Title-zhCN: Dominos 设置
-## Title-zhTW: Dominos 設置
+## Title-zhCN: |cFF0099FFDominos|r 设置
+## Title-zhTW: |cFF0099FFDominos|r 設置
 ## Notes: GUI based configuration for Dominos
+## Notes-zhCN: Dominos 图形设置界面
 ## Author: Tuller
 ## Dependencies: Dominos
 ## LoadOnDemand: 1
 localization.xml
+main.lua
 widgets\include.xml
-panels\include.xml
+options\general.lua
+options\profiles.lua
+overlay\ui.lua
+overlay\dragFrame.lua
+overlay\help.lua
 
 
 ## Title-zhCN: |cff880303[爱不易]|r Dominos 设置界面

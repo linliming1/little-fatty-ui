@@ -237,9 +237,7 @@ function IE:OnInitialize()
 		-- GLOBALS: StaticPopupDialogs, StaticPopup_Show, EXIT_GAME, CANCEL, ForceQuit
 		StaticPopupDialogs["TMWOPT_RESTARTNEEDED"] = {
 			text = L["ERROR_MISSINGFILE_OPT"], 
-			button1 = EXIT_GAME,
-			button2 = CANCEL,
-			OnAccept = ForceQuit,
+			button1 = OKAY,
 			timeout = 0,
 			showAlert = true,
 			whileDead = true,
@@ -252,9 +250,7 @@ function IE:OnInitialize()
 	elseif not TMW.DOGTAG then
 		StaticPopupDialogs["TMWOPT_RESTARTNEEDED"] = {
 			text = L["ERROR_MISSINGFILE_OPT_NOREQ"], 
-			button1 = EXIT_GAME,
-			button2 = CANCEL,
-			OnAccept = ForceQuit,
+			button1 = OKAY,
 			timeout = 0,
 			showAlert = true,
 			whileDead = true,
@@ -659,6 +655,9 @@ function IE:PositionPanels(parentPageName, panelList)
 	for _, panelColumn in ipairs(panelColumns) do
 		for _, panel in TMW:Vararg(panelColumn:GetChildren()) do
 			panel:Hide()
+
+			-- Reset the top anchor so we don't have accidental circular anchorings while iterating below
+			panel:SetPoint("TOP") 
 		end
 		wipe(panelColumn.currentPanels)
 	end
@@ -1103,7 +1102,7 @@ CScriptProvider = TMW:NewClass("CScriptProvider"){
 	end,
 
 	CScriptRemoveAll = function(self)
-		self.__CScripts = null
+		self.__CScripts = nil
 	end,
 
 	CScriptCall = function(self, script, ...)
@@ -1670,7 +1669,6 @@ TMW:NewClass("Config_Page", "Config_Frame"){
 	end,
 
 	ReloadRequested = function(self)
-		print("PAGE RELOAD", self:GetParentKey())
 
 		if IE.CurrentTab and IE.CurrentTab.pageKey == self:GetParentKey() then
 			IE.CurrentTab:CScriptCall("PageReloadRequested", self)
@@ -1691,6 +1689,7 @@ TMW:NewClass("Config_ScrollFrame", "ScrollFrame", "Config_Frame"){
 
 	OnNewInstance_ScrollFrame = function(self)
 		self:EnableMouseWheel(true)
+		self:CScriptAdd("BeforeMouseWheelHandled", self.BeforeMouseWheelHandled)
 	end,
 
 	SetEdgeScrollEnabled = function(self, enabled, range, dps)
@@ -1795,7 +1794,24 @@ TMW:NewClass("Config_ScrollFrame", "ScrollFrame", "Config_Frame"){
 			newScroll = self:GetVerticalScrollRange()
 		end
 
+		self.LastWheelScrollX, self.LastWheelScrollY = GetCursorPosition()
+
 		self:SetVerticalScroll(newScroll)
+	end,
+
+	BeforeMouseWheelHandled = function(self, delta)
+		local x, y = GetCursorPosition()
+		if self.LastWheelScrollX == x and self.LastWheelScrollY == y then
+			-- Mouse is in the same position as it was the last time the user
+			-- scrolled with their mouse wheel. It could be a total coincidence,
+			-- but most likely, the user is trying to scroll down and some other
+			-- mouse-wheel handling frame has landed under their cursor.
+			-- They probably wanted to keep scrolling
+			-- and not adjust the slider, so lets not adjust the slider.
+
+			self:OnMouseWheel(delta)
+			return 1
+		end
 	end,
 
 	OnUpdate = function(self, elapsed)
@@ -2380,7 +2396,7 @@ TMW:NewClass("Config_Slider", "Slider", "Config_Frame")
 		self.max = max
 
 		if self.mode == self.MODE_STATIC then
-			self:SetMinMaxValues_base(min, max)
+			self:SetMinMaxValues_base(math.max(min, -10e10), math.min(max, 10e10))
 		elseif not self.EditBoxShowing then
 			self:UpdateRange()
 		end
@@ -2466,23 +2482,27 @@ TMW:NewClass("Config_Slider", "Slider", "Config_Frame")
 	end,
 	
 	OnMouseWheel = function(self, delta)
-		if self:IsEnabled() then
-			if IsShiftKeyDown() then
-				delta = delta*10
-			end
-			if IsControlKeyDown() then
-				delta = delta*60
-			end
-			if delta == 1 or delta == -1 then
-				delta = delta*(self:GetWheelStep() or 1)
-			end
+		if not self:IsEnabled() then return end
 
-			local level = self:GetValue() + delta
-
-			self:SetValue(level)
-
-			self:SaveSetting()
+		if self:CScriptBubbleGet("BeforeMouseWheelHandled", delta) then
+			return
 		end
+		
+		if IsShiftKeyDown() then
+			delta = delta*10
+		end
+		if IsControlKeyDown() then
+			delta = delta*60
+		end
+		if delta == 1 or delta == -1 then
+			delta = delta*(self:GetWheelStep() or 1)
+		end
+
+		local level = self:GetValue() + delta
+
+		self:SetValue(level)
+
+		self:SaveSetting()
 	end,
 
 	-- Methods
@@ -2685,7 +2705,7 @@ TMW:NewClass("Config_Slider", "Slider", "Config_Frame")
 
 			self:SetMinMaxValues_base(newmin, newmax)
 		else
-			self:SetMinMaxValues_base(self.min, self.max)
+			self:SetMinMaxValues_base(math.max(self.min, -10e10), math.min(self.max, 10e10))
 		end
 	end,
 
@@ -3813,7 +3833,7 @@ function TMW:DeserializeDatum(string, silent)
 end
 
 function TMW:DeserializeData(str, silent)
-	if not str then 
+	if not str then
 		return
 	end
 
@@ -3825,9 +3845,12 @@ function TMW:DeserializeData(str, silent)
 		results = results or {}
 
 		local result = TMW:DeserializeDatum(string, silent)
-
-		tinsert(results, result)
+		if result then
+			tinsert(results, result)
+		end
 	end
+
+	if results and #results == 0 then return end
 
 	return results
 end
@@ -4087,7 +4110,6 @@ TMW:NewClass("HistorySet") {
 	end,
 
 	AttemptBackup = function(self, location, settings)
-		print("running backup")
 
 		if not location or not settings then
 			return

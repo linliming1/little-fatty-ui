@@ -1,9 +1,8 @@
 local mod	= DBM:NewMod("SotSTrash", "DBM-Party-BfA", 4)
 local L		= mod:GetLocalizedStrings()
 
-mod:SetRevision(("$Revision: 18412 $"):sub(12, -3))
+mod:SetRevision("20201116014239")
 --mod:SetModelID(47785)
-mod:SetZone()
 
 mod.isTrashMod = true
 
@@ -11,7 +10,6 @@ mod:RegisterEvents(
 	"SPELL_CAST_START 268030 267973 268391 268239 268309 276268 267977 268050 268027 274437 268184 276292 268211 268273 268322 268317 268375 276767",
 	"SPELL_AURA_APPLIED 268375 268322 268214 276297 276767 274631",
 	"SPELL_AURA_REMOVED 276297"
---	"SPELL_CAST_SUCCESS"
 )
 
 --TODO, Colossal Slam-268348? START
@@ -49,6 +47,8 @@ local yellVoidSeed					= mod:NewShortFadesYell(276297)
 
 local MinorReinforcement = DBM:GetSpellInfo(268211)
 
+--1: Dodge Shit on ground, 2: Shockwaves, 4: AoEs, 5: Run Away, 6: Role
+
 function mod:SPELL_CAST_START(args)
 	if not self.Options.Enabled then return end
 	local spellId = args.spellId
@@ -61,13 +61,13 @@ function mod:SPELL_CAST_START(args)
 	elseif spellId == 267973 and self:AntiSpam(5, 1) then
 		specWarnWashAway:Show()
 		specWarnWashAway:Play("watchstep")
-	elseif spellId == 268391 and self:AntiSpam(2.5, 2) then
+	elseif spellId == 268391 and self:AntiSpam(3, 2) then
 		specWarnMentalAssault:Show()
 		specWarnMentalAssault:Play("shockwave")
 	elseif spellId == 268239 and self:AntiSpam(5, 4) then
 		specWarnShipbreakerStorm:Show()
 		specWarnShipbreakerStorm:Play("aesoon")
-	elseif spellId == 276268 and self:AntiSpam(2.5, 2) then
+	elseif spellId == 276268 and self:AntiSpam(3, 2) then
 		specWarnHeavingBlow:Show()
 		specWarnHeavingBlow:Play("shockwave")
 	elseif spellId == 267977 and self:CheckInterruptFilter(args.sourceGUID, false, true) then
@@ -76,19 +76,19 @@ function mod:SPELL_CAST_START(args)
 	elseif spellId == 268050 and self:CheckInterruptFilter(args.sourceGUID, false, true) then
 		specWarnAnchorofBinding:Show(args.sourceName)
 		specWarnAnchorofBinding:Play("kickcast")
-	elseif spellId == 268027 and self:AntiSpam(4, 6) then
+	elseif spellId == 268027 and self:AntiSpam(4, 4) then
 		specWarnRisingTides:Show()
 		specWarnRisingTides:Play("aesoon")
 	elseif spellId == 274437 and self:CheckInterruptFilter(args.sourceGUID, false, true) then
 		specWarnTempest:Show(args.sourceName)
 		specWarnTempest:Play("kickcast")
-	elseif spellId == 268184 and self:AntiSpam(4, 7) then
+	elseif spellId == 268184 and self:AntiSpam(4, 6) then
 		specWarnMinorSwiftness:Show()
 		specWarnMinorSwiftness:Play("moveboss")
-	elseif spellId == 276292 and self:AntiSpam(4, 8) then
+	elseif spellId == 276292 and self:AntiSpam(5, 5) then
 		specWarnWhirlingSlam:Show()
 		specWarnWhirlingSlam:Play("justrun")
-	elseif spellId == 268211 and self:AntiSpam(4, 10) then
+	elseif spellId == 268211 and self:AntiSpam(4, 6) then
 		specWarnMinorReinforcement:Show()
 		specWarnMinorReinforcement:Play("moveboss")
 	elseif spellId == 268273 and self:AntiSpam(4, 1) then
@@ -112,10 +112,10 @@ end
 function mod:SPELL_AURA_APPLIED(args)
 	if not self.Options.Enabled then return end
 	local spellId = args.spellId
-	if spellId == 268375 and self:AntiSpam(2, 12) then
+	if spellId == 268375 and self:AntiSpam(2, 6) then
 		specWarnDetectThoughts:Show(args.destName)
 		specWarnDetectThoughts:Play("helpdispel")
-	elseif spellId == 276767 and self:AntiSpam(2, 13) then
+	elseif spellId == 276767 and self:AntiSpam(2, 6) then
 		if self.Options.SpecWarn276767dispel then
 			specWarnConsumingVoid:Show(args.destName)
 			specWarnConsumingVoid:Play("helpdispel")
@@ -139,7 +139,7 @@ function mod:SPELL_AURA_APPLIED(args)
 			specWarnVoidSeed:ScheduleVoice(8, "runout")
 			yellVoidSeed:Countdown(12)
 		end
-	elseif spellId == 274631 and self:AntiSpam(4, 9) then
+	elseif spellId == 274631 and self:AntiSpam(4, 5) then
 		specWarnBlessingofIrontides:Show()
 		specWarnBlessingofIrontides:Play("justrun")
 	end
@@ -156,13 +156,3 @@ function mod:SPELL_AURA_REMOVED(args)
 		end
 	end
 end
-
---[[
-function mod:SPELL_CAST_SUCCESS(args)
-	if not self.Options.Enabled then return end
-	local spellId = args.spellId
-	if spellId == 200343 then
-
-	end
-end
---]]

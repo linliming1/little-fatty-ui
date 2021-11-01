@@ -23,11 +23,14 @@ local continents = {
 	[13]  = true, -- Eastern Kingdoms
 	[101] = true, -- Outland
 	[113] = true, -- Northrend
+	[203] = true, -- Vashj'ir
+	[224] = true, -- Stranglethorn Vale
 	[424] = true, -- Pandaria
 	[572] = true, -- Draenor
 	[619] = true, -- Broken Isles
 	[875] = true, -- Zandalar
 	[876] = true, -- Kul Tiras
+	[947] = true, -- Azeroth
 }
 
 local notes = {
@@ -48,22 +51,18 @@ local notes = {
 }
 
 -- upvalues
-local _G = getfenv(0)
-
-local C_Timer_NewTicker = _G.C_Timer.NewTicker
 local C_Calendar = _G.C_Calendar
+local C_DateAndTime = _G.C_DateAndTime
+local C_QuestLog = _G.C_QuestLog
+local C_Map = _G.C_Map
+local C_Timer_After = _G.C_Timer.After
 local GameTooltip = _G.GameTooltip
 local GetFactionInfoByID = _G.GetFactionInfoByID
-local GetGameTime = _G.GetGameTime
-local GetQuestsCompleted = _G.GetQuestsCompleted
-local gsub = _G.string.gsub
 local IsControlKeyDown = _G.IsControlKeyDown
-local LibStub = _G.LibStub
-local next = _G.next
 local UIParent = _G.UIParent
-local WorldMapButton = _G.WorldMapButton
-local WorldMapTooltip = _G.WorldMapTooltip
+local UnitFactionGroup = _G.UnitFactionGroup
 
+local LibStub = _G.LibStub
 local HandyNotes = _G.HandyNotes
 local TomTom = _G.TomTom
 
@@ -74,35 +73,30 @@ local points = HallowsEnd.points
 -- plugin handler for HandyNotes
 function HallowsEnd:OnEnter(mapFile, coord)
 	local point = points[mapFile] and points[mapFile][coord]
-	local tooltip = self:GetParent() == WorldMapButton and WorldMapTooltip or GameTooltip
 
 	if self:GetCenter() > UIParent:GetCenter() then -- compare X coordinate
-		tooltip:SetOwner(self, "ANCHOR_LEFT")
+		GameTooltip:SetOwner(self, "ANCHOR_LEFT")
 	else
-		tooltip:SetOwner(self, "ANCHOR_RIGHT")
+		GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
 	end
 
-	tooltip:SetText("万圣节糖罐")
+	GameTooltip:SetText("万圣节糖罐")
 
 	if notes[point] then
-		tooltip:AddLine(notes[point])
-		tooltip:AddLine(" ")
+		GameTooltip:AddLine(notes[point])
+		GameTooltip:AddLine(" ")
 	end
 
 	if false and TomTom then
-		tooltip:AddLine("右键设置TomTom路径指示.", 1, 1, 1)
-		tooltip:AddLine("Control-Right-click to set waypoints to every bucket.", 1, 1, 1)
+		GameTooltip:AddLine("右键设置TomTom路径指示.", 1, 1, 1)
+		GameTooltip:AddLine("Ctrl右键把所有糖罐位置加入路径.", 1, 1, 1)
 	end
 
-	tooltip:Show()
+	GameTooltip:Show()
 end
 
 function HallowsEnd:OnLeave()
-	if self:GetParent() == WorldMapButton then
-		WorldMapTooltip:Hide()
-	else
 		GameTooltip:Hide()
-	end
 end
 
 
@@ -112,11 +106,11 @@ local function createWaypoint(mapID, coord)
 end
 
 local function createAllWaypoints()
-	for mapID, coords in next, points do
+	for mapFile, coords in next, points do
 		if not continents[mapFile] then
 		for coord, questID in next, coords do
 			if coord and (db.completed or not completedQuests[questID]) then
-				createWaypoint(mapID, coord)
+				createWaypoint(mapFile, coord)
 			end
 		end
 		end
@@ -151,7 +145,7 @@ do
 		end
 	end
 
-	function HallowsEnd:GetNodes2(mapID, minimap)
+	function HallowsEnd:GetNodes2(mapID)
 		return iterator, points[mapID]
 	end
 end
@@ -204,8 +198,9 @@ local options = {
 -- check
 local setEnabled = false
 local function CheckEventActive()
-	local calendar = C_Calendar.GetDate()
+	local calendar = C_DateAndTime.GetCurrentCalendarTime()
 	local month, day, year = calendar.month, calendar.monthDay, calendar.year
+	local hour, minute = calendar.hour, calendar.minute
 
 	local monthInfo = C_Calendar.GetMonthInfo()
 	local curMonth, curYear = monthInfo.month, monthInfo.year
@@ -217,8 +212,6 @@ local function CheckEventActive()
 		local event = C_Calendar.GetDayEvent(monthOffset, day, i)
 
 		if event.iconTexture == 235460 or event.iconTexture == 235461 or event.iconTexture == 235462 then
-			local hour, minute = GetGameTime()
-
 			setEnabled = event.sequenceType == "ONGOING" -- or event.sequenceType == "INFO"
 
 			if event.sequenceType == "START" then
@@ -230,7 +223,9 @@ local function CheckEventActive()
 	end
 
 	if setEnabled and not HallowsEnd.isEnabled then
-		completedQuests = GetQuestsCompleted(completedQuests)
+		for _, id in ipairs(C_QuestLog.GetAllCompletedQuestIDs()) do
+			completedQuests[id] = true
+		end
 
 		-- special treatment for Westfall
 		if UnitFactionGroup("player") == "Alliance" and completedQuests[26322] then
@@ -249,6 +244,11 @@ local function CheckEventActive()
 
 		--HandyNotes:Print("万圣节活动结束了，明年再见!")
 	end
+end
+
+local function RepeatingCheck()
+	CheckEventActive()
+	C_Timer_After(60, RepeatingCheck)
 end
 
 
@@ -279,7 +279,7 @@ function HallowsEnd:OnEnable()
 	end
 
 	for continentMapID in next, continents do
-		local children = C_Map.GetMapChildrenInfo(continentMapID)
+		local children = C_Map.GetMapChildrenInfo(continentMapID, nil, true)
 		for _, map in next, children do
 			local coords = points[map.mapID]
 			if coords then
@@ -295,13 +295,18 @@ function HallowsEnd:OnEnable()
 		end
 	end
 
-	local calendar = C_Calendar.GetDate()
+	local calendar = C_DateAndTime.GetCurrentCalendarTime()
 	C_Calendar.SetAbsMonth(calendar.month, calendar.year)
+	CheckEventActive()
 
-	C_Timer_NewTicker(15, CheckEventActive)
 	HandyNotes:RegisterPluginDB("HallowsEnd", self, options)
-
 	db = LibStub("AceDB-3.0"):New("HandyNotes_HallowsEndDB", defaults, "Default").profile
+
+	self:RegisterEvent("CALENDAR_UPDATE_EVENT", CheckEventActive)
+	self:RegisterEvent("CALENDAR_UPDATE_EVENT_LIST", CheckEventActive)
+	self:RegisterEvent("ZONE_CHANGED", CheckEventActive)
+
+	C_Timer_After(60, RepeatingCheck)
 end
 
 function HallowsEnd:Refresh(_, questID)

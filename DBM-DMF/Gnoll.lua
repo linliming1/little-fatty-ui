@@ -1,8 +1,7 @@
 local mod	= DBM:NewMod("Gnoll", "DBM-DMF")
 local L		= mod:GetLocalizedStrings()
 
-mod:SetRevision(("$Revision: 17623 $"):sub(12, -3))
-mod:SetZone()
+mod:SetRevision("20200803045206")
 
 mod:RegisterEvents(
 	"SPELL_AURA_APPLIED 101612",
@@ -19,9 +18,7 @@ local warnGnoll					= mod:NewAnnounce("warnGnoll", 2, nil, false)
 
 local specWarnHogger			= mod:NewSpecialWarning("specWarnHogger")
 
-local timerGame					= mod:NewBuffActiveTimer(60, 101612, nil, nil, nil, 6)
-
-local countdownGame				= mod:NewCountdownFades(60, 101612)
+local timerGame					= mod:NewBuffActiveTimer(60, 101612, nil, nil, nil, 5, nil, nil, nil, 1, 5)
 
 local gameEarnedPoints = 0
 local gameMaxPoints = 0
@@ -31,14 +28,12 @@ function mod:SPELL_AURA_APPLIED(args)
 		gameEarnedPoints = 0
 		gameMaxPoints = 0
 		timerGame:Start()
-		countdownGame:Start(60)
 	end
 end
 
 function mod:SPELL_AURA_REMOVED(args)
 	if args.spellId == 101612 and args:IsPlayer() then
 		timerGame:Cancel()
-		countdownGame:Cancel()
 		if self.Options.warnGameOver then
 			if gameEarnedPoints > 0 then
 				warnGameOverQuest:Show(gameEarnedPoints, gameMaxPoints)
@@ -49,7 +44,7 @@ function mod:SPELL_AURA_REMOVED(args)
 	end
 end
 
-function mod:UNIT_SPELLCAST_SUCCEEDED(uId, _, spellId)
+function mod:UNIT_SPELLCAST_SUCCEEDED(_, _, spellId)
 	if spellId == 102044 then--Hogger
 		gameMaxPoints = gameMaxPoints + 3
 		if self:AntiSpam(2, 1) then
@@ -61,7 +56,7 @@ function mod:UNIT_SPELLCAST_SUCCEEDED(uId, _, spellId)
 	end
 end
 
-function mod:UNIT_POWER_FREQUENT(uId, type)
+function mod:UNIT_POWER_FREQUENT(_, type)
 	if type == "ALTERNATE" then
 		local playerPower = UnitPower("player", 10)
 		if playerPower > gameEarnedPoints then

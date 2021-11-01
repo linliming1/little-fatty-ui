@@ -3,8 +3,9 @@
 --------------------------------------------------------------------------
 --[[
 GTFO Spell List - Legion
-Author: Zensunim of Malygos
 ]]--
+
+if (not (GTFO.ClassicMode or GTFO.BurningCrusadeMode)) then
 
 --- ********************
 --- * The Broken Isles *
@@ -436,7 +437,10 @@ GTFO.SpellID["238443"] = {
   sound = 1;
 };
 
-
+GTFO.SpellID["293579"] = {
+  --desc = "Electric Wave (Essence of Hati)";
+  sound = 1;
+};
 
 -- **********
 -- * Mardum *
@@ -1967,3 +1971,4 @@ GTFO.SpellID["245916"] = {
   sound = 1;
 };
 
+end

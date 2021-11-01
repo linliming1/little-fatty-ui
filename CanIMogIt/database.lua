@@ -225,8 +225,8 @@ function CanIMogIt:DBAddAppearance(appearanceID, itemLink)
 end
 
 
-function CanIMogIt:DBRemoveAppearance(appearanceID, itemLink)
-    local hash = self:GetAppearanceHash(appearanceID, itemLink)
+function CanIMogIt:DBRemoveAppearance(appearanceID, itemLink, dbHash)
+    local hash = dbHash or self:GetAppearanceHash(appearanceID, itemLink)
     self.db.global.appearances[hash] = nil
 end
 
@@ -252,10 +252,10 @@ end
 
 CanIMogIt.itemsToAdd = {}
 
-local function LateAddItems(event, itemID)
+local function LateAddItems(event, itemID, success)
     if event == "GET_ITEM_INFO_RECEIVED" and itemID then
         -- The 8.0.1 update is causing this event to return a bunch of itemID=0
-        if itemID <= 0 then
+        if not success or itemID <= 0 then
             return
         end
         if CanIMogIt.itemsToAdd[itemID] then
@@ -314,16 +314,31 @@ function CanIMogIt:DBAddItem(itemLink, appearanceID, sourceID)
 end
 
 
-function CanIMogIt:DBRemoveItem(appearanceID, sourceID, itemLink)
-    local hash = self:GetAppearanceHash(appearanceID, itemLink)
+function CanIMogIt:DBRemoveItem(appearanceID, sourceID, itemLink, dbHash)
+    -- The specific dbHash can be passed in to bypass trying to generate it.
+    -- This is used mainly when Blizzard removes or changes item appearanceIDs.
+    local hash = dbHash or self:GetAppearanceHash(appearanceID, itemLink)
+    appearanceID = appearanceID or CanIMogIt.Utils.strsplit(":", hash)[1]
     if self.db.global.appearances[hash] == nil then return end
     if self.db.global.appearances[hash].sources[sourceID] ~= nil then
         self.db.global.appearances[hash].sources[sourceID] = nil
         if next(self.db.global.appearances[hash].sources) == nil then
-            self:DBRemoveAppearance(appearanceID, itemLink)
+            self:DBRemoveAppearance(appearanceID, itemLink, dbHash)
         end
         if CanIMogItOptions['databaseDebug'] then
-            CanIMogIt:Print("Item removed: " .. CanIMogIt:GetItemLinkFromSourceID(sourceID) .. " itemID: " .. CanIMogIt:GetItemID(itemLink) .. " sourceID: " .. sourceID .. " appearanceID: " .. appearanceID)
+            local itemID, itemLink
+            if itemLink then
+                itemID = CanIMogIt:GetItemID(itemLink)
+            else
+                itemID = "nil"
+            end
+            if sourceID then
+                itemLink = CanIMogIt:GetItemLinkFromSourceID(sourceID)
+            end
+            if not itemLink then
+                itemLink = "nil"
+            end
+            CanIMogIt:Print("Item removed: " .. itemLink .. " itemID: " .. itemID .. " sourceID: " .. sourceID .. " appearanceID: " .. appearanceID)
         end
     end
 end
@@ -382,11 +397,15 @@ local function TransmogCollectionUpdated(event, sourceID, ...)
         if event == "TRANSMOG_COLLECTION_SOURCE_ADDED" then
             local itemLink = CanIMogIt:GetItemLinkFromSourceID(sourceID)
             local appearanceID = CanIMogIt:GetAppearanceIDFromSourceID(sourceID)
-            CanIMogIt:DBAddItem(itemLink, appearanceID, sourceID)
+            if itemLink and appearanceID then
+                CanIMogIt:DBAddItem(itemLink, appearanceID, sourceID)
+            end
         elseif event == "TRANSMOG_COLLECTION_SOURCE_REMOVED" then
             local itemLink = CanIMogIt:GetItemLinkFromSourceID(sourceID)
             local appearanceID = CanIMogIt:GetAppearanceIDFromSourceID(sourceID)
-            CanIMogIt:DBRemoveItem(appearanceID, sourceID, itemLink)
+            if itemLink and appearanceID then
+                CanIMogIt:DBRemoveItem(appearanceID, sourceID, itemLink)
+            end
         end
         if sourceID then
             CanIMogIt.cache:RemoveItemBySourceID(sourceID)

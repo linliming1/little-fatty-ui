@@ -64,7 +64,9 @@ local locales = {
 			frame_draggable = "Loot frame draggable",
 			linkall_threshold = "Minimum chat link quality",
 			linkall_channel = "Default chat link channel",
+			linkall_channel_secondary = "Secondary chat link channel",
 			linkall_show = "Link button visibility",
+			linkall_first_only = "Only link top item",
 
 			autolooting_text = "XLoot's autolooting features act separately from the default UI. As such, if both are enabled, you may recieve warnings like 'that object is busy'. They are safe to ignore, but can be resolved by picking one autoloot method to use exclusively.",
 
@@ -139,9 +141,13 @@ local locales = {
 			visible = "Anchor visible",
 			show_crafted = "Crafted",
 			show_totals = "Show total items in inventory",
+			totals_delay = "Totals delay",
+			totals_delay_desc = "Time to wait before asking the game how many items you have, as the item events do not reliably match up to inventory counts",
 			use_altoholic = "Include bank (Altoholic)",
 			show_ilvl = "Show item level",
+			font_size_ilvl = "Item level",
 			name_width = "Player name width",
+			gradients = "Gradients",
 		},
 		Master = {
 			panel_title = "Loot Master",
@@ -159,6 +165,7 @@ local locales = {
 			menu_self = "Show self",
 			award_qualitythreshold = "Minimum announce quality",
 			award_channel = "Default chat announce channel",
+			award_channel_secondary = "Secondary chat announce channel",
 			award_guildannounce = "Echo in guild chat",
 			award_special = "Announce special recipients",
 		},
@@ -293,7 +300,8 @@ locales.esMX["Options"] = {
 
 locales.ruRU["Options"] = {
 	["alpha"] = "Прозрачность",
-	["bottom"] = "Внизу",
+	["bottom"] = [=[Внизу
+]=],
 	["confirm_reset_profile"] = "Это сбросит все параметры этого профиля. Вы уверены?",
 	["desc_channel_auto"] = "Наивысший из доступных",
 	["down"] = "Вниз",
@@ -306,10 +314,12 @@ locales.ruRU["Options"] = {
 	["items_others"] = "Остальные вещи",
 	["items_own"] = "Ваши вещи",
 	["minimum_quality"] = "Минимальное качество",
-	["padding"] = "Заполнение",
+	["padding"] = [=[Заполнение
+]=],
 	["profile"] = "Профиль",
 	["scale"] = "Масштаб",
-	["top"] = "Вверх",
+	["top"] = [=[Вверх
+]=],
 	["up"] = "Вверх",
 	["visible"] = "Видимый",
 	["when_always"] = "Всегда",
@@ -365,6 +375,7 @@ locales.esES["Options"] = {
 
 locales.zhTW["Options"] = {
 	["alpha"] = "透明度",
+	["bottom"] = "底部",
 	["confirm_reset_profile"] = "將會重置此設定檔的所有設定。你確定要重置嗎？",
 	["desc_channel_auto"] = "最高可得",
 	["down"] = "下",
@@ -377,8 +388,10 @@ locales.zhTW["Options"] = {
 	["items_others"] = "他人物品",
 	["items_own"] = "自己物品",
 	["minimum_quality"] = "最低品質",
+	["padding"] = "填充",
 	["profile"] = "設定檔",
 	["scale"] = "比例",
+	["top"] = "頂部",
 	["up"] = "上",
 	["visible"] = "可見",
 	["when_always"] = "總是",
@@ -658,10 +671,11 @@ locales.koKR["Group"] = {
 }
 
 locales.esMX["Group"] = {
+	["alert_anchor"] = "Ventanas emergentes de botín",
 }
 
 locales.ruRU["Group"] = {
-	["alert_anchor"] = "Всплывающие фреймы добычи",
+	["alert_anchor"] = "Всплывающие фреймы добычи.",
 	["anchor"] = "Броски группы",
 	["undecided"] = "Не принял решения",
 }

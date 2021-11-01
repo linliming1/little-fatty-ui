@@ -12,7 +12,7 @@
 	Grid status module for resurrections.
 ----------------------------------------------------------------------]]
 
-local IS_WOW_8 = GetBuildInfo():match("^8")
+local IS_WOW_8 = select(4, GetBuildInfo()) >= 80000
 
 local _, Grid = ...
 local L = Grid.L
@@ -154,13 +154,13 @@ end
 
 function GridStatusResurrect:UpdateUnit(unit, guid)
 	if not unit then return end
-	if not guid then guid = UnitGUID(unitid) end
+	if not guid then guid = UnitGUID(unit) end
 	if not GridRoster:IsGUIDInRaid(guid) then return end
 
 	local db = self.db.profile.alert_resurrect
 	local hasRes, endTime, casterUnit, casterGUID = LibResInfo:UnitHasIncomingRes(guid)
 
-	if not hasRes or (hasRes == "PENDING" and not db.showUntilUsed) or not casterUnit then
+	if not hasRes or (hasRes == "PENDING" and not db.showUntilUsed) then --abyui or not casterUnit
 		return self.core:SendStatusLost(guid, "alert_resurrect")
 	end
 
@@ -173,7 +173,7 @@ function GridStatusResurrect:UpdateUnit(unit, guid)
 		icon = "Interface\\ICONS\\Spell_Shadow_Soulgem"
 		startTime = endTime - 360
 		duration = 360
-	else -- CASTING or PENDING
+	elseif casterUnit then -- CASTING or PENDING
 		if IS_WOW_8 then
 			_, _, icon, startTime = UnitCastingInfo(casterUnit)
 		else

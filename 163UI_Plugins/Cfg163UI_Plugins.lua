@@ -21,9 +21,21 @@ U1RegisterAddon("163UI_Plugins", {
     nopic = 1,
 
     {
-        var = "AutoSwapRacial", text = U1_NEW_ICON.."自动替换种族天赋", default = false,
-        tip = "说明`（测试功能）在达萨罗之战剧情更换种族时，自动替换动作栏上的主动种族天赋。",
+        var = "MawThreat", text = "噬渊典狱长之眼详细数值", default = true,
+        tip = "说明`在噬渊典狱长之眼框体中显示详细进度值",
+        callback = function(cfg, v, loading, ...)
+            if not loading then
+                if U1PluginMawThreatToggle then U1PluginMawThreatToggle(v) end
+            else
+                return load(cfg, v, loading, ...)
+            end
+        end
     },
+
+    {
+        var = "UnlimitedMapPinDistance", text = "导航地图标记无限距离", default = true, callback = load, tip = "说明`9.0新增的游戏内导航，暴雪限制地图标记在1000码-100码之内才显示，可以取消这个限制"
+    },
+
     {
         var = "CastSound",
         text = U1_NEW_ICON.."战斗节奏音",
@@ -75,7 +87,12 @@ U1RegisterAddon("163UI_Plugins", {
     },
 
     {
-        var = "ExaltedPlus", text = U1_NEW_ICON.."声望增强", default = true, callback = load,
+        var = "AlwaysShowAltBarText", text = "始终显示特殊能量条的文字", default = true,
+        tip = "说明`在大小幻象里，始终显示能量条上面的文字，便于查看。",
+    },
+
+    {
+        var = "ExaltedPlus", text = "声望增强", default = true, callback = load,
         tip = "说明`7.2版本新增功能`声望面板直接显示崇拜后的进度。`获得声望时会显示当前进度。`可以设置自动追踪刚获得的声望。",
         {
             var = "autotrace",
@@ -211,6 +228,11 @@ U1RegisterAddon("163UI_Plugins", {
     },
 
     {
+        var = "AutoSwapRacial", text = "自动替换种族天赋", default = false,
+        tip = "说明`（测试功能）在达萨罗之战剧情更换种族时，自动替换动作栏上的主动种族天赋。",
+    },
+
+    {
         var = "SlashCommands", text = "快捷命令", default = true, callback = load,
         tip = "说明`增加若干命令行指令`● /tele 传入传出随机副本`● /in 秒数 其他命令`　　延迟N秒后执行其他命令`　　例如/in 1 /yell 开怪啦",
     },
@@ -242,3 +264,14 @@ U1RegisterAddon("163UI_Plugins", {
 })
 
 --U1RegisterAddon("GrievousHelper", { title = "重伤助手(自动摘武器)", defaultEnable = 1, parent = "163UI_Plugins", })
+
+U1RegisterAddon("AbyAuctionFavoritesSavior", {
+    title = "拍卖收藏保存",
+    defaultEnable = 1,
+    load = "DEMAND",
+    nolodbutton = 1,
+    tags = { TAG_TRADING, TAG_GOOD },
+    desc = "暴雪的BUG导致8.3新拍卖行的收藏登出就没了，爱不易临时保存在插件里，可以加载回来。当插件发现系统保存的收藏列表和本地保存的收藏列表不一致的时候，会在系统默认收藏按钮旁边增加一个'加载'按钮，点击就可以加载。",
+    icon = [[Interface\Icons\INV_WorseRobot]],
+    author = "|cffcd1a1c[爱不易原创]|r",
+});

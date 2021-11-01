@@ -1,0 +1,12 @@
+## Interface: 90100
+## Title: WeakAuras Archive
+## Author: The WeakAuras Team
+## Version: 3.7.2
+## LoadOnDemand: 1
+## SavedVariables: WeakAurasArchive
+## Dependencies: WeakAuras
+
+WeakAurasArchive.lua
+
+## Title-zhCN: |cff880303[爱不易]|r WeakAuras 数据存档
+## X-Vendor: AbyUI

@@ -1,13 +1,18 @@
+--[[
+local abytfm = WW:Button("AbyTotemFrameMover", UIParent):Size(100,40):SetFrameStrata("BACKGROUND"):SetPoint(TotemFrame:GetPoint(1))
+:CreateTexture():SetColorTexture(0,1,0,0.5):ALL():up():un()
+CoreUIEnableTooltip(abytfm, "面板移动","按住SHIFT拖动\nCtrl点击保存位置\nCtrl滚轮缩放\nC+S+A点击重置")
+]]
 -- BlizzMmove, move the blizzard frames by yess
 local db = nil
 local frame = CreateFrame("Frame")
 local optionPanel = nil
 
 local defaultDB = {
-    version = "20180816",
+    version = "20200206",
     AchievementFrame = {save = true},
     CalendarFrame = {save = true},
-    AuctionFrame = {save = true},
+    --AuctionFrame = {save = true},
     GuildBankFrame = {save = true},
     CastingBarFrame = {save = true},
     WardrobeFrame = {save = true},
@@ -29,10 +34,14 @@ local defaultDB = {
     CollectionsJournal = {save = true, },
     GuildFrame = {save = true, },
     FriendsFrame = {save = true, },
-    ObjectiveTrackerFrame = { save = true, },
+    ObjectiveTrackerFrame_abyuiBG = { save = true, modifyKey = "IsShiftKeyDown", },
     --WorldMapFrame = {save = true, },
     ScrappingMachineFrame = { save = true, },
     AzeriteEmpoweredItemUI = { save = true, },
+    PlayerPowerBarAlt = { save = true, },
+    AuctionHouseFrame = {save = true},
+    CommunitiesFrame = {save = true},
+    --CommunitiesFrame = {save = true},
 }
 
 local userPlaced = {
@@ -96,6 +105,11 @@ local function OnShow(self, ...)
                 self:SetPoint(settings.point,settings.relativeTo, settings.relativePoint, settings.xOfs,settings.yOfs)
                 if self:GetHeight()~=h then self:SetHeight(h) end
                 if self:GetWidth()~=w then self:SetWidth(w) end
+                if self:GetRight() <= 0 or self:GetLeft() >= GetScreenWidth() or self:GetTop() <= 0 or self:GetBottom() >= GetScreenHeight() then
+                    self:ClearAllPoints()
+                    self:SetPoint("CENTER")
+                    settings.point, settings.relativeTo, settings.relativePoint, settings.xOfs, settings.yOfs = nil, nil, nil, nil, nil
+                end
                 self.__blizzMove = nil
             end
         end
@@ -109,10 +123,10 @@ local function OnHide(self)
 end
 
 local running = {} --已经记录的
-local function runOnNext(self)
+local function runOnNext(self, ...)
     if not self.__blizzMove then
         self.__blizzMove = 1
-        saveDefaultPos(self)
+        --saveDefaultPos(self) --要在hooks SetPoint的时候设置
         if self:IsProtected() and InCombatLockdown() then
             --CoreLeaveCombatCall(self, nil, OnShow)
         else
@@ -124,6 +138,7 @@ local function runOnNext(self)
 end
 local function hookSetPoint(self, point, parent, relative, offsetx, offsety)
     if not self.__blizzMove then
+        saveDefaultPos(self) --其他插件设置位置，更新默认位置
         if not running[self] then
             running[self] = 1
             RunOnNextFrame(runOnNext, self)
@@ -131,7 +146,8 @@ local function hookSetPoint(self, point, parent, relative, offsetx, offsety)
     end
 end
 
-local function OnDragStart(self)
+local function OnDragStart(self, button)
+    if button == "RightButton" then return end
     local frameToMove = self.frameToMove
     local settings = frameToMove.settings
     if settings and not settings.default then -- set defaults
@@ -181,16 +197,15 @@ local function OnMouseWheel(self, value, ...)
             end
         end
         frameToMove.__blizzMove = 1
-        CoreUISetScale(frameToMove, scale)
-        --frameToMove:SetScale(scale)
-        frameToMove.__blizzMove = nil
+        CoreUISetScale(frameToMove, scale) --frameToMove:SetScale(scale)
         if frameToMove.settings then
             frameToMove.settings.scale = scale
         end
         if frameToMove:IsMovable() then
-            frameToMove:StartMoving();
+            --frameToMove:StartMoving(); --这句会导致飘. 如果没有这句reload后的位置不对, 修改CoreUISetScale支持anchor=nil后, 去掉这句没问题
             OnDragStop(self); --因为位置有调整，所以要执行一下，但实际上不需要，因为CoreUISetScale修改了当前的Point，再移动后的相对位置由暴雪计算完成。
         end
+        frameToMove.__blizzMove = nil
         --Debug("scroll", arg1, scale, frameToMove:GetScale())
     end
 end
@@ -262,8 +277,8 @@ function BM_SetMoveHandlerWith(frameNameToMove, loadWith, callback)
         loadWithTable[loadWith] = callback or frameNameToMove
     end
 end
-function BM_SetMoveHandler(frameToMove, handler)
-    if not frameToMove then
+function BM_SetMoveHandler(frameToMove, handler, multiHandler)
+    if not frameToMove or (not multiHandler and frameToMove.settings) then
         return
     end
     if not handler then
@@ -332,6 +347,34 @@ local function resetDB()
     end
 end
 
+function BM_CreateBackground(frame, name, ...)
+    local bg = WW:Frame(name, UIParent):SetSize(frame:GetSize()):un()
+    bg:SetPoint(frame:GetPoint())
+    --WW(bg):CreateTexture():ALL():SetColorTexture(0, 1, 0, 0.5):up()
+    frame:SetParent(bg)
+    local points = { ... }
+    local reAnchor = function(frame)
+        frame:ClearAllPoints()
+        if #points == 0 then
+            frame:SetAllPoints(bg)
+        else
+            for i = 1, #points do frame:SetPoint(points[i], bg, points[i], 0, 0) end
+        end
+    end
+    reAnchor(frame)
+    frame:SetMovable(true)
+    if not frame:IsMovable() then return end
+    frame:SetUserPlaced(true) --stop UIParentManageFramePositions handler
+    if not frame.__blizzMoveHooked then
+        frame.originSetPoint = frame.SetPoint
+        hooksecurefunc(frame, "SetPoint", function(self, ...)
+            reAnchor(self)
+        end)
+        frame.__blizzMoveHooked = 1
+    end
+    return bg
+end
+
 local function OnEvent(self, event, arg1, arg2)
     --Debug(event, arg1, arg2)
     if event == "PLAYER_ENTERING_WORLD" then
@@ -339,6 +382,9 @@ local function OnEvent(self, event, arg1, arg2)
 
         frame:RegisterEvent("ADDON_LOADED") --for blizz lod addons
         db = BlizzMoveDB and BlizzMoveDB.version == defaultDB.version and BlizzMoveDB or defaultDB
+        if db.ObjectiveTrackerFrame then db.ObjectiveTrackerFrame_abyuiBG = db.ObjectiveTrackerFrame db.ObjectiveTrackerFrame = nil end
+        db.ObjectiveTrackerFrame_abyuiBG.modifyKey = "IsShiftKeyDown"
+
         BlizzMoveDB = db
         for k, v in pairs(db) do
             if type(v)=="table" then
@@ -354,17 +400,45 @@ local function OnEvent(self, event, arg1, arg2)
         BM_SetMoveHandler(FriendsFrame)
         --BM_SetMoveHandler(WatchFrame,WatchFrameCollapseExpandButton)
         --userPlaced[WatchFrame] = true --加了也不好，UIParent里写的有问题
-        BM_SetMoveHandler(ObjectiveTrackerFrame,ObjectiveTrackerFrame.HeaderMenu.MinimizeButton)
-        WW(ObjectiveTrackerFrame.HeaderMenu):Button("OTFMover"):Size(22,22):RIGHT(ObjectiveTrackerFrame.HeaderMenu.MinimizeButton, "LEFT", 0,0):up():un()
-        CoreUIEnableTooltip(OTFMover, "面板移动","Ctrl点击保存位置\nCtrl滚轮缩放\nC+S+A点击重置")
-        BM_SetMoveHandler(ObjectiveTrackerFrame,OTFMover)
+
+        WW(ObjectiveTrackerFrame.HeaderMenu):Button("OTFMover"):Size(36,24):RIGHT(ObjectiveTrackerFrame.HeaderMenu.MinimizeButton, "LEFT", 0,0):up():un()
+        CoreUIEnableTooltip(OTFMover, "面板移动","按住SHIFT拖动\nCtrl点击保存位置\nCtrl滚轮缩放\nC+S+A点击重置")
+        local bg = BM_CreateBackground(ObjectiveTrackerFrame, "ObjectiveTrackerFrame_abyuiBG", "TOPLEFT", "BOTTOMRIGHT")
+        BM_SetMoveHandler(bg,OTFMover)
+        OTFMover:SetFrameStrata("LOW")
+        --TODO: this is shit
+        CoreDependCall("Blizzard_MawBuffs", function()
+            local function adjust()
+                if not bg then return end
+                local settings = bg.settings
+                local point, relativeTo, relativePoint, xOfs, yOfs = settings.point,settings.relativeTo, settings.relativePoint, settings.xOfs,settings.yOfs
+                if point == nil and settings.default and #settings.default == 1 then
+                    point, relativeTo, relativePoint, xOfs, yOfs = unpack(settings.default[1])
+                end
+                if point == nil then return end
+                bg.__blizzMove = 1
+                bg:SetPoint(point, relativeTo, relativePoint, xOfs, yOfs)
+                if MawBuffsBelowMinimapFrame and MawBuffsBelowMinimapFrame:IsShown() then
+                    if CoreIsFrameIntersects(MawBuffsBelowMinimapFrame, bg) then
+                        local delta = bg:GetTop() - MawBuffsBelowMinimapFrame:GetBottom()
+                        if delta > 0 and bg:GetBottom() < MawBuffsBelowMinimapFrame:GetTop() and
+                                (bg:GetTop() <= MawBuffsBelowMinimapFrame:GetTop() + 50) then
+                            bg:SetPoint(point, relativeTo, relativePoint, xOfs, yOfs - delta)
+                        end
+                    end
+                end
+                bg.__blizzMove = nil
+            end
+            SetOrHookScript(MawBuffsBelowMinimapFrame, "OnShow", adjust)
+            SetOrHookScript(MawBuffsBelowMinimapFrame, "OnHide", adjust)
+        end)
+
         BM_SetMoveHandler(GameMenuFrame)
         BM_SetMoveHandler(GossipFrame)
         BM_SetMoveHandler(DressUpFrame)
         BM_SetMoveHandler(QuestFrame)
         BM_SetMoveHandler(MerchantFrame)
         BM_SetMoveHandler(HelpFrame)
-        BM_SetMoveHandler(PlayerTalentFrame)
         BM_SetMoveHandler(ClassTrainerFrame)
         BM_SetMoveHandler(MailFrame)
         BM_SetMoveHandler(BankFrame)
@@ -392,19 +466,41 @@ local function OnEvent(self, event, arg1, arg2)
 
         if not hasConflict and U1GetCfgValue and U1GetCfgValue("BlizzMove", "powerbar") then
             BM_SetMoveHandler(EclipseBarFrame)
+
             BM_SetMoveHandler(PaladinPowerBarFrame)
-            for i=1,3 do BM_SetMoveHandler(PaladinPowerBarFrame, PaladinPowerBarFrame["rune"..i]) end
             PaladinPowerBarFrame:SetFrameStrata("LOW")
-            BM_SetMoveHandler(RuneFrame)
-            for i=1,6 do BM_SetMoveHandler(RuneFrame, RuneFrame["Rune"..i]) end
+            --for i=1,3 do BM_SetMoveHandler(PaladinPowerBarFrame, PaladinPowerBarFrame["rune"..i], true) end
+
+            --BM_SetMoveHandler(RuneFrame)
+            for i=1,6 do BM_SetMoveHandler(RuneFrame, RuneFrame["Rune"..i], true) end
+
+            --[[ --诡异的问题, 拖动之后，hooksecurefunc("TotemFrame_Update")无输出,但实际是运行到了的,怀疑是安全环境导致的,不能拖动TotemFrame本身,只能用锚点定位
             BM_SetMoveHandler(TotemFrame)
-            for i=1,4 do BM_SetMoveHandler(TotemFrame, _G["TotemFrameTotem"..i]) end
+            for i=1,4 do BM_SetMoveHandler(TotemFrame, _G["TotemFrameTotem"..i], true) end
+            --]]
+
+            if AbyTotemFrameMover then
+                BM_SetMoveHandler(AbyTotemFrameMover)
+                hooksecurefunc(TotemFrame, "SetPoint", function()
+                    if TotemFrame.__settingByAby then return end
+                    AbyTotemFrameMover:SetSize(TotemFrame:GetSize())
+                    TotemFrame.__settingByAby = true
+                    TotemFrame:ClearAllPoints()
+                    TotemFrame:SetPoint("TOPLEFT", AbyTotemFrameMover)
+                    TotemFrame.__settingByAby = nil
+                    TotemFrame:SetScale(AbyTotemFrameMover:GetScale())
+                end)
+            end
+
             --7.0.3
             --BM_SetMoveHandler(InsanityBarFrame)
+
             BM_SetMoveHandler(WarlockPowerFrame)
             BM_SetMoveHandler(MageArcaneChargesFrame)
-            BM_SetMoveHandler(MonkHarmonyBarFrame)
-            for i=1,1 do BM_SetMoveHandler(MonkHarmonyBarFrame, MonkHarmonyBarFrame.LightEnergy[i]) end
+
+            --BM_SetMoveHandler(MonkHarmonyBarFrame)
+            for i=1,5 do BM_SetMoveHandler(MonkHarmonyBarFrame, MonkHarmonyBarFrame.LightEnergy[i], true) end
+
             BM_SetMoveHandler(ComboPointPlayerFrame)
         end
 
@@ -416,25 +512,28 @@ local function OnEvent(self, event, arg1, arg2)
         BM_SetMoveHandlerWith("GuildBankFrame", "Blizzard_GuildBankUI");
         BM_SetMoveHandlerWith("TradeSkillFrame", "Blizzard_TradeSkillUI");
         BM_SetMoveHandlerWith("ItemSocketingFrame", "Blizzard_ItemSocketingUI");
-        BM_SetMoveHandlerWith("BarberShopFrame", "Blizzard_BarbershopUI");
+        --BM_SetMoveHandlerWith("BarberShopFrame", "Blizzard_BarbershopUI");
         BM_SetMoveHandlerWith("MacroFrame", "Blizzard_MacroUI");
         BM_SetMoveHandlerWith("PlayerTalentFrame", "Blizzard_TalentUI");
         BM_SetMoveHandlerWith("CalendarFrame", "Blizzard_Calendar");
         BM_SetMoveHandlerWith("ClassTrainerFrame", "Blizzard_TrainerUI");
         BM_SetMoveHandlerWith("KeyBindingFrame", "Blizzard_BindingUI");
-        BM_SetMoveHandlerWith("AuctionFrame", "Blizzard_AuctionUI");
+        --BM_SetMoveHandlerWith("AuctionFrame", "Blizzard_AuctionUI");
         BM_SetMoveHandlerWith("LookingForGuildFrame", "Blizzard_LookingForGuildUI");
         BM_SetMoveHandlerWith("ArchaeologyFrame", "Blizzard_ArchaeologyUI");
         BM_SetMoveHandlerWith("ArtifactRelicForgeFrame", "Blizzard_ArtifactUI");
         BM_SetMoveHandlerWith("ScrappingMachineFrame", "Blizzard_ScrappingMachineUI");
         BM_SetMoveHandlerWith("AzeriteEmpoweredItemUI", "Blizzard_AzeriteUI");
+        BM_SetMoveHandlerWith("SoulbindViewer", "Blizzard_Soulbinds");
 
-        if not hasConflict then 
-            BM_SetMoveHandler(PlayerPowerBarAlt) 
+        if not hasConflict then
+            BM_SetMoveHandler(PlayerPowerBarAlt)
+            --[[ --多米诺发现BlizzMove启用时不加载Encounter模块
             if IsAddOnLoaded("Dominos_Encounter") then
                 PlayerPowerBarAlt:SetScript("OnDragStart", function() U1Message("由于多米诺动作条已启用，不能拖动，请点击|TInterface\\Addons\\Dominos\\Dominos:0|t按钮进行布局") end)
                 PlayerPowerBarAlt:SetScript("OnDragStop", nil)
             end
+            --]]
         end
         --if not hasConflict then BM_SetMoveHandler(Boss1TargetFrame) Boss1TargetFrame:SetClampedToScreen(true) end --
         if not hasConflict then BM_SetMoveHandler(MinimapCluster, MinimapZoneTextButton) end
@@ -493,7 +592,16 @@ local function OnEvent(self, event, arg1, arg2)
             BM_SetMoveHandler(GuildFrame, GuildFrame.TitleMouseover);
         end);
 
+        --8.0
+        BM_SetMoveHandlerWith("AuctionHouseFrame", "Blizzard_AuctionHouseUI");
+        BM_SetMoveHandlerWith("CommunitiesFrame", "Blizzard_Communities");
+        BM_SetMoveHandlerWith("AzeriteEssenceUI", "Blizzard_AzeriteEssenceUI");
+        --BM_SetMoveHandlerWith("AzeriteEmpoweredItemUI", "Blizzard_AzeriteUI");
+        BM_SetMoveHandlerWith("OrderHallTalentFrame", "Blizzard_OrderHallUI");
 
+        --9.0
+        BM_SetMoveHandler(ItemTextFrame)
+        BM_SetMoveHandlerWith("WeeklyRewardsFrame", "Blizzard_WeeklyRewards");
         frame:UnregisterEvent("PLAYER_ENTERING_WORLD")
         
     elseif event=="ADDON_LOADED" then

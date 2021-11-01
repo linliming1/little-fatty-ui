@@ -3,18 +3,25 @@ local _, U1 = ...
 U1PlayerName = UnitName("player")
 U1PlayerClass = select(2, UnitClass("player"))
 
-hooksecurefunc("TaskPOI_OnEnter", function(self) self.UpdateTooltip = nil end)
-if WorldMap_AddQuestTimeToTooltip then
-    hooksecurefunc("WorldMap_AddQuestTimeToTooltip", function()
-        local o = GameTooltip:GetOwner()
-        if o and o.OnTabEnter and not o._abyui then o._abyui = 1 hooksecurefunc(o, "OnTabEnter", function(self) self.UpdateTooltip = nil end) end
-    end)
-end
+DisableAddOn("VEM-Core")
+DisableAddOn("DBM-Profiles")
+DisableAddOn("DBM-SpellTimers")
+DisableAddOn("DBM-RaidLeadTools")
+DisableAddOn("DPMCore")
+DisableAddOn("DBM-VictorySound")
 
 -- 一些常用的变量会被莫名其妙重置的, 必须在VARIABLES_LOADED里设置
 local f01 = CreateFrame("Frame")
 f01:RegisterEvent("VARIABLES_LOADED")
 f01:SetScript("OnEvent", function(self)
+    if U1DBG and not U1DBG.bossGuide9 then
+        U1DBG.bossGuide9 = true
+        if not U1IsAddonEnabled("AbyBossGuide") then
+            CoreScheduleTimer(false, 3, U1LoadAddOn, "AbyBossGuide")
+        end
+    end
+
+    u1debug = DEBUG_MODE and CoreDebug or noop
     if U1DB and U1DB.configs then
         local c = U1DB.configs["163ui_moreoptions/cvar_nameplateMaxDistance"]
         if c == "0" or c == "nil" then
@@ -26,7 +33,7 @@ f01:SetScript("OnEvent", function(self)
         SetCVar("nameplateMaxDistance", 60)
     end
     SetCVar("scriptErrors", DEBUG_MODE and 1 or 0)
-    SetCVar("showQuestTrackingTooltips", 1)
+    --SetCVar("showQuestTrackingTooltips", 1) --9.0貌似没有这个了
     self:UnregisterAllEvents()
 end)
 
@@ -66,9 +73,35 @@ end
 
 local cfNames = {} for i=1, NUM_CHAT_WINDOWS do cfNames[i] = "ChatFrame"..i end
 function WithAllChatFrame(func, ...)
-    for i=1, NUM_CHAT_WINDOWS do
-        local chatFrame = _G[cfNames[i]]
-        if chatFrame then func(chatFrame, ...); end
+    local args = {}
+    local args_len = select("#", ...)
+    for i = 1, args_len do
+        args[i] = select(i, ...)
+    end
+    local hook = function()
+        for _, chatFrameName in pairs(CHAT_FRAMES) do
+            local frame = _G[chatFrameName];
+            if frame then
+                frame.u1funcs = frame.u1funcs or {}
+                if not frame.u1funcs[func] then
+                    frame.u1funcs[func] = true
+                    func(frame, unpack(args, 1, args_len))
+                end
+            end
+        end
+    end
+    hook()
+    hooksecurefunc("FCF_OpenTemporaryWindow", hook)
+end
+
+-- old addons's sound config is changed to number, but still use PlaySoundFile API
+local playSoundFileOrigin = PlaySoundFile
+PlaySoundFile = function(file, channel, ...)
+    if not file then return end
+    if type(file) == "number" and file < 500000 then --bigwigs 569200 只能用 PlaySoundFile
+        return PlaySound(file, channel, false) --soundKitID [, channel, forceNoDuplicates, runFinishCallback]
+    else
+        return playSoundFileOrigin(file, channel, ...)
     end
 end
 
@@ -76,11 +109,6 @@ end
 
 --UI163_USER_MODE = 1 --- alwaysRegister=1 and not checkVendor
 --UI163_USE_X_CATEGORIES = 1 --- use X-Categories tag
-
-
-UnitIsTapped = function() end
-CLASS_BUTTONS = CLASS_ICON_TCOORDS
-CooldownFrame_SetTimer = CooldownFrame_Set
 
 --WithAllChatFrame(function(frame) frame:SetMaxLines(5000) end)
 
@@ -104,16 +132,6 @@ local function checkActionBarButtonEventsFrame(test)
         oisv(frame)
     end
 end
-
-local events = {}
-_G.DBG_events1 = events
-hooksecurefunc("ActionButton_OnEvent", function(self, event)
-    events[self] = events[self] or {}
-    table.insert(events[self], event)
-    if #events[self] > 10 then
-        table.remove(events[self], 11)
-    end
-end)
 
 local happened = false
 hooksecurefunc("StartChargeCooldown", function(self)

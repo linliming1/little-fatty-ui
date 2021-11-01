@@ -1,3 +1,5 @@
+--NOBODY, except Keseva touches this file.
+
 -- globals
 DBM.Nameplate = {}
 -- locals
@@ -22,7 +24,7 @@ local CreateAuraFrame
 do
     local function AuraFrame_CreateIcon(frame)
         local icon = DBMNameplateFrame:CreateTexture(nil,'BACKGROUND',nil,0)
-        icon:SetSize(40,40)
+        icon:SetSize(DBM.Options.NPAuraSize, DBM.Options.NPAuraSize)
         icon:Hide()
 
         tinsert(frame.icons,icon)
@@ -39,7 +41,7 @@ do
                 return frame.texture_index[texture]
             else
                 -- find unused icon:
-                for i,icon in ipairs(frame.icons) do
+                for _, icon in ipairs(frame.icons) do
                     if not icon:IsShown() then
                         return icon
                     end
@@ -54,7 +56,7 @@ do
         if not frame.icons or #frame.icons == 0 then return end
 
         local prev,total_width,first_icon
-        for i,icon in ipairs(frame.icons) do
+        for _, icon in ipairs(frame.icons) do
             if icon:IsShown() then
                 icon:ClearAllPoints()
 
@@ -77,7 +79,7 @@ do
                 -floor(total_width/2),0)
         end
     end
-    local function AuraFrame_AddAura(frame,texture)
+    local function AuraFrame_AddAura(frame,aura_tbl)
         if not frame.icons then
             frame.icons = {}
         end
@@ -85,41 +87,40 @@ do
             frame.texture_index = {}
         end
 
-        local icon = frame:GetIcon(texture)
-        icon:SetTexture(texture)
+        local icon = frame:GetIcon(aura_tbl.texture)
+        icon:SetTexture(aura_tbl.texture)
         icon:Show()
 
-        frame.texture_index[texture] = icon
-
+        frame.texture_index[aura_tbl.texture] = icon
         frame:ArrangeIcons()
     end
-    local function AuraFrame_RemoveAura(frame,texture)
+    local function AuraFrame_RemoveAura(frame,texture,batch)
         if not texture then return end
         if not frame.texture_index then return end
-        if not frame.texture_index[texture] then return end
 
-        frame.texture_index[texture]:Hide()
+        local icon = frame.texture_index[texture]
+        if not icon then return end
+
+        icon:Hide()
         frame.texture_index[texture] = nil
 
-        frame:ArrangeIcons()
+        if not batch then
+            frame:ArrangeIcons()
+        end
     end
     local function AuraFrame_RemoveAll(frame)
         if not frame.icons or not frame.texture_index then return end
 
-        for i,icon in ipairs(frame.icons) do
-            icon:Hide()
+        for texture,_ in pairs(frame.texture_index) do
+            frame:RemoveAura(texture,true)
         end
-
-        if type(frame.texture_index) == 'table' then
-            twipe(frame.texture_index)
-        end
+        twipe(frame.texture_index)
     end
 
     local auraframe_proto = {
         CreateIcon = AuraFrame_CreateIcon,
         GetIcon = AuraFrame_GetIcon,
         ArrangeIcons = AuraFrame_ArrangeIcons,
-
         AddAura = AuraFrame_AddAura,
         RemoveAura = AuraFrame_RemoveAura,
         RemoveAll = AuraFrame_RemoveAll,
@@ -172,15 +173,15 @@ local function Nameplate_UnitAdded(frame,unit)
     end
 
     if unit_tbl and #unit_tbl > 0 then
-        for k,v in ipairs(unit_tbl) do
-            frame.DBMAuraFrame:AddAura(v)
+        for _,aura_tbl in ipairs(unit_tbl) do
+            frame.DBMAuraFrame:AddAura(aura_tbl)
         end
     end
 end
 ----------------
 --  On Event  --
 ----------------
-DBMNameplateFrame:SetScript("OnEvent", function(self, event, ...)
+DBMNameplateFrame:SetScript("OnEvent", function(_, event, ...)
     if event == 'NAME_PLATE_UNIT_ADDED' then
         local unit = ...
         if not unit then return end
@@ -194,7 +195,7 @@ end)
 -----------------
 --  Functions  --
 -----------------
---/run DBM.Nameplate:Show(true, UnitGUID("target"), 227723)--Mana tracking, easy to find in Legion Dalaran
+--/run DBM:FireEvent("BossMod_EnableHostileNameplates")
 --/run DBM.Nameplate:Show(false, GetUnitName("target", true), 227723)--Mana tracking, easy to find in Dalaran
 --/run DBM.Nameplate:Hide(true, nil, nil, nil, true)
 --/run DBM.Nameplate:Hide(true, UnitGUID("target"), 227723)
@@ -202,27 +203,26 @@ end)
 
 --Add more nameplate mods as they gain support
 function nameplateFrame:SupportedNPMod()
-    if KuiNameplates or TidyPlatesThreatDBM then return true end
+	if not DBM.Options.UseNameplateHandoff then return false end
+    if _G["KuiNameplates"] or _G["TidyPlatesThreatDBM"] or _G["Plater"] then return true end
     return false
 end
 
 --isGUID: guid or name (bool)
---addLine true or false/nil, if present, tells it to create a line between player and nameplate aura
 --ie, anchored to UIParent Center (ie player is in center) and to bottom of nameplate aura.
---Line will be handled entirely by aura, no need for second object/functions. When aura hides, line hides.
---Maybe additional arg for line color (since not all environments are equal. might want a red line in a blue room and a blue line in a red room, etc
-function nameplateFrame:Show(isGUID, unit, spellId, texture, duration, desaturate, addLine)
+function nameplateFrame:Show(isGUID, unit, spellId, texture, duration, desaturate)
     -- nameplate icons are disabled;
     if DBM.Options.DontShowNameplateIcons then return end
 
     -- ignore player nameplate;
     if playerGUID == unit or playerName == unit then return end
 
-    local currentTexture = texture or GetSpellTexture(spellId)
+	--Texture Id passed as string so as not to get confused with spellID for GetSpellTexture
+    local currentTexture = tonumber(texture) or texture or GetSpellTexture(spellId)
 
     -- Supported by nameplate mod, passing to their handler;
     if self:SupportedNPMod() then
-        DBM:FireEvent("BossMod_ShowNameplateAura", isGUID, unit, currentTexture, duration, desaturate, addLine)
+        DBM:FireEvent("BossMod_ShowNameplateAura", isGUID, unit, currentTexture, duration, desaturate)
         DBM:Debug("DBM.Nameplate Found supported NP mod, only sending Show callbacks", 3)
         return
     end
@@ -239,7 +239,9 @@ function nameplateFrame:Show(isGUID, unit, spellId, texture, duration, desaturat
         num_units = num_units + 1
     end
 
-    tinsert(units[unit],currentTexture)
+    tinsert(units[unit], {
+        texture = currentTexture
+    })
 
     -- find frame for this unit;
     if not isGUID then
@@ -247,7 +249,7 @@ function nameplateFrame:Show(isGUID, unit, spellId, texture, duration, desaturat
         if frame then
             Nameplate_UnitAdded(frame, unit)
             if duration then
-            	DBM:Schedule(duration, Nameplate_AutoHide, self, isGUID, unit, spellId, texture)
+				DBM:Schedule(duration, Nameplate_AutoHide, self, isGUID, unit, spellId, texture)
             end
         end
     else
@@ -257,9 +259,9 @@ function nameplateFrame:Show(isGUID, unit, spellId, texture, duration, desaturat
             local foundUnit = frame.namePlateUnitToken or (frame.UnitFrame and frame.UnitFrame.unit)
             if foundUnit and UnitGUID(foundUnit) == unit then
                 Nameplate_UnitAdded(frame, foundUnit)
-            	if duration then
-            		DBM:Schedule(duration, Nameplate_AutoHide, self, isGUID, unit, spellId, texture)
-            	end
+				if duration then
+					DBM:Schedule(duration, Nameplate_AutoHide, self, isGUID, unit, spellId, texture)
+				end
                 break
             end
         end
@@ -268,17 +270,18 @@ end
 
 --Friendly is still being kept around for world bosses, for now anyways, but args being swapped.
 function nameplateFrame:Hide(isGUID, unit, spellId, texture, force, isHostile, isFriendly)
-    local currentTexture = texture or GetSpellTexture(spellId)
+	--Texture Id passed as string so as not to get confused with spellID for GetSpellTexture
+    local currentTexture = tonumber(texture) or texture or GetSpellTexture(spellId)
 
     if self:SupportedNPMod() then
         DBM:Debug("DBM.Nameplate Found supported NP mod, only sending Hide callbacks", 3)
 
         if force then
-        	if isFriendly then
-            	DBM:FireEvent("BossMod_DisableFriendlyNameplates")
+			if isFriendly then
+				DBM:FireEvent("BossMod_DisableFriendlyNameplates")
             end
             if isHostile then
-            	DBM:FireEvent("BossMod_DisableHostileNameplates")
+				DBM:FireEvent("BossMod_DisableHostileNameplates")
             end
         elseif unit then
             DBM:FireEvent("BossMod_HideNameplateAura", isGUID, unit, currentTexture)
@@ -290,8 +293,8 @@ function nameplateFrame:Hide(isGUID, unit, spellId, texture, force, isHostile, i
     --Not running supported NP Mod, internal handling
     if unit and units[unit] then
         if currentTexture then
-            for i,this_texture in ipairs(units[unit]) do
-                if this_texture == currentTexture then
+            for i,aura_tbl in ipairs(units[unit]) do
+                if aura_tbl.texture == currentTexture then
                     tremove(units[unit],i)
                     break
                 end
